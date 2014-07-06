@@ -173,9 +173,8 @@ sub process_file {
         next unless $path =~ $re;
         my $d = Data::Dumper->new([$args]);
         $d->Deepcopy(1);
-        warn $d->Dump;
         my $s = view->can($method) or die "Can't locate method: $method\n";
-        my ($content, $ext) = $s->(path => $path, eval {%{$d->Dump}});
+        my ($content, $ext) = $s->(path => $path, %{eval $d->Dump});
         open my $fh, ">", "$target_base/$target_file.$ext"
             or die "Can't open $target_base/$target_file.$ext: $!\n";
         print $fh $content;
