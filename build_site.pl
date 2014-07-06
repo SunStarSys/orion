@@ -29,6 +29,7 @@ use warnings;
 use Getopt::Long;
 use File::Path;
 use ASF::Util qw/copy_if_newer parse_filename/;
+use Data::Dumper ();
 
 my ($target_base, $source_base, $runners, $offline);
 
@@ -170,8 +171,10 @@ sub process_file {
     for my $p (@path::patterns) {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
+        my $d = Data:::Dumper->new([$args]);
+        $d->Deepcopy(1);
         my $s = view->can($method) or die "Can't locate method: $method\n";
-        my ($content, $ext) = $s->(path => $path, %$args);
+        my ($content, $ext) = $s->(path => $path, eval {%{$d->Dump}});
         open my $fh, ">", "$target_base/$target_file.$ext"
             or die "Can't open $target_base/$target_file.$ext: $!\n";
         print $fh $content;
