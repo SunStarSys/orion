@@ -171,7 +171,7 @@ sub process_file {
     for my $p (@path::patterns) {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
-        my $d = Data:::Dumper->new([$args]);
+        my $d = Data::Dumper->new([$args]);
         $d->Deepcopy(1);
         my $s = view->can($method) or die "Can't locate method: $method\n";
         my ($content, $ext) = $s->(path => $path, eval {%{$d->Dump}});
