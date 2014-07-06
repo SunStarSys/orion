@@ -141,7 +141,7 @@ sub fetch_deps {
             else {
                 local $ASF::Value::Offline = 1 if $quick == 3;
                 my $s = view->can($method) or die "Can't locate method: $method\n";
-                my (undef, $ext, $vars) = $s->(path => $file, eval {%{$d->Dump}});
+                my (undef, $ext, $vars) = $s->(path => $file, %$args);
                 $file = "$filename.$ext" eq "index.html" ? $dirname : "$dirname$filename.$ext";
                 $data->{$file} = $vars;
             }
