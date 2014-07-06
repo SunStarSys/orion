@@ -124,7 +124,7 @@ sub fetch_deps {
     my ($path, $data, $quick) = @_;
     $quick //= 0;
     for (@{$path::dependencies{$path}}) {
-        my $file = $_;
+        warn my $file = $_;
         my ($filename, $dirname) = parse_filename;
         for my $p (@path::patterns) {
             my ($re, $method, $args) = @$p;
@@ -157,14 +157,14 @@ sub fetch_deps {
 
 sub sitemap {
     my %args = @_;
-    my $template = "content$args{path}";
+    warn my $template = "content$args{path}";
     $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
     view->can("fetch_deps")->($args{path} => $args{deps} = {}, $args{quick_deps})
         unless exists $args{deps};
 
     my $content = "";
 
-    warn my $pre_title = $args{headers}->{title};
+    my $pre_title = $args{headers}->{title};
     if ($pre_title eq "Index" and $args{path} =~ m!/index\.html$!) {
 	my ($filename, $dirname) = parse_filename($args{path});
 	$args{headers}->{title} .= " of "
