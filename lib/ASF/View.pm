@@ -23,10 +23,10 @@ use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use ASF::Util qw/read_text_file sort_tables parse_filename/;
-use Data::Dumper;
+use Data::Dumper ();
 
 push our @TEMPLATE_DIRS, "templates";
-our $VERSION = "1.15";
+our $VERSION = "1.16";
 
 # This is most widely used view.  It takes a 'template' argument and a 'path' argument.
 # Assuming the path ends in foo.mdtext, any files like foo.page/bar.mdtext will be parsed and
