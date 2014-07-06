@@ -132,9 +132,9 @@ sub fetch_deps {
             next unless $file =~ $re;
             if ($quick == 1 or $quick == 2) {
                 $file = "$filename" eq "index" ? $dirname : "$dirname$filename"; # no extension
-                my $d = Data::Dumper->new(%$args);
+                my $d = Data::Dumper->new([$args]);
                 $d->Deepcopy(1);
-                $data->{$file} = { path => $file, eval {$d->Dump} };
+                $data->{$file} = { path => $file, eval {%{$d->Dump}} };
                 read_text_file "content/$_", $data->{$file}, $quick == 1;
             }
             else {
