@@ -175,6 +175,7 @@ sub sitemap {
         my $title = $args{deps}->{$_}->{headers}->{title};
         if ($title eq "Index" and m!/$!) {
             my ($filename, $dirname) = parse_filename;
+            warn $dirname;
             $title .= " of " . File::Basename::basename($dirname) . "/";
         }
         $content .= "- [$title]($_)\n";
