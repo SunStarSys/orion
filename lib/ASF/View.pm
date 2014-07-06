@@ -169,7 +169,7 @@ sub sitemap {
 	my ($filename, $dirname) = parse_filename($args{path});
 	$args{headers}->{title} .= " of "
 	    . File::Basename::basename($dirname) . "/";
-        warn "data=$dirname:$_\n";
+        warn "$args{headers}->{title}:data=$dirname:$_\n";
     }
 
     for (sort keys %{$args{deps}}) {
@@ -177,7 +177,7 @@ sub sitemap {
         if ($title eq "Index" and m!/$!) {
             my ($filename, $dirname) = parse_filename;
             $title .= " of " . File::Basename::basename($dirname) . "/";
-            warn "DATA=$dirname:$_\n";
+            warn "DATA=$title:$dirname:$_\n";
         }
         $content .= "- [$title]($_)\n";
         for my $hdr (grep /^#/, split "\n", $args{deps}->{$_}->{content} // "") {
