@@ -130,17 +130,17 @@ sub fetch_deps {
         for my $p (@path::patterns) {
             my ($re, $method, $args) = @$p;
             next unless $file =~ $re;
+            my $d = Data::Dumper->new([$args]);
+            $d->Deepcopy(1);
             if ($quick == 1 or $quick == 2) {
                 $file = "$filename" eq "index" ? $dirname : "$dirname$filename"; # no extension
-                my $d = Data::Dumper->new([$args]);
-                $d->Deepcopy(1);
                 $data->{$file} = { path => $file, eval {%{$d->Dump}} };
                 read_text_file "content/$_", $data->{$file}, $quick == 1;
             }
             else {
                 local $ASF::Value::Offline = 1 if $quick == 3;
                 my $s = view->can($method) or die "Can't locate method: $method\n";
-                my (undef, $ext, $vars) = $s->(path => $file, %$args);
+                my (undef, $ext, $vars) = $s->(path => $file, eval {%{$d->Dump}});
                 $file = "$filename.$ext" eq "index.html" ? $dirname : "$dirname$filename.$ext";
                 $data->{$file} = $vars;
             }
