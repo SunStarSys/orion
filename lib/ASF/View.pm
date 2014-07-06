@@ -169,6 +169,7 @@ sub sitemap {
 	my ($filename, $dirname) = parse_filename($args{path});
 	$args{headers}->{title} .= " of "
 	    . File::Basename::basename($dirname) . "/";
+        warn "data=$dirname:$_\n";
     }
 
     for (sort keys %{$args{deps}}) {
