@@ -23,6 +23,7 @@ use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use ASF::Util qw/read_text_file sort_tables parse_filename/;
+use Data::Dumper;
 
 push our @TEMPLATE_DIRS, "templates";
 our $VERSION = "1.15";
@@ -131,7 +132,9 @@ sub fetch_deps {
             next unless $file =~ $re;
             if ($quick == 1 or $quick == 2) {
                 $file = "$filename" eq "index" ? $dirname : "$dirname$filename"; # no extension
-                $data->{$file} = { path => $file, %$args };
+                my $d = Data::Dumper->new(%$args);
+                $d->Deepcopy(1);
+                $data->{$file} = { path => $file, eval {$d->Dump} };
                 read_text_file "content/$_", $data->{$file}, $quick == 1;
             }
             else {
@@ -163,13 +166,13 @@ sub sitemap {
         unless exists $args{deps};
 
     my $content = "";
-    warn "PATH=$args{path}\n";
+
     my $pre_title = $args{headers}->{title};
     if ($pre_title eq "Index" and $args{path} =~ m!/index\.html$!) {
 	my ($filename, $dirname) = parse_filename($args{path});
 	$args{headers}->{title} .= " of "
 	    . File::Basename::basename($dirname) . "/";
-        warn "data=$args{path}:$args{headers}->{title}:$dirname\n";
+
     }
 
     for (sort keys %{$args{deps}}) {
@@ -178,7 +181,6 @@ sub sitemap {
         if ($title eq "Index" and m!/$!) {
             my ($filename, $dirname) = parse_filename;
             $title .= " of " . File::Basename::basename($dirname) . "/";
-            warn "DATA=$args{path}:$title:$dirname:$_\n";
         }
         $content .= "- [$title]($_)\n";
         for my $hdr (grep /^#/, split "\n", $args{deps}->{$_}->{content} // "") {
