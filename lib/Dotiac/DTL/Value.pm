@@ -78,7 +78,7 @@ sub defined {
 }
 
 sub scalar {
-	return !$_[0]->[2] and defined $_[0]->[0];
+	return !$_[0]->[2] && defined $_[0]->[0];
 }
 
 sub true {
