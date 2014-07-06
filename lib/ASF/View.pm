@@ -130,11 +130,12 @@ sub fetch_deps {
         for my $p (@path::patterns) {
             my ($re, $method, $args) = @$p;
             next unless $file =~ $re;
-            my $d = Data::Dumper->new([$args]);
+            my $d = Data::Dumper->new([$args], ['$args']);
             $d->Deepcopy(1);
+            eval $d->Dump;
             if ($quick == 1 or $quick == 2) {
                 $file = "$filename" eq "index" ? $dirname : "$dirname$filename"; # no extension
-                $data->{$file} = { path => $file, %{eval $d->Dump} };
+                $data->{$file} = { path => $file, %$args };
                 read_text_file "content/$_", $data->{$file}, $quick == 1;
             }
             else {
