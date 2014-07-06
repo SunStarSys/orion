@@ -174,8 +174,7 @@ sub sitemap {
     for (sort keys %{$args{deps}}) {
         my $title = $args{deps}->{$_}->{headers}->{title};
         if ($title eq "Index" and m!/$!) {
-            my ($filename, $dirname) = parse_filename;
-            warn $dirname;
+            my ($filename, $dirname) = parse_filename $_;
             $title .= " of " . File::Basename::basename($dirname) . "/";
         }
         $content .= "- [$title]($_)\n";
