@@ -164,7 +164,7 @@ sub sitemap {
 
     my $content = "";
 
-    my $pre_title = $args{headers}->{title};
+    warn my $pre_title = $args{headers}->{title};
     if ($pre_title eq "Index" and $args{path} =~ m!/index\.html$!) {
 	my ($filename, $dirname) = parse_filename($args{path});
 	$args{headers}->{title} .= " of "
