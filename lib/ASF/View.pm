@@ -173,7 +173,8 @@ sub sitemap {
     }
 
     for (sort keys %{$args{deps}}) {
-        warn my $title = $args{deps}->{$_}->{headers}->{title};
+        my $title = $args{deps}->{$_}->{headers}->{title};
+        warn $title if $title =~ /^Index of/;
         if ($title eq "Index" and m!/$!) {
             my ($filename, $dirname) = parse_filename;
             $title .= " of " . File::Basename::basename($dirname) . "/";
