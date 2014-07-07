@@ -131,7 +131,7 @@ sub fetch_deps {
             my ($re, $method, $args) = @$p;
             next unless $file =~ $re;
             my $d = Data::Dumper->new([$args], ['$args']);
-            $d->Deepcopy(1);
+            $d->Deepcopy(1)->Purity(1);
             eval $d->Dump;
             if ($quick == 1 or $quick == 2) {
                 $file = "$filename" eq "index" ? $dirname : "$dirname$filename"; # no extension

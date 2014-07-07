@@ -172,7 +172,7 @@ sub process_file {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
         my $d = Data::Dumper->new([$args], ['$args']);
-        $d->Deepcopy(1);
+        $d->Deepcopy(1)->Purity(1);
         eval $d->Dump;
         my $s = view->can($method) or die "Can't locate method: $method\n";
         my ($content, $ext) = $s->(path => $path, %$args);
