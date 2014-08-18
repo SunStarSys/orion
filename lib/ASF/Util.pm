@@ -20,7 +20,7 @@ our $VERSION = "1.9";
 # and passing the args along to a hashref (in 2nd arg)
 
 sub read_text_file {
-    my ($file, $out, $headers_only) = @_;
+    my ($file, $out, $content_lines) = @_;
     open my $fh, "<", $file or die "Can't open file $file: $!\n";
 
     my $headers = 1;
@@ -57,7 +57,7 @@ sub read_text_file {
             }
             $out->{headers}->{$name} = $val;
         }
-        last LOOP if $headers_only;
+        last LOOP if defined $content_lines and $content_lines-- > 0;
         no warnings 'uninitialized';
         $content .= $_;
     }
@@ -69,7 +69,7 @@ sub read_text_file {
         }
     }
 
-    $out->{content} = $content unless $headers_only;
+    $out->{content} = $content;
 }
 
 sub copy_if_newer {
