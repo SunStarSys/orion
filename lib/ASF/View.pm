@@ -138,7 +138,7 @@ sub fetch_deps {
             if ($quick == 1 or $quick == 2) {
                 $file = "$filename" eq "index" ? $dirname : "$dirname$filename"; # no extension
                 $data->{$file} = { path => $file, %$args };
-                read_text_file "content/$_", $data->{$file}, $quick == 1;
+                read_text_file "content/$_", $data->{$file}, $quick == 1 ? 0 : undef;
             }
             else {
                 local $ASF::Value::Offline = 1 if $quick == 3;
