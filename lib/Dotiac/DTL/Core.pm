@@ -453,7 +453,7 @@ sub devar_var {
 				}
 			}
 			elsif ($r eq "ARRAY") {
-				if ($name=~m/\D/) {
+				if ($name=~m/[^-\d]/) {
 					return Dotiac::DTL::Value->safe(undef) unless blessed $param;
 				}
 				else {
