@@ -122,7 +122,6 @@ unless ($built_site) {
 
                 push @sources, "content$key" if ! $seen{"content$key"}++;
                 delete $deps{$key};
-                last;
             }
         }
     }
