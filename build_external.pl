@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/local/bin/perl
 #
 # build site using external build system
 # requires svn 1.7 working copies

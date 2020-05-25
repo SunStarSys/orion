@@ -249,7 +249,7 @@ sub breadcrumbs {
         $_ ||= "Home";
         push @rv, qq(<a href="$relpath">\u$_</a>);
     }
-    return join "&nbsp;&raquo&nbsp;", @rv;
+    return join "&nbsp&raquo&nbsp", @rv;
 }
 
 # Extensive use of the memoize() wrapper view probably necessitates adding

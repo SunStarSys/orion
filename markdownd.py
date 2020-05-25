@@ -17,6 +17,7 @@
 #           under the License.
 
 import socket,sys,os,markdown,select,signal
+from markdown.extensions.toc import TocExtension
 
 if "MARKDOWN_SOCKET" not in os.environ:
     print >>sys.stderr, "missing MARKDOWN_SOCKET environment variable"
@@ -35,7 +36,7 @@ os.chdir("/")
 os.setsid() 
 os.umask(0) 
 
-EXTENSIONS = ['tables', 'def_list', 'toc',
+EXTENSIONS = ['tables', 'def_list', TocExtension(permalink=True), 'attr_list',
              'codehilite', 'elementid', 'footnotes', 'abbr']
 
 # check markdown prereqs outside trapped exceptions
