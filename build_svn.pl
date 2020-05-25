@@ -160,9 +160,9 @@ sub flatten_and_uniquify {
         my %seen;
         undef @seen{$k, @{$deps->{$k}}};
         until ($s == @{$deps->{$k}}) {
-            if (exists $d{$deps->{$k}->[$s]}) {
-                push @{$deps->{$k}}, grep {! exists $seen{$_}} @{$d{$deps->{$k}->[$s]}};
-                undef @seen{@{$d{$deps->{$k}->[$s]}}};
+            if (defined(my $arr = $d{$deps->{$k}->[$s]})) {
+                push @{$deps->{$k}}, grep {! exists $seen{$_}} @$arr;
+                @seen{@$arr} = ();
             }
             $s++;
             die "way too many transitive dependencies (loop?)\n" if $s > 100_000;

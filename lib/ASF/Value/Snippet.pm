@@ -13,10 +13,10 @@ sub new {
 
     $args{branch} //= "HEAD";
     $args{type} //= $args{repo} ? "git" : "svn";
-
-    my $uri = $args{type} eq "svn" ? "http://svn.apache.org/repos/asf/$args{path}"
+    $args{repo} =~ s!^gitbox/!!;
+    my $uri = $args{type} eq "svn" ? "https://svn.apache.org/repos/asf/$args{path}"
         : $args{type} eq "git"
-        ? "http://git-wip-us.apache.org/repos/asf?p=$args{repo};a=blob_plain;f=$args{path};hb=$args{branch}"
+        ? "https://gitbox.apache.org/repos/asf?p=$args{repo};a=blob_plain;f=$args{path};hb=$args{branch}"
         : undef;
 
     if (exists $args{revision} and $args{type} eq "svn") {
