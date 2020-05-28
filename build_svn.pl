@@ -10,6 +10,7 @@
 use Getopt::Long;
 use File::Basename;
 use Cwd 'abs_path';
+use File::Path qw/rmtree/;
 
 my $script_path;
 BEGIN {
@@ -52,31 +53,33 @@ fork or (svn_up($target_base), exit 0) if is_version_controlled($target_base);
 my %modified = svn_up($source_base);
 my $status = 0;
 
+my $rm = \&rmtree;
+
 if (is_version_controlled($target_base)) {
     wait;
     $status = $?;
+    $rm = \&svm_rm;
+}
+my %seen;
+for my $del (@{$modified{delete}}) {
 
-    my %seen;
-    for my $del (@{$modified{delete}}) {
+    my ($filename, $dirname, $ext) = parse_filename $del;
 
-        my ($filename, $dirname, $ext) = parse_filename $del;
+    -e "$target_base/$del" && $rm->("$target_base/$del"), next
+        if ! defined $ext or -e "$target_base/$del" or $del !~ /^(?:content|cgi-bin)/;
 
-        -e "$target_base/$del" && svn_rm("$target_base/$del"), next
-            if ! defined $ext or -e "$target_base/$del" or $del !~ /^(?:content|cgi-bin)/;
+    local $_ = "$dirname$filename.*";
 
-        local $_ = "$dirname$filename.*";
-
-        my %candidates = map +($_ => 1), grep -f && ! $seen{$_}++, glob "$target_base/$_";
-        if (my $c = join "' '", map {s/'/'\\''/g;$_} glob) {
-            delete @candidates{
-                map /^Built to (.+)\.$/,
-                    `'$script_path/build_file.pl' --source-base '$source_base' --target-base '$target_base' '$c'`
+    my %candidates = map +($_ => 1), grep -f && ! $seen{$_}++, glob "$target_base/$_";
+    if (my $c = join "' '", map {s/'/'\\''/g;$_} glob) {
+        delete @candidates{
+            map /^Built to (.+)\.$/,
+                `'$script_path/build_file.pl' --source-base '$source_base' --target-base '$target_base' '$c'`
             };
-            die "Can't build_file.pl --source-base '$source_base' --target-base '$target_base' '$c': $?\n"
-                if $?;
-        }
-        svn_rm(keys %candidates);
+        die "Can't build_file.pl --source-base '$source_base' --target-base '$target_base' '$c': $?\n"
+            if $?;
     }
+    $rm->(keys %candidates);
 }
 
 my $built_site = 0;
@@ -172,6 +175,21 @@ sub flatten_and_uniquify {
     }
 }
 
+sub handle_extpaths {
+    my $extpaths_file = "$source_base/content/extpaths.txt";
+    -f $extpaths_file or return;
+    my $svn = SVN::Client->new;
+    my $SVN_URL = "https://svn.apache.org/repos/asf/infrastructure/websites/production";
+    my $repo_url;
+    open my $fh, "<", $extpaths_file or die "Can't open extpaths.txt: $!";
+    my @externals = map chomp, <$fh>;
+    my @old_externals = grep {-d "$target_base/content/$_"} @externals;
+    my @new_externals = grep {not -d "$target_base/content/$_"} @externals;
+    close $fh;
+    svn_up "$target_base/content/$_" for @old_externals;
+    chdir "$target_base/content";
+    system "svn", "checkout", "$repo_url/$_" for @new_externals;
+}
 =head1 LICENSE
 
            Licensed to the Apache Software Foundation (ASF) under one
