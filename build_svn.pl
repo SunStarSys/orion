@@ -20,8 +20,8 @@ BEGIN {
     unshift @INC, "$script_path/lib";
 }
 
-use ASF::Util 'parse_filename';
-use ASF::SVNUtil;
+use SunStarSys::Util 'parse_filename';
+use SunStarSys::SVNUtil;
 use strict;
 use warnings;
 

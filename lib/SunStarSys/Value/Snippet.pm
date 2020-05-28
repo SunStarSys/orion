@@ -1,7 +1,7 @@
-package ASF::Value::Snippet;
+package SunStarSys::Value::Snippet;
 use LWP::UserAgent;
 use URI;
-use ASF::Util qw/fixup_code/;
+use SunStarSys::Util qw/fixup_code/;
 use strict;
 use warnings;
 
@@ -38,7 +38,7 @@ sub new {
 my %cache;
 
 sub fetch {
-    return if $ASF::Value::Offline;
+    return if $SunStarSys::Value::Offline;
     my $self = shift;
 
     my $content = $cache{$self->{uri}} //= do {

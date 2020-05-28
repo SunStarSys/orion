@@ -1,4 +1,4 @@
-package ASF::Value::Jira;
+package SunStarSys::Value::Jira;
 use XML::RSS::Parser::Lite;
 use LWP::Simple;
 use CGI;
@@ -18,7 +18,7 @@ sub new {
 
 
 sub list {
-    return if $ASF::Value::Offline;
+    return if $SunStarSys::Value::Offline;
     my $self = shift;
     $jira{$self->{url}} ||= get($self->{url}) or
         die "get $self->{url} failed.\n";

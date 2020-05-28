@@ -1,4 +1,4 @@
-package ASF::Value::Twitter;
+package SunStarSys::Value::Twitter;
 use Net::Twitter;
 use strict;
 use warnings;
@@ -33,7 +33,7 @@ sub new {
 }
 
 sub list {
-    return if $ASF::Value::Offline;
+    return if $SunStarSys::Value::Offline;
     my $self = shift;
     my $nt = $self->{nt};
     die "Twitter Authz failed!" unless $nt->authorized;

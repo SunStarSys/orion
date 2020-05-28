@@ -1,4 +1,4 @@
-package ASF::SVNUtil;
+package SunStarSys::SVNUtil;
 
 # assumes svn 1.7+, but will mostly work with prior versions
 

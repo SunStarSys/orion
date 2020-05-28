@@ -24,7 +24,7 @@ BEGIN {
     unshift @INC, "$script_path/lib";
 }
 
-use ASF::SVNUtil;
+use SunStarSys::SVNUtil;
 use strict;
 use warnings;
 

@@ -1,4 +1,4 @@
-package ASF::Value::Mail;
+package SunStarSys::Value::Mail;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
 use URI;
@@ -25,7 +25,7 @@ sub new {
 }
 
 sub list {
-    return if $ASF::Value::Offline;
+    return if $SunStarSys::Value::Offline;
     my $self = shift;
     my $feed = eval { XML::Atom::Feed->new($self->{url}) };
     warn $@ and return if $@;

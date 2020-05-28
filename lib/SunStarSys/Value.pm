@@ -1,4 +1,4 @@
-package ASF::Value;
+package SunStarSys::Value;
 
 #
 # new() should quickly instantiate an object without doing much else,
@@ -7,12 +7,12 @@ package ASF::Value;
 # This package is a convenient way to pull in all the other Value packages.
 
 
-use ASF::Value::Jira;
-use ASF::Value::Mail;
-use ASF::Value::Blogs;
-use ASF::Value::Twitter;
-use ASF::Value::SVN;
-use ASF::Value::Snippet;
+use SunStarSys::Value::Jira;
+use SunStarSys::Value::Mail;
+use SunStarSys::Value::Blogs;
+use SunStarSys::Value::Twitter;
+use SunStarSys::Value::SVN;
+use SunStarSys::Value::Snippet;
 
 1;
 

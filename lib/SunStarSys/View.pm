@@ -1,4 +1,4 @@
-package ASF::View;
+package SunStarSys::View;
 
 # abstract base class for default view methods
 # see http://svn.apache.org/repos/asf/infrastructure/site/trunk/lib/view.pm for sample usage
@@ -22,7 +22,7 @@ use strict;
 use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
-use ASF::Util qw/read_text_file sort_tables parse_filename/;
+use SunStarSys::Util qw/read_text_file sort_tables parse_filename/;
 use Data::Dumper ();
 
 push our @TEMPLATE_DIRS, "templates";
@@ -141,7 +141,7 @@ sub fetch_deps {
                 read_text_file "content/$_", $data->{$file}, $quick == 1 ? 0 : undef;
             }
             else {
-                local $ASF::Value::Offline = 1 if $quick == 3;
+                local $SunStarSys::Value::Offline = 1 if $quick == 3;
                 my $s = view->can($method) or die "Can't locate method: $method\n";
                 my (undef, $ext, $vars) = $s->(path => $file, %$args);
                 $file = "$filename.$ext" eq "index.html" ? $dirname : "$dirname$filename.$ext";
@@ -230,7 +230,7 @@ sub next_view {
 # to service relevant content generation in dependencies, etc.
 
 sub offline {
-    local $ASF::Value::Offline = 1;
+    local $SunStarSys::Value::Offline = 1;
     my %args = @_;
     my $view = next_view \%args;
     return view->can($view)->(%args);
@@ -271,7 +271,7 @@ sub breadcrumbs {
         my $file = "content$args{path}";
         return @{$cache{$file}} if exists $cache{$file};
 
-        return view->can($view)->(%args) if $ASF::Value::Offline; # don't cache offline pages
+        return view->can($view)->(%args) if $SunStarSys::Value::Offline; # don't cache offline pages
 
         $cache{$file} = [ view->can($view)->(%args) ];
         return @{$cache{$file}};
@@ -290,8 +290,8 @@ sub snippet {
                        {
                            my $argspec = $1;
                            my %a = (%args, map {split /=/, $_, 2} split /:/, $argspec);
-                           require ASF::Value::Snippet; # see source for list of valid args
-                           $args{$key} = ASF::Value::Snippet->new(%a);
+                           require SunStarSys::Value::Snippet; # see source for list of valid args
+                           $args{$key} = SunStarSys::Value::Snippet->new(%a);
                            my $filter = exists $a{lang} ?  "markdown" : "safe";
                            my $rv = "{{ $key.fetch|$filter }}";
                            if (defined(my $header = $args{snippet_header})) {

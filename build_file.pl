@@ -7,7 +7,7 @@
 # --source-base=path  path to base of source tree
 #                     (either trunk or a branch)
 # --source=path       (relative to source-base) path to source file/dir
-# --offline           don't process "dynamic" content from ASF::Value::*
+# --offline           don't process "dynamic" content from SunStarSys::Value::*
 
 use File::Basename;
 use Cwd 'abs_path';
@@ -25,7 +25,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use File::Path;
-use ASF::Util qw/copy_if_newer parse_filename/;
+use SunStarSys::Util qw/copy_if_newer parse_filename/;
 use POSIX qw/_exit/;
 
 my ($target_base, $source_base, $source, $offline);
@@ -56,7 +56,7 @@ require view;
 
 {
     no warnings 'once';
-    $ASF::Value::Offline = 1 if $offline;
+    $SunStarSys::Value::Offline = 1 if $offline;
 }
 
 $|=1;

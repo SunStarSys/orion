@@ -6,7 +6,7 @@
 # --target-base=path  path to destination dir
 # --source-base=path  trunk or a branch
 # --runners=N         number of runners to use (default 8)
-# --offline           don't process "dynamic" content from ASF::Value::*
+# --offline           don't process "dynamic" content from SunStarSys::Value::*
 
 use File::Basename;
 use Cwd 'abs_path';
@@ -28,7 +28,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use File::Path;
-use ASF::Util qw/copy_if_newer parse_filename/;
+use SunStarSys::Util qw/copy_if_newer parse_filename/;
 use Data::Dumper ();
 
 my ($target_base, $source_base, $runners, $offline);
@@ -55,7 +55,7 @@ require view;
 
 {
     no warnings 'once';
-    $ASF::Value::Offline = 1 if $offline;
+    $SunStarSys::Value::Offline = 1 if $offline;
 }
 
 my @errors;

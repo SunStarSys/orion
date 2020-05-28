@@ -1,4 +1,4 @@
-package ASF::Util;
+package SunStarSys::Util;
 
 use base 'Exporter';
 use YAML::XS;

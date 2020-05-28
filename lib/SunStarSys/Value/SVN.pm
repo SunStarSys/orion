@@ -1,7 +1,7 @@
-package ASF::Value::SVN;
+package SunStarSys::Value::SVN;
 use SVN::Client;
 use CGI;
-use ASF::Util 'normalize_svn_path';
+use SunStarSys::Util 'normalize_svn_path';
 
 sub new {
     my $class = shift;
@@ -42,7 +42,7 @@ sub init {
 }
 
 sub list {
-    return if $ASF::Value::Offline;
+    return if $SunStarSys::Value::Offline;
     my $self = shift;
     $self->init;
     return $self->{data};

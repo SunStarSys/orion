@@ -1,4 +1,4 @@
-package ASF::Value::Blogs;
+package SunStarSys::Value::Blogs;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
 use URI;
@@ -17,7 +17,7 @@ sub new {
 }
 
 sub list {
-    return if $ASF::Value::Offline;
+    return if $SunStarSys::Value::Offline;
     my $self = shift;
     my $feed = XML::Atom::Feed->new($self->{url});
     # Try to fix the following error building site:
