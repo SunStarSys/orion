@@ -1,4 +1,4 @@
-andle#!/usr/local/bin/perl
+#!/usr/local/bin/perl
 #
 # build changes from svn 1.7+ tree
 #
@@ -10,7 +10,7 @@ andle#!/usr/local/bin/perl
 use Getopt::Long;
 use File::Basename;
 use Cwd 'abs_path';
-use File::Path qw/rmtree/;
+use File::Path qw/rmtree mkpath/;
 
 my $script_path;
 BEGIN {
@@ -183,7 +183,7 @@ sub handle_extpaths {
     my $extpaths_file = "$source_base/content/extpaths.txt";
     -f $extpaths_file or return;
     my $svn = SVN::Client->new;
-    my $project = dirname $target_base;
+    my $project = basename $target_base;
     my $SVN_URL = "https://svn.apache.org/repos/infra/websites/production/$project/content";
     my $repo_url;
     open my $fh, "<", $extpaths_file or die "Can't open extpaths.txt: $!";
@@ -193,7 +193,7 @@ sub handle_extpaths {
     close $fh;
     svn_up "$target_base/content/$_" for @old_externals;
     chdir "$target_base/content";
-    system "mkdir -p \$(dirname $_) && cd \$(dirname $_) && svn checkout $SVN_URL/$_ &" for @new_externals;
+    mkpath dirname $_ and chdir dirname $_ and system "svn checkout $SVN_URL/$_ &" for @new_externals;
 }
 
 =head1 LICENSE
