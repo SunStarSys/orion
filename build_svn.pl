@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+andle#!/usr/local/bin/perl
 #
 # build changes from svn 1.7+ tree
 #
@@ -25,6 +25,9 @@ use ASF::SVNUtil;
 use strict;
 use warnings;
 
+sub flatten_and_uniquify;
+sub handle_extpaths;
+
 umask 022;
 
 $|=1;
@@ -42,7 +45,7 @@ die <<USAGE unless defined $target_base and -d $source_base;
 Usage: $0 --source-base /path/to/trunk/or/a/branch --target-base /path/to/target [--runners=N]
 USAGE
 
-$_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
+$_ = abs_path $_ and s!/+$!! for $source_base, $target_base;
 $runners ||= 8; # educated guess
 
 die "Path contains '-char!\n" if grep /'/, $source_base, $target_base, $script_path;
@@ -104,7 +107,7 @@ unless ($built_site) {
     no warnings 'once';
     my %deps = %path::dependencies;
     $_ = [@$_] for values %deps;
-    flatten_and_uniquify(\%deps); # converts %deps values to hashrefs as well
+    flatten_and_uniquify \%deps; # converts %deps values to hashrefs as well
 
     my %seen;
     for my $file (grep -f && /^content|^cgi-bin/, @{$modified{update}}, @{$modified{add}}) {
@@ -129,7 +132,7 @@ unless ($built_site) {
         }
     }
     my $accel = "";
-    $accel = "-P $runners" if $^O =~ /freebsd|linux/i; # xargs parallelization
+    $accel = "-P $runners" if $^O =~ /freebsd|linux|solaris/i; # xargs parallelization
     open my $builder, "| xargs -0 $accel -n $runners '$script_path/build_file.pl' "
         . "--source-base '$source_base' --target-base '$target_base'"
             or die "Can't popen xargs -0 $accel -n $runners $script_path/build_file.pl ...: $?";
@@ -150,6 +153,7 @@ if (is_version_controlled($target_base) and not $status) {
     warn "$_ is conflicted!\n" for @{$status{conflicted}};
 }
 
+handle_extpaths;
 exit $status;
 
 # now supports loops in the dependency graph
@@ -179,7 +183,8 @@ sub handle_extpaths {
     my $extpaths_file = "$source_base/content/extpaths.txt";
     -f $extpaths_file or return;
     my $svn = SVN::Client->new;
-    my $SVN_URL = "https://svn.apache.org/repos/asf/infrastructure/websites/production";
+    my $project = dirname $target_base;
+    my $SVN_URL = "https://svn.apache.org/repos/infra/websites/production/$project/content";
     my $repo_url;
     open my $fh, "<", $extpaths_file or die "Can't open extpaths.txt: $!";
     my @externals = map chomp, <$fh>;
@@ -188,8 +193,9 @@ sub handle_extpaths {
     close $fh;
     svn_up "$target_base/content/$_" for @old_externals;
     chdir "$target_base/content";
-    system "svn", "checkout", "$repo_url/$_" for @new_externals;
+    system "mkdir -p \$(dirname $_) && cd \$(dirname $_) && svn checkout $SVN_URL/$_ &" for @new_externals;
 }
+
 =head1 LICENSE
 
            Licensed to the Apache Software Foundation (ASF) under one
