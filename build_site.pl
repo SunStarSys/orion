@@ -30,6 +30,7 @@ use Getopt::Long;
 use File::Path;
 use SunStarSys::Util qw/copy_if_newer parse_filename/;
 use Data::Dumper ();
+use ASF::Compat;
 
 my ($target_base, $source_base, $runners, $offline);
 

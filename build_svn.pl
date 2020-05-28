@@ -24,7 +24,7 @@ use SunStarSys::Util 'parse_filename';
 use SunStarSys::SVNUtil;
 use strict;
 use warnings;
-
+use ASF::Compat;
 sub flatten_and_uniquify;
 sub handle_extpaths;
 

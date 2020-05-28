@@ -27,6 +27,7 @@ use Getopt::Long;
 use File::Path;
 use SunStarSys::Util qw/copy_if_newer parse_filename/;
 use POSIX qw/_exit/;
+use ASF::Compat;
 
 my ($target_base, $source_base, $source, $offline);
 
