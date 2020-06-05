@@ -15,8 +15,6 @@ const MARKDOWN_SOCKET       = process.env.MARKDOWN_SOCKET || "/x1/cms/run/markdo
 const fs                    = require('fs');
 const net                   = require('net');
 
-global.jQuery               = require('jquery');
-
 require.extensions['.css']  = function (module, filename) {
     module.exports = fs.readFileSync(filename, 'utf8');
 };
@@ -31,6 +29,7 @@ require.extensions['.html'] = function (module, filename) {
 const HTML = `<html><body><div id="editor"><textarea></textarea></div></body></html>`;
 const { JSDOM }             = require('jsdom');
 
+global.jQuery               = require('jquery');
 global.navigator            = require('navigator');
 global.marked               = require(EDITOR_MD + "/lib/marked.min.js");
 
