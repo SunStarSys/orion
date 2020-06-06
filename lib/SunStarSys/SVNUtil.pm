@@ -8,12 +8,30 @@ use strict;
 use warnings;
 use base 'Exporter';
 
-our @EXPORT = qw/svn_up svn_status svn_add svn_rm svn_ps is_version_controlled/;
+our @EXPORT = qw/svn_up svn_status svn_add svn_rm svn_ps is_version_controlled *USERNAME *PASSWORD/;
 our $VERSION = "1.0";
+our ($USERNAME, $PASSWORD) = (svn => undef);
+
+sub auth {
+    my $user = $USERNAME;
+    my $pw   = $PASSWORD;
+    my $authcb = sub {
+        my $cred = shift;
+        $cred->username($user);
+        $cred->password($password);
+        $cred->may_save(0);
+    };
+    return [
+        SVN::Client::get_ssl_server_trust_file_provider(),
+        SVN::Client::get_simple_prompt_provider($authcb, 1),
+        ];
+}
+
+sub new { return SVN::Client->new( auth => auth ) }
 
 sub svn_up {
+    my $ctx = shift->new;
     my $svn_base = shift;
-    my $ctx = SVN::Client->new;
     my (@add, @delete, @restore, @update);
     my %dispatch = (
         $SVN::Wc::Notify::Action::add           => \@add,
@@ -23,7 +41,7 @@ sub svn_up {
         $SVN::Wc::Notify::Action::update_update => \@update,
     );
 
-    $ctx->notify( sub {
+    $ctx->notify(sub {
         my ($path, $action) = @_;
         $path =~ s!^\Q$svn_base/!!;
         push @{$dispatch{$action}}, $path if exists $dispatch{$action};
@@ -65,17 +83,17 @@ sub svn_status {
 }
 
 sub svn_add {
-    my $ctx = SVN::Client->new;
+    my $ctx = shift->new;
     print "Adding $_.\n" and $ctx->add($_, 1) for @_;
 }
 
 sub svn_rm {
-    my $ctx = SVN::Client->new;
+    my $ctx = shift->new;
     print "Removing $_.\n" and $ctx->delete($_, 1) for @_;
 }
 
 sub svn_ps {
-    my $ctx = SVN::Client->new;
+    my $ctx = shift->new;
     my ($target, $propname, $propval) = @_;
     print "Setting '$propname' on $target.\n"
         and $ctx->propset($propname, $propval, $target, 0);

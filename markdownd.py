@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/local/bin/python3
 #           Licensed to the Apache Software Foundation (ASF) under one
 #           or more contributor license agreements.  See the NOTICE file
 #           distributed with this work for additional information
@@ -24,17 +24,17 @@ if "MARKDOWN_SOCKET" not in os.environ:
     sys.exit(1)
 path = os.environ["MARKDOWN_SOCKET"]
 
-try: 
-    pid = os.fork() 
+try:
+    pid = os.fork()
     if pid > 0:
-        sys.exit(0) 
-except OSError, e: 
-    print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror) 
+        sys.exit(0)
+except OSError, e:
+    print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror)
     sys.exit(1)
 
-os.chdir("/") 
-os.setsid() 
-os.umask(0) 
+os.chdir("/")
+os.setsid()
+os.umask(0)
 
 EXTENSIONS = ['tables', 'def_list', TocExtension(permalink=True), 'attr_list',
              'codehilite', 'elementid', 'footnotes', 'abbr']
@@ -61,7 +61,7 @@ data = {}
 def reap(signum, frame):
     cpid, cstatus = os.wait()
     return
-    
+
 signal.signal(signal.SIGCHLD, reap)
 signal.siginterrupt(signal.SIGCHLD, False)
 
@@ -76,7 +76,7 @@ while 1:
                 break
             except:
                 pass
-                
+
         for r in can_read:
             if r == s:
                 conn, addr = s.accept()
@@ -85,7 +85,7 @@ while 1:
                 newdata = ''
                 while 1:
                     try:
-                        newdata = r.recv(8192)
+                        newdata = r.recv(65536)
                         break
                     except:
                         pass
@@ -113,7 +113,7 @@ while 1:
                             forked = 2
                     except:
                         pass
-                    
+
                 if forked != 1:
                     try:
                         data[w] = markdown.markdown(unicode(data[w], "utf-8"),
@@ -121,7 +121,7 @@ while 1:
                         w.sendall(data[w].encode("utf-8"))
                     except:
                         pass
-                        
+
                 if forked == 2:
                     os._exit(0)
 

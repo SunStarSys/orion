@@ -4,11 +4,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.2
 ####################
-#This file is an addon to the Dotiac::DTL project. 
+#This file is an addon to the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#unparsed.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#unparsed.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -58,11 +58,11 @@ sub markdown {
             Type    => SOCK_STREAM,
             Timeout => 30,
         ) or die "Can't open markdown socket: $!";
-
         print $sock $val->repr();
         shutdown $sock, 1;
         my $html = "";
         1 while sysread $sock, $html, 65536, length $html;
+
         return Dotiac::DTL::Value->safe($html);
 }
 sub textile {
@@ -182,7 +182,7 @@ This will render to:
 
 	<p><a href="http://www.textism.com/tools/textile">More information</a> is available.</p>
 
-	
+
 Example from L<Text::Textile>.
 
 =head3 markdown
@@ -210,7 +210,7 @@ It will always return a safe string.
 	### Header 3
 
 	> This is a blockquote.
-	> 
+	>
 	> This is the second paragraph in the blockquote.
 	>
 	> ## This is an H2 in a blockquote
@@ -244,7 +244,7 @@ This will render to:
 
 	    <h2>This is an H2 in a blockquote</h2>
 	</blockquote>
-	
+
 Example from L<http://daringfireball.net/projects/markdown/basics>
 
 =head3 restructuredtext
@@ -260,16 +260,16 @@ It will always return a safe string.
 	Title
 	=====
 	Subtitle
-	-------- 
+	--------
 
 	Titles are underlined (or over-
 	and underlined) with a printing
 	nonalphanumeric 7-bit ASCII
 	character.
-	
+
 	- This is item 1
-	- This is item 2 
-	
+	- This is item 2
+
 	EOR
 
 	text=>$text;
@@ -286,13 +286,13 @@ This will render to:
           and underlined) with a printing
           nonalphanumeric 7-bit ASCII
           character.</p>
-	
+
 
 	<ul>
           <li>This is item 1
           </li><li>This is item 2
           </li></ul>
-	
+
 Example from L<http://docutils.sourceforge.net/docs/user/rst/quickref.html>
 
 =head1 BUGS
