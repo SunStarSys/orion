@@ -54,7 +54,7 @@ sub unimport {
 sub markdown {
         my $val=shift;
         my $sock = IO::Socket::UNIX->new(
-            Peer    => $ENV{MARKDOWN_SOCKET},
+            Peer    => $ENV{MARKDOWN_SOCKET} || "/x1/cms/run/markdown-socket",
             Type    => SOCK_STREAM,
             Timeout => 30,
         ) or die "Can't open markdown socket: $!";
