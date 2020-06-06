@@ -6,7 +6,7 @@
  * jQuery is thread-safe if you ask it nicely (key here is jsdom).
  * this runs forever, so daemonize it if needed.
  *
- * Prerequisites: jsdom, navigator, and jquery.
+ * NPM Prerequisites: jsdom, navigator, and jquery.
  * Env Vars: EDITOR_MD, MARKDOWN_SOCKET.
  * Example:
  *
