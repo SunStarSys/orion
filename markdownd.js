@@ -6,6 +6,12 @@
  * jQuery is thread-safe if you ask it nicely (key here is jsdom).
  * this runs forever, so daemonize it if needed.
  *
+ * Prerequisites: jsdom, navigator, and jquery.
+ * Env Vars: EDITOR_MD, MARKDOWN_SOCKET.
+ * Example:
+ *
+ * % EDITOR_MD=editor.md MARKDOWN_SOCKET=markdown-socket ./markdownd.js &
+ *
  * SPDX License Identifier: Apache License 2.0
  */
 
