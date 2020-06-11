@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/local/bin/node
 
 /*
  * markdownd.js: Unix socket daemon responding to markdown inputs with html outputs.
@@ -17,7 +17,6 @@
 
 const EDITOR_MD             = process.env.EDITOR_MD       || "/x1/cms/webgui/content/editor.md";
 const MARKDOWN_SOCKET       = process.env.MARKDOWN_SOCKET || "/x1/cms/run/markdown-socket";
-
 const fs                    = require('fs');
 const net                   = require('net');
 
@@ -32,18 +31,34 @@ require.extensions['.html'] = function (module, filename) {
     module.exports = fs.readFileSync(filename, 'utf8');
 };
 
-const HTML = `<html><body><div id="editor"><textarea></textarea></div></body></html>`;
-const { JSDOM }             = require('jsdom');
-
-global.jQuery               = require('jquery');
-global.navigator            = require('navigator');
-global.marked               = require(EDITOR_MD + "/lib/marked.min.js");
-
-const emd                   = require(EDITOR_MD + "/editormd.js");
+global.IN_GLOBAL_SCOPE  = false;
+global.navigator        = require("navigator");
+global.jQuery           = require("jquery");
+const { JSDOM }         = require('jsdom');
+const EMD               = require(EDITOR_MD + "/editormd.js");
+global.marked           = require(EDITOR_MD + "/lib/marked.min.js");
+global.CodeMirror       = require(EDITOR_MD + "/lib/codemirror/codemirror.min.js");
+global.solarizedTheme   = require(EDITOR_MD + "/lib/codemirror/theme/solarized.css");
+global.CodeMirrorAddOns = require(EDITOR_MD + "/lib/codemirror/addons.min.js");
+global.CodeMirrorModes  = require(EDITOR_MD + "/lib/codemirror/modes.min.js");
+global.jQuery_flowchart = require(EDITOR_MD + "/lib/jquery.flowchart.min.js");
+global.prettify         = require(EDITOR_MD + "/lib/prettify.min.js");
+global.katex            = require(EDITOR_MD + "/lib/katex.min.js");
 
 if (fs.existsSync(MARKDOWN_SOCKET)) {
     fs.unlinkSync(MARKDOWN_SOCKET);
 }
+
+const HTML =`<!doctype html>
+<html>
+<head><style type="text/css">
+``` +  solarizedTheme
++ ```</style></head>
+<body><div id="editor"><textarea></textarea></div></body>
+</html>
+`;
+
+
 
 const server = net.createServer(
     { allowHalfOpen: true },
@@ -55,13 +70,41 @@ const server = net.createServer(
         });
 
         c.on('end', () => {
-            const e = new emd(new JSDOM(HTML).window);
-            const div = e.markdownToHTML("editor", {
-                markdown: markdown,
-                previewCodeHighlight: false,
-            });
-            c.end(div.html());
-        });
+	    var jsdom = new JSDOM(HTML, {
+		pretendToBeVisual: true,
+	    });
+            var editormd = EMD(jsdom.window);
+	    const options = {
+		autoLoadModules: false,
+		readOnly: true,
+		markdown: markdown,
+		tocm : true,
+		tex : true,
+		theme: "solarized",
+		editorTheme: "solarized",
+		previewTheme: "solarized",
+		filterHTML: false,
+		lineWrapping: false,
+		lineNumbers: false,
+		searchReplace : false,
+		toolbar: false,
+		flowChart : true,
+//		sequenceDiagram : true,
+		htmlDecode : false, //"style,script,iframe|on*",
+		taskList: true,
+	    };
+
+	    if (markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
+		var editor = editormd("editor", options, editormd);
+		c.end(editor.getPreviewedHTML());
+	    }
+	    else {
+		options.tex = false;
+		options.flowChart = false;
+		var div = editormd.markdownToHTML("editor", options);
+		c.end(div.html());
+	    }
+	});
     });
 
 server.on('error', (err) => {

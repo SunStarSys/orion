@@ -35,23 +35,19 @@
 	}
 
 }(function(w) {
-
     /* Require.js assignment replace */
     "use strict";
+    var $ = w ? jQuery(w, 1) : jQuery;
+    w = w || window;
+    var document = w.document;
 
-    var $;
-    if (w) {
-        $ = jQuery(w, 1);
-    } else {
-        $ = jQuery;
-        w = window;
-    }
+    if (typeof (jQuery_flowchart) != "undefined") {
+	jQuery_flowchart($);
+    }    
 
     if (typeof ($) === "undefined") {
 	return ;
     }
-    let window = w;
-    let document = window.document;
     /**
      * editormd
      *
@@ -60,12 +56,12 @@
      * @returns {Object} editormd     返回editormd对象
      */
 
-    var editormd         = function (id, options) {
-        return new editormd.fn.init(id, options);
+    var editormd         = function (id, options, emd) {
+        return new editormd.fn.init(id, options, emd);
     };
 
     editormd.title        = editormd.$name = "Editor.md";
-    editormd.version      = "1.5.0";
+    editormd.version      = "1.5.0.1";
     editormd.homePage     = "https://pandao.github.io/editor.md/";
     editormd.classPrefix  = "editormd-";
 
@@ -114,7 +110,7 @@
         gotoLine             : true,
         codeFold             : false,
         autoHeight           : false,
-		autoFocus            : true,
+	autoFocus            : true,
         autoCloseTags        : true,
         searchReplace        : true,
         syncScrolling        : true,           // true | false | "single", default true
@@ -339,8 +335,8 @@
     editormd.$katex       = null;
     editormd.$marked      = null;
     editormd.$CodeMirror  = null;
-    editormd.$prettyPrint = null;
-
+    editormd.$prettify    = null;
+    editormd.window       = w;
     var timer, flowchartTimer;
 
     editormd.prototype    = editormd.fn = {
@@ -360,11 +356,11 @@
          * @returns {editormd}               返回editormd的实例对象
          */
 
-        init : function (id, options) {
-
+        init : function (id, options, emd) {
             options              = options || {};
+//	    var editormd = typeof emd === "undefined" ? editormd : emd;
 
-            if (typeof id === "object")
+	    if (typeof id === "object")
             {
                 options = id;
             }
@@ -469,19 +465,40 @@
                     editormd.loadCSS(settings.path + "codemirror/addon/dialog/dialog");
                     editormd.loadCSS(settings.path + "codemirror/addon/search/matchesonscrollbar");
                 }
-            }
+	    }
 
-            if ((typeof define === "function" && define.amd) || !settings.autoLoadModules)
+	    this.editormd = editormd;
+	    
+            if (!settings.autoLoadModules)
             {
                 if (typeof CodeMirror !== "undefined") {
-                    editormd.$CodeMirror = CodeMirror;
+                    editormd.$CodeMirror = CodeMirror(w);
+		    CodeMirrorModes(editormd.$CodeMirror, document);
+		    CodeMirrorAddOns(editormd.$CodeMirror, document);
                 }
-
+		else {
+		    abort();
+		}
                 if (typeof marked     !== "undefined") {
                     editormd.$marked     = marked;
                 }
-                this.setCodeMirror().setToolbar().loadedDisplay();
-            }
+		else {
+		    abort();
+		}
+		if (typeof prettify   !== "undefined") {
+		    editormd.$prettify = prettify(editormd.window);
+		}
+		else {
+		    abort();
+		}
+		if (typeof katex      !== "undefined") {
+		    editormd.$katex = katex;
+		}		
+		else {
+		    abort();
+		}
+		this.setCodeMirror().setToolbar().loadedDisplay();
+	    }
             else
             {
                 this.loadQueues();
@@ -501,7 +518,9 @@
             var _this        = this;
             var settings     = this.settings;
             var loadPath     = settings.path;
-
+	    if (!settings.autoLoadModules) {
+		return;
+	    }
             var loadFlowChartOrSequenceDiagram = function() {
 
                 if (editormd.isIE8)
@@ -511,101 +530,99 @@
                     return ;
                 }
 
-                if (settings.flowChart || settings.sequenceDiagram)
+                if(settings.flowChart || settings.sequenceDiagram)
                 {
-                    editormd.loadScript(loadPath + "raphael.min", function() {
-
+		    editormd.loadScript(loadPath + "raphael.min", function() {
+			
                         editormd.loadScript(loadPath + "underscore.min", function() {
-
-                            if (!settings.flowChart && settings.sequenceDiagram)
-                            {
+			    
+			    if (!settings.flowChart && settings.sequenceDiagram)
+			    {
                                 editormd.loadScript(loadPath + "sequence-diagram.min", function() {
-                                    _this.loadedDisplay();
+				    _this.loadedDisplay();
                                 });
-                            }
-                            else if (settings.flowChart && !settings.sequenceDiagram)
-                            {
+			    }
+			    else if (settings.flowChart && !settings.sequenceDiagram)
+			    {
                                 editormd.loadScript(loadPath + "flowchart.min", function() {
-                                    editormd.loadScript(loadPath + "jquery.flowchart.min", function() {
+				    editormd.loadScript(loadPath + "jquery.flowchart.min", function() {
                                         _this.loadedDisplay();
-                                    });
+				    });
                                 });
-                            }
-                            else if (settings.flowChart && settings.sequenceDiagram)
-                            {
+			    }
+			    else if (settings.flowChart && settings.sequenceDiagram)
+			    {
                                 editormd.loadScript(loadPath + "flowchart.min", function() {
-                                    editormd.loadScript(loadPath + "jquery.flowchart.min", function() {
+				    editormd.loadScript(loadPath + "jquery.flowchart.min", function() {
                                         editormd.loadScript(loadPath + "sequence-diagram.min", function() {
-                                            _this.loadedDisplay();
+					    _this.loadedDisplay();
                                         });
-                                    });
+				    });
                                 });
-                            }
+			    }
                         });
-
-                    });
-                }
-                else
+		    });
+		}				   
+		else
                 {
-                    _this.loadedDisplay();
+		    _this.loadedDisplay();
                 }
-            };
+	    };
+	    editormd.loadCSS(loadPath + "codemirror/codemirror.min");
 
-            editormd.loadCSS(loadPath + "codemirror/codemirror.min");
+	    if (settings.searchReplace && !settings.readOnly)
+	    {
+		editormd.loadCSS(loadPath + "codemirror/addon/dialog/dialog");
+		editormd.loadCSS(loadPath + "codemirror/addon/search/matchesonscrollbar");
+	    }
+	    
+	    if (settings.codeFold)
+	    {
+		editormd.loadCSS(loadPath + "codemirror/addon/fold/foldgutter");
+	    }
+	    
+	    editormd.loadScript(loadPath + "codemirror/codemirror.min", function() {
+		editormd.$CodeMirror = CodeMirror;
+		
+		editormd.loadScript(loadPath + "codemirror/modes.min", function() {
 
-            if (settings.searchReplace && !settings.readOnly)
-            {
-                editormd.loadCSS(loadPath + "codemirror/addon/dialog/dialog");
-                editormd.loadCSS(loadPath + "codemirror/addon/search/matchesonscrollbar");
-            }
+		    editormd.loadScript(loadPath + "codemirror/addons.min", function() {
+				
+			_this.setCodeMirror();
+			_this.setToolbar();
 
-            if (settings.codeFold)
-            {
-                editormd.loadCSS(loadPath + "codemirror/addon/fold/foldgutter");
-            }
+			if (settings.mode !== "gfm" && settings.mode !== "markdown")
+			{
+			    _this.loadedDisplay();
 
-            editormd.loadScript(loadPath + "codemirror/codemirror.min", function() {
-                editormd.$CodeMirror = CodeMirror;
+			    return false;
+			}
 
-                editormd.loadScript(loadPath + "codemirror/modes.min", function() {
 
-                    editormd.loadScript(loadPath + "codemirror/addons.min", function() {
+			editormd.loadScript(loadPath + "marked.min", function() {
+			    
+			    editormd.$marked = marked;
+				    
+			    if (settings.previewCodeHighlight)
+			    {
+				editormd.loadScript(loadPath + "prettify.min", function() {
+				    editormd.$prettify = prettyPrint;
+				    loadFlowChartOrSequenceDiagram();
+				});
+			    }
+			    else
+			    {
+				loadFlowChartOrSequenceDiagram();
+			    }
+			});
 
-                        _this.setCodeMirror();
+		    });
+			    
+		});
+	    });
 
-                        if (settings.mode !== "gfm" && settings.mode !== "markdown")
-                        {
-                            _this.loadedDisplay();
-
-                            return false;
-                        }
-
-                        _this.setToolbar();
-
-                        editormd.loadScript(loadPath + "marked.min", function() {
-
-                            editormd.$marked = marked;
-
-                            if (settings.previewCodeHighlight)
-                            {
-                                editormd.loadScript(loadPath + "prettify.min", function() {
-                                    loadFlowChartOrSequenceDiagram();
-                                });
-                            }
-                            else
-                            {
-                                loadFlowChartOrSequenceDiagram();
-                            }
-                        });
-
-                    });
-
-                });
-
-            });
-
-            return this;
-        },
+	    return this;
+	},
 
         /**
          * 设置 Editor.md 的整体主题，主要是工具栏
@@ -639,8 +656,10 @@
 
             if (theme !== "default")
             {
-                editormd.loadCSS(settings.path + "codemirror/theme/" + settings.editorTheme);
-            }
+		if (settings.autoLoadModules) {
+                    editormd.loadCSS(settings.path + "codemirror/theme/" + settings.editorTheme);
+		}
+	    }
 
             this.cm.setOption("theme", theme);
 
@@ -722,7 +741,7 @@
                 highlightSelectionMatches : ( (!settings.matchWordHighlight) ? false : { showToken: (settings.matchWordHighlight === "onselected") ? false : /\w/ } )
             };
 
-            this.codeEditor = this.cm        = editormd.$CodeMirror.fromTextArea(this.markdownTextarea[0], codeMirrorConfig);
+            this.codeEditor = this.cm        = this.editormd.$CodeMirror.fromTextArea(this.markdownTextarea[0], codeMirrorConfig);
             this.codeMirror = this.cmElement = editor.children(".CodeMirror");
 
             if (settings.value !== "")
@@ -1068,7 +1087,7 @@
             }
 
             var autoFixedHandle = function(){
-                var $window = $(window);
+                var $window = $(editormd.window);
                 var top     = $window.scrollTop();
 
                 if (!settings.toolbarAutoFixed)
@@ -1096,7 +1115,7 @@
 
             if (!state.fullscreen && !state.preview && settings.toolbar && settings.toolbarAutoFixed)
             {
-                $(window).bind("scroll", autoFixedHandle);
+                $(editormd.window).bind("scroll", autoFixedHandle);
             }
 
             return this;
@@ -1353,14 +1372,14 @@
 
 			var _infoDialogPosition = function() {
 				infoDialog.css({
-					top  : ($(window).height() - infoDialog.height()) / 2 + "px",
-					left : ($(window).width()  - infoDialog.width()) / 2  + "px"
+					top  : ($(editormd.window).height() - infoDialog.height()) / 2 + "px",
+					left : ($(editormd.window).width()  - infoDialog.width()) / 2  + "px"
 				});
 			};
 
 			_infoDialogPosition();
 
-			$(window).resize(_infoDialogPosition);
+			$(editormd.window).resize(_infoDialogPosition);
 
             return this;
         },
@@ -1479,11 +1498,7 @@
             if (settings.previewCodeHighlight)
             {
                 previewContainer.find("pre").addClass("prettyprint linenums");
-
-                if (typeof prettyPrint !== "undefined")
-                {
-                    prettyPrint();
-                }
+		this.editormd.$prettify();
             }
 
             return this;
@@ -1505,7 +1520,7 @@
 
             this.previewContainer.find("." + editormd.classNames.tex).each(function(){
                 var tex  = $(this);
-                editormd.$katex.render(tex.text(), tex[0]);
+                this.editormd.$katex.render(tex.text(), tex[0]);
 
                 tex.find(".katex").css("font-size", "1.6em");
             });
@@ -1524,7 +1539,8 @@
             var $this            = this;
             var settings         = this.settings;
             var previewContainer = this.previewContainer;
-
+	    var editormd         = this.editormd;
+	    
             if (editormd.isIE8) {
                 return this;
             }
@@ -1620,7 +1636,7 @@
                     }
                 }
 
-                $(window).keydown(function(event) {
+                $(editormd.window).keydown(function(event) {
 
                     var keymaps = {
                         "120" : "F9",
@@ -1819,7 +1835,7 @@
             this.resize();
             this.registerKeyMaps();
 
-            $(window).resize(function(){
+            $(editormd.window).resize(function(){
                 _this.resize();
             });
 
@@ -1907,7 +1923,7 @@
 
                 if (state.fullscreen)
                 {
-                    editor.height($(window).height());
+                    editor.height($(editormd.window).height());
                 }
 
                 if (settings.toolbar && !settings.readOnly)
@@ -1915,6 +1931,7 @@
                     codeMirror.css("margin-top", toolbar.height() + 1).height(editor.height() - toolbar.height());
                 }
                 else
+
                 {
                     codeMirror.css("margin-top", 0).height(editor.height());
                 }
@@ -1932,6 +1949,7 @@
                     preview.css("top", toolbar.height() + 1);
                 }
                 else
+
                 {
                     preview.css("top", 0);
                 }
@@ -1946,6 +1964,7 @@
 
                     preview.height(previewHeight);
                 }
+
             }
             else
             {
@@ -1989,7 +2008,7 @@
 
                 return this;
             }
-
+	    var editormd        = this.editormd;
             var marked          = editormd.$marked;
             var markdownToC     = this.markdownToC = [];
             var rendererOptions = this.markedRendererOptions = {
@@ -2020,7 +2039,7 @@
 
             marked.setOptions(markedOptions);
 
-            var newMarkdownDoc = editormd.$marked(cmValue, markedOptions);
+            var newMarkdownDoc = marked(cmValue, markedOptions);
 
             //console.info("cmValue", cmValue, newMarkdownDoc);
 
@@ -2538,11 +2557,11 @@
                     $.proxy(settings.onpreviewing, this)();
                 }
 
-                $(window).bind("keyup", escHandle);
+                $(editormd.window).bind("keyup", escHandle);
             }
             else
             {
-                $(window).unbind("keyup", escHandle);
+                $(editormd.window).unbind("keyup", escHandle);
                 this.previewed();
             }
         },
@@ -2636,19 +2655,19 @@
                 $("html,body").css("overflow", "hidden");
 
                 editor.css({
-                    width    : $(window).width(),
-                    height   : $(window).height()
+                    width    : $(editormd.window).width(),
+                    height   : $(editormd.window).height()
                 }).addClass(fullscreenClass);
 
                 this.resize();
 
                 $.proxy(settings.onfullscreen, this)();
 
-                $(window).bind("keyup", escHandle);
+                $(editormd.window).bind("keyup", escHandle);
             }
             else
             {
-                $(window).unbind("keyup", escHandle);
+                $(editormd.window).unbind("keyup", escHandle);
                 this.fullscreenExit();
             }
 
@@ -2805,8 +2824,8 @@
         var settings = this.settings || {dialogShowMask : true};
 
         dialog.css({
-            top  : ($(window).height() - dialog.height()) / 2 + "px",
-            left : ($(window).width()  - dialog.width())  / 2 + "px"
+            top  : ($(editormd.window).height() - dialog.height()) / 2 + "px",
+            left : ($(editormd.window).width()  - dialog.width())  / 2 + "px"
         });
 
         if (settings.dialogShowMask) {
@@ -3404,7 +3423,7 @@
         };
 
         var settings        = $.extend(defaults, options || {});
-        var marked          = editormd.$marked;
+        //var marked          = editormd.$marked;
         var markedRenderer  = new marked.Renderer();
         markdownToC         = markdownToC || [];
 
@@ -3921,8 +3940,6 @@
             previewCodeHighlight : true
         };
 
-        editormd.$marked  = marked;
-
         var div           = $("#" + id);
         var settings      = div.settings = $.extend(true, defaults, options || {});
         var saveTo        = div.find("textarea");
@@ -3951,18 +3968,18 @@
             previewCodeHighlight : settings.previewCodeHighlight,
         };
 
-        var markedOptions = {
-            renderer    : editormd.markedRenderer(markdownToC, rendererOptions),
-            gfm         : settings.gfm,
-            tables      : true,
-            breaks      : true,
-            pedantic    : false,
-            sanitize    : (settings.htmlDecode) ? false : true, // 是否忽略HTML标签，即是否开启HTML标签解析，为了安全性，默认不开启
-            smartLists  : true,
-            smartypants : true
+	var markedOptions = {
+	    renderer    : editormd.markedRenderer(markdownToC, rendererOptions),
+	    gfm         : settings.gfm,
+	    tables      : true,
+	    breaks      : true,
+	    pedantic    : false,
+	    sanitize    : (settings.htmlDecode) ? false : true, // 是否忽略HTML标签，即是否开启HTML标签解析，为了安全性，默认不开启
+	    smartLists  : true,
+	    smartypants : true
         };
 
-		markdownDoc = new String(markdownDoc);
+	markdownDoc = new String(markdownDoc);
 
         var markdownParsed = marked(markdownDoc, markedOptions);
 
@@ -3997,22 +4014,20 @@
                 div.find(".editormd-toc-menu, .editormd-markdown-toc").remove();
             }
         }
-
-        if (settings.previewCodeHighlight)
-        {
-            div.find("pre").addClass("prettyprint linenums");
-            prettyPrint();
-        }
-
+	
         if (!editormd.isIE8)
         {
             if (settings.flowChart) {
-                div.find(".flowchart").flowChart();
-            }
-
+		div.find(".flowchart").flowChart();
+	    }
+	    
             if (settings.sequenceDiagram) {
-                div.find(".sequence-diagram").sequenceDiagram({theme: "simple"});
+		div.find(".sequence-diagram").sequenceDiagram({theme: "simple"});
             }
+            if (settings.flowChart) {
+		div.find(".flowchart").flowChart();
+	    }
+
         }
 
         if (settings.tex)
@@ -4111,10 +4126,10 @@
     editormd.loadCSS   = function(fileName, callback, into) {
         into       = into     || "head";
         callback   = callback || function() {};
+	var css    = document.createElement("link");
+	css.type   = "text/css";
+	css.rel    = "stylesheet";
 
-        var css    = document.createElement("link");
-        css.type   = "text/css";
-        css.rel    = "stylesheet";
         css.onload = css.onreadystatechange = function() {
             editormd.loadFiles.css.push(fileName);
             callback();
@@ -4143,7 +4158,7 @@
 
     editormd.loadScript = function(fileName, callback, into) {
 
-        into          = into     || "head";
+        into          = into     || "body";
         callback      = callback || function() {};
 
         var script    = null;
@@ -4184,8 +4199,8 @@
     // 使用国外的CDN，加载速度有时会很慢，或者自定义URL
     // You can custom KaTeX load url.
     editormd.katexURL  = {
-        css : "//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.3.0/katex.min",
-        js  : "//cdnjs.cloudflare.com/ajax/libs/KaTeX/0.3.0/katex.min"
+        css : "katex.min",
+        js  : "katex.min"
     };
 
     editormd.kaTeXLoaded = false;
@@ -4243,7 +4258,7 @@
         };
 
         options          = $.extend(true, defaults, options);
-
+	var editormd     = this.editormd;
         var $this        = this;
         var editor       = this.editor;
         var classPrefix  = editormd.classPrefix;
@@ -4327,14 +4342,14 @@
 
         var dialogPosition = function(){
             dialog.css({
-                top    : ($(window).height() - dialog.height()) / 2 + "px",
-                left   : ($(window).width() - dialog.width()) / 2 + "px"
+                top    : ($(editormd.window).height() - dialog.height()) / 2 + "px",
+                left   : ($(editormd.window).width() - dialog.width()) / 2 + "px"
             });
         };
 
         dialogPosition();
 
-        $(window).resize(dialogPosition);
+        $(editormd.window).resize(dialogPosition);
 
         dialog.children("." + classPrefix + "dialog-close").bind(mouseOrTouch("click", "touchend"), function() {
             dialog.hide().lockScreen(false).hideMask();
@@ -4391,10 +4406,10 @@
                 var left, top, nowLeft = parseInt(dialog[0].style.left), nowTop = parseInt(dialog[0].style.top);
 
                 if( nowLeft >= 0 ) {
-                    if( nowLeft + dialog.width() <= $(window).width()) {
+                    if( nowLeft + dialog.width() <= $(editormd.window).width()) {
                         left = e.clientX - posX;
                     } else {
-                        left = $(window).width() - dialog.width();
+                        left = $(editormd.window).width() - dialog.width();
                         document.onmousemove = null;
                     }
                 } else {
