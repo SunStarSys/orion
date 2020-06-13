@@ -21,7 +21,6 @@ BEGIN {
     $script_path =~ /(.*)/;
     $script_path = $1;
     unshift @INC, "$script_path/lib";
-    $ENV{MARKDOWN_SOCKET} ||= "/usr/local/cms/logs/markdown.socket";
 }
 
 use strict;

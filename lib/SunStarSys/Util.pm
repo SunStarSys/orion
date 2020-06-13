@@ -57,7 +57,7 @@ sub read_text_file {
             }
             $out->{headers}->{$name} = $val;
         }
-        last LOOP if defined $content_lines and $content_lines-- > 0;
+        last LOOP if defined $content_lines and $content_lines-- == 0;
         no warnings 'uninitialized';
         $content .= $_;
     }

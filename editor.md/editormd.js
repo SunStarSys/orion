@@ -61,7 +61,7 @@
     };
 
     editormd.title        = editormd.$name = "Editor.md";
-    editormd.version      = "1.5.0.1";
+    editormd.version      = "1.5.0";
     editormd.homePage     = "https://pandao.github.io/editor.md/";
     editormd.classPrefix  = "editormd-";
 
@@ -3378,7 +3378,7 @@
     editormd.regexs = {
         atLink        : /@(\w+)/g,
         email         : /(\w+)@(\w+)\.(\w+)\.?(\w+)?/g,
-        emailLink     : /(mailto:)?([\w\.\_]+)@(\w+)\.(\w+)\.?(\w+)?/g,
+        emailLink     : /(mailto:)?([\w.-]+)@([\w-]+)(?:\.([\w-]+))*/g,
         emoji         : /:([\w\+-]+):/g,
         emojiDatetime : /(\d{2}:\d{2}:\d{2})/g,
         twemoji       : /:(tw-([\w]+)-?(\w+)?):/g,
@@ -3546,7 +3546,7 @@
                 }
             }
 
-            var out = "<a href=\"" + href + "\"";
+            var out = "<a href=\"" + href.replace(/@/g, "&#64;") + "\"";
 
             if (atLinkReg.test(title) || atLinkReg.test(text))
             {
@@ -3852,11 +3852,9 @@
             html = html.replace(new RegExp("\<\s*" + tag + "\s*([^\>]*)\>([^\>]*)\<\s*\/" + tag + "\s*\>", "igm"), "");
         }
 
-        //return html;
-
         if (typeof attrs !== "undefined")
         {
-            var htmlTagRegex = /\<(\w+)\s*([^\>]*)\>([^\>]*)\<\/(\w+)\>/ig;
+            var htmlTagRegex = /<(\w+)\s*([^>]*?)\s*\/?>(.*)<\/(\1)>/isg;
 
             if (attrs === "*")
             {
@@ -4043,8 +4041,8 @@
             if (settings.autoLoadKaTeX && !editormd.$katex && !editormd.kaTeXLoaded)
             {
                 this.loadKaTeX(function() {
-                    editormd.$katex      = katex;
-                    editormd.kaTeXLoaded = true;
+                    this.editormd.$katex      = katex;
+                    this.editormd.kaTeXLoaded = true;
                     katexHandle();
                 });
             }
@@ -4199,8 +4197,8 @@
     // 使用国外的CDN，加载速度有时会很慢，或者自定义URL
     // You can custom KaTeX load url.
     editormd.katexURL  = {
-        css : "katex.min",
-        js  : "katex.min"
+        css : "/editor.md/lib/katex.min",
+        js  : "/editor.md/lib/katex.min"
     };
 
     editormd.kaTeXLoaded = false;
