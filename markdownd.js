@@ -79,8 +79,6 @@ const server = net.createServer(
 		theme: "solarized",
 		editorTheme: "solarized",
 		previewTheme: "solarized",
-		lineWrapping: false,
-		lineNumbers: false,
 		searchReplace : false,
 		toolbar: false,
 		flowChart : true,

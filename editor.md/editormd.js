@@ -43,7 +43,7 @@
 
     if (typeof (jQuery_flowchart) != "undefined") {
 	jQuery_flowchart($);
-    }    
+    }
 
     if (typeof ($) === "undefined") {
 	return ;
@@ -358,7 +358,8 @@
 
         init : function (id, options, emd) {
             options              = options || {};
-//	    var editormd = typeof emd === "undefined" ? editormd : emd;
+            this.editormd        = emd;
+            var editormd         = emd;
 
 	    if (typeof id === "object")
             {
@@ -366,8 +367,8 @@
             }
 
             var _this            = this;
-            var classPrefix      = this.classPrefix  = editormd.classPrefix;
-            var settings         = this.settings     = $.extend(true, {}, editormd.defaults, options);
+            var classPrefix      = this.classPrefix  = this.editormd.classPrefix;
+            var settings         = this.settings     = $.extend(true, {}, this.editormd.defaults, options);
 
             id                   = (typeof id === "object") ? settings.id : id;
 
@@ -457,22 +458,20 @@
             {
                 if (typeof katex !== "undefined")
                 {
-                    editormd.$katex = katex;
+                    this.editormd.$katex = katex;
                 }
 
                 if (settings.searchReplace && !settings.readOnly)
                 {
-                    editormd.loadCSS(settings.path + "codemirror/addon/dialog/dialog");
-                    editormd.loadCSS(settings.path + "codemirror/addon/search/matchesonscrollbar");
+                    this.editormd.loadCSS(settings.path + "codemirror/addon/dialog/dialog");
+                    this.editormd.loadCSS(settings.path + "codemirror/addon/search/matchesonscrollbar");
                 }
 	    }
 
-	    this.editormd = editormd;
-	    
             if (!settings.autoLoadModules)
             {
                 if (typeof CodeMirror !== "undefined") {
-                    editormd.$CodeMirror = CodeMirror(w);
+                    this.editormd.$CodeMirror = CodeMirror(w);
 		    CodeMirrorModes(editormd.$CodeMirror, document);
 		    CodeMirrorAddOns(editormd.$CodeMirror, document);
                 }
@@ -480,20 +479,20 @@
 		    abort();
 		}
                 if (typeof marked     !== "undefined") {
-                    editormd.$marked     = marked;
+                    this.editormd.$marked     = marked;
                 }
 		else {
 		    abort();
 		}
 		if (typeof prettify   !== "undefined") {
-		    editormd.$prettify = prettify(editormd.window);
+		    this.editormd.$prettify = prettify(editormd.window);
 		}
 		else {
 		    abort();
 		}
 		if (typeof katex      !== "undefined") {
-		    editormd.$katex = katex;
-		}		
+		    this.editormd.$katex = katex;
+		}
 		else {
 		    abort();
 		}
@@ -511,7 +510,7 @@
          * 所需组件加载队列
          * Required components loading queue
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {editormd}  返回this.editormd的实例对象
          */
 
         loadQueues : function() {
@@ -523,7 +522,7 @@
 	    }
             var loadFlowChartOrSequenceDiagram = function() {
 
-                if (editormd.isIE8)
+                if (_this.editormd.isIE8)
                 {
                     _this.loadedDisplay();
 
@@ -532,29 +531,29 @@
 
                 if(settings.flowChart || settings.sequenceDiagram)
                 {
-		    editormd.loadScript(loadPath + "raphael.min", function() {
-			
-                        editormd.loadScript(loadPath + "underscore.min", function() {
-			    
+		    _this.editormd.loadScript(loadPath + "raphael.min", function() {
+
+                        _this.editormd.loadScript(loadPath + "underscore.min", function() {
+
 			    if (!settings.flowChart && settings.sequenceDiagram)
 			    {
-                                editormd.loadScript(loadPath + "sequence-diagram.min", function() {
+                                _this.editormd.loadScript(loadPath + "sequence-diagram.min", function() {
 				    _this.loadedDisplay();
                                 });
 			    }
 			    else if (settings.flowChart && !settings.sequenceDiagram)
 			    {
-                                editormd.loadScript(loadPath + "flowchart.min", function() {
-				    editormd.loadScript(loadPath + "jquery.flowchart.min", function() {
+                            _this.editormd.loadScript(loadPath + "flowchart.min", function() {
+				    _this.editormd.loadScript(loadPath + "jquery.flowchart.min", function() {
                                         _this.loadedDisplay();
 				    });
                                 });
 			    }
 			    else if (settings.flowChart && settings.sequenceDiagram)
 			    {
-                                editormd.loadScript(loadPath + "flowchart.min", function() {
-				    editormd.loadScript(loadPath + "jquery.flowchart.min", function() {
-                                        editormd.loadScript(loadPath + "sequence-diagram.min", function() {
+                                _this.editormd.loadScript(loadPath + "flowchart.min", function() {
+				    _this.editormd.loadScript(loadPath + "jquery.flowchart.min", function() {
+                                        _this.editormd.loadScript(loadPath + "sequence-diagram.min", function() {
 					    _this.loadedDisplay();
                                         });
 				    });
@@ -562,32 +561,32 @@
 			    }
                         });
 		    });
-		}				   
+		}
 		else
                 {
 		    _this.loadedDisplay();
                 }
 	    };
-	    editormd.loadCSS(loadPath + "codemirror/codemirror.min");
+	    this.editormd.loadCSS(loadPath + "codemirror/codemirror.min");
 
 	    if (settings.searchReplace && !settings.readOnly)
 	    {
-		editormd.loadCSS(loadPath + "codemirror/addon/dialog/dialog");
-		editormd.loadCSS(loadPath + "codemirror/addon/search/matchesonscrollbar");
+		this.editormd.loadCSS(loadPath + "codemirror/addon/dialog/dialog");
+		this.editormd.loadCSS(loadPath + "codemirror/addon/search/matchesonscrollbar");
 	    }
-	    
+
 	    if (settings.codeFold)
 	    {
-		editormd.loadCSS(loadPath + "codemirror/addon/fold/foldgutter");
+		this.editormd.loadCSS(loadPath + "codemirror/addon/fold/foldgutter");
 	    }
-	    
-	    editormd.loadScript(loadPath + "codemirror/codemirror.min", function() {
+
+	    this.editormd.loadScript(loadPath + "codemirror/codemirror.min", function() {
 		editormd.$CodeMirror = CodeMirror;
-		
+
 		editormd.loadScript(loadPath + "codemirror/modes.min", function() {
 
 		    editormd.loadScript(loadPath + "codemirror/addons.min", function() {
-				
+
 			_this.setCodeMirror();
 			_this.setToolbar();
 
@@ -600,9 +599,9 @@
 
 
 			editormd.loadScript(loadPath + "marked.min", function() {
-			    
+
 			    editormd.$marked = marked;
-				    
+
 			    if (settings.previewCodeHighlight)
 			    {
 				editormd.loadScript(loadPath + "prettify.min", function() {
@@ -617,7 +616,7 @@
 			});
 
 		    });
-			    
+
 		});
 	    });
 
@@ -628,7 +627,7 @@
          * 设置 Editor.md 的整体主题，主要是工具栏
          * Setting Editor.md theme
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {this.editormd}  返回this.editormd的实例对象
          */
 
         setTheme : function(theme) {
@@ -647,7 +646,7 @@
          * 设置 CodeMirror（编辑区）的主题
          * Setting CodeMirror (Editor area) theme
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {this.editormd}  返回this.editormd的实例对象
          */
 
         setEditorTheme : function(theme) {
@@ -657,7 +656,7 @@
             if (theme !== "default")
             {
 		if (settings.autoLoadModules) {
-                    editormd.loadCSS(settings.path + "codemirror/theme/" + settings.editorTheme);
+                    this.editormd.loadCSS(settings.path + "codemirror/theme/" + settings.editorTheme);
 		}
 	    }
 
@@ -670,7 +669,7 @@
          * setEditorTheme() 的别名
          * setEditorTheme() alias
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {this.editormd}  返回this.editormd的实例对象
          */
 
         setCodeMirrorTheme : function (theme) {
@@ -683,7 +682,7 @@
          * 设置 Editor.md 的主题
          * Setting Editor.md theme
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {this.editormd}  返回this.editormd的实例对象
          */
 
         setPreviewTheme : function(theme) {
@@ -702,7 +701,7 @@
          * 配置和初始化CodeMirror组件
          * CodeMirror initialization
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {this.editormd}  返回this.editormd的实例对象
          */
 
         setCodeMirror : function() {
@@ -711,7 +710,7 @@
 
             if (settings.editorTheme !== "default")
             {
-                editormd.loadCSS(settings.path + "codemirror/theme/" + settings.editorTheme);
+                this.editormd.loadCSS(settings.path + "codemirror/theme/" + settings.editorTheme);
             }
 
             var codeMirrorConfig = {
@@ -783,7 +782,7 @@
          * 配置和重配置CodeMirror的选项
          * CodeMirror setting options / resettings
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {this.editormd}  返回this.editormd的实例对象
          */
 
         setCodeMirrorOption : function(key, value) {
@@ -797,7 +796,7 @@
          * 添加 CodeMirror 键盘快捷键
          * Add CodeMirror keyboard shortcuts key map
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {this.editormd}  返回this.editormd的实例对象
          */
 
         addKeyMap : function(map, bottom) {
@@ -810,7 +809,7 @@
          * 移除 CodeMirror 键盘快捷键
          * Remove CodeMirror keyboard shortcuts key map
          *
-         * @returns {editormd}  返回editormd的实例对象
+         * @returns {this.editormd}  返回this.editormd的实例对象
          */
 
         removeKeyMap : function(map) {
@@ -824,7 +823,7 @@
          * Goto CodeMirror line
          *
          * @param   {String|Intiger}   line      line number or "first"|"last"
-         * @returns {editormd}                   返回editormd的实例对象
+         * @returns {this.editormd}                   返回this.editormd的实例对象
          */
 
         gotoLine : function (line) {
@@ -905,9 +904,9 @@
 
         /**
          * 扩展当前实例对象，可同时设置多个或者只设置一个
-         * Extend editormd instance object, can mutil setting.
+         * Extend this.editormd instance object, can mutil setting.
          *
-         * @returns {editormd}                  this(editormd instance object.)
+         * @returns {this.editormd}                  this(this.editormd instance object.)
          */
 
         extend : function() {
@@ -931,11 +930,11 @@
 
         /**
          * 设置或扩展当前实例对象，单个设置
-         * Extend editormd instance object, one by one
+         * Extend this.editormd instance object, one by one
          *
          * @param   {String|Object}   key       option key
          * @param   {String|Object}   value     option value
-         * @returns {editormd}                  this(editormd instance object.)
+         * @returns {this.editormd}                  this(this.editormd instance object.)
          */
 
         set : function (key, value) {
@@ -1520,7 +1519,7 @@
 
             this.previewContainer.find("." + editormd.classNames.tex).each(function(){
                 var tex  = $(this);
-                this.editormd.$katex.render(tex.text(), tex[0]);
+                editormd.$katex.render(tex.text(), tex[0]);
 
                 tex.find(".katex").css("font-size", "1.6em");
             });
@@ -1540,7 +1539,7 @@
             var settings         = this.settings;
             var previewContainer = this.previewContainer;
 	    var editormd         = this.editormd;
-	    
+
             if (editormd.isIE8) {
                 return this;
             }
@@ -2092,15 +2091,15 @@
                     if (!editormd.kaTeXLoaded && settings.autoLoadModules)
                     {
                         editormd.loadKaTeX(function() {
-                            editormd.$katex = katex;
-                            editormd.kaTeXLoaded = true;
+                            _this.editormd.$katex = katex;
+                            _this.editormd.kaTeXLoaded = true;
                             _this.katexRender();
                         });
                     }
                     else
                     {
-                        editormd.$katex = katex;
-                        this.katexRender();
+                        _this.editormd.$katex = katex;
+                        _this.katexRender();
                     }
                 }
 
@@ -4012,13 +4011,13 @@
                 div.find(".editormd-toc-menu, .editormd-markdown-toc").remove();
             }
         }
-	
+
         if (!editormd.isIE8)
         {
             if (settings.flowChart) {
 		div.find(".flowchart").flowChart();
 	    }
-	    
+
             if (settings.sequenceDiagram) {
 		div.find(".sequence-diagram").sequenceDiagram({theme: "simple"});
             }
@@ -4041,8 +4040,8 @@
             if (settings.autoLoadKaTeX && !editormd.$katex && !editormd.kaTeXLoaded)
             {
                 this.loadKaTeX(function() {
-                    this.editormd.$katex      = katex;
-                    this.editormd.kaTeXLoaded = true;
+                    editormd.$katex      = katex;
+                    editormd.kaTeXLoaded = true;
                     katexHandle();
                 });
             }

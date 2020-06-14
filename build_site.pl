@@ -30,6 +30,7 @@ use File::Path;
 use SunStarSys::Util qw/copy_if_newer parse_filename/;
 use Data::Dumper ();
 use SunStarSys::ASF;
+sub syswrite_all;
 
 my ($target_base, $source_base, $runners, $offline);
 
@@ -69,8 +70,8 @@ $fd2rid[fileno $runners[$_]->{socket}] = $_ for 0..$#runners;
 my $sockets = IO::Select->new;
 $sockets->add(map $_->{socket}, @runners);
 
-$|=1;
-print "Building site (runners = $runners)...\n";
+syswrite_all "Building site (runners = $runners)...\n";
+
 my $saw_error = 0;
 
 LOOP: while (@dirqueue) {
@@ -117,7 +118,7 @@ goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
 
 shutdown $_, 1 for map $_->{socket}, @runners;
 $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
-print "All done.\n";
+syswrite_all "All done.\n";
 _exit -1 if $saw_error;
 _exit 0; # avoid global cleanup segfault
 
@@ -182,6 +183,7 @@ sub process_file {
             or die "Can't open $target_base/$target_file.$ext: $!\n";
         print $fh $content;
         $matched = 1;
+        syswrite_all "Built $target_base/$target_file.$ext.\n";
         last;
     }
 
@@ -236,7 +238,8 @@ sub fork_runner {
 }
 
 sub syswrite_all {
-    my ($fh, $data) = @_;
+    my $data = pop;
+    my $fh = shift // \*STDOUT;
     my $bytes;
     my $total = 0;
     while (($bytes = syswrite($fh, substr($data, $total))) > 0) {
