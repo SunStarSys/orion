@@ -42,7 +42,8 @@
     var document = w.document;
 
     if (typeof (jQuery_flowchart) != "undefined") {
-	jQuery_flowchart($);
+	// AWAITING jsdom SVGMatrix implementation
+	// jQuery_flowchart($, flowchart(w, Raphael(w)));
     }
 
     if (typeof ($) === "undefined") {
@@ -496,6 +497,7 @@
 		else {
 		    abort();
 		}
+
 		this.setCodeMirror().setToolbar().loadedDisplay();
 	    }
             else
@@ -567,21 +569,21 @@
 		    _this.loadedDisplay();
                 }
 	    };
-	    this.editormd.loadCSS(loadPath + "codemirror/codemirror.min");
+	    _this.editormd.loadCSS(loadPath + "codemirror/codemirror.min");
 
 	    if (settings.searchReplace && !settings.readOnly)
 	    {
-		this.editormd.loadCSS(loadPath + "codemirror/addon/dialog/dialog");
-		this.editormd.loadCSS(loadPath + "codemirror/addon/search/matchesonscrollbar");
+		_this.editormd.loadCSS(loadPath + "codemirror/addon/dialog/dialog");
+		_this.editormd.loadCSS(loadPath + "codemirror/addon/search/matchesonscrollbar");
 	    }
 
 	    if (settings.codeFold)
 	    {
-		this.editormd.loadCSS(loadPath + "codemirror/addon/fold/foldgutter");
+		_this.editormd.loadCSS(loadPath + "codemirror/addon/fold/foldgutter");
 	    }
 
-	    this.editormd.loadScript(loadPath + "codemirror/codemirror.min", function() {
-		editormd.$CodeMirror = CodeMirror;
+	    _this.editormd.loadScript(loadPath + "codemirror/codemirror.min", function() {
+		_this.editormd.$CodeMirror = CodeMirror;
 
 		editormd.loadScript(loadPath + "codemirror/modes.min", function() {
 
@@ -605,7 +607,7 @@
 			    if (settings.previewCodeHighlight)
 			    {
 				editormd.loadScript(loadPath + "prettify.min", function() {
-				    editormd.$prettify = prettyPrint;
+				    editormd.$prettify = typeof prettify !== "undefined" ? prettify(w) : prettyPrint;
 				    loadFlowChartOrSequenceDiagram();
 				});
 			    }
@@ -1158,7 +1160,7 @@
             toolbar.show();
 
             var icons       = (typeof settings.toolbarIcons === "function") ? settings.toolbarIcons()
-                            : ((typeof settings.toolbarIcons === "string")  ? editormd.toolbarModes[settings.toolbarIcons] : settings.toolbarIcons);
+                            : ((typeof settings.toolbarIcons === "string")  ? this.editormd.toolbarModes[settings.toolbarIcons] : settings.toolbarIcons);
 
             var toolbarMenu = toolbar.find("." + this.classPrefix + "menu"), menu = "";
             var pullRight   = false;
@@ -1232,19 +1234,19 @@
          */
 
         dialogLockScreen : function() {
-            $.proxy(editormd.dialogLockScreen, this)();
+            $.proxy(this.editormd.dialogLockScreen, this)();
 
             return this;
         },
 
         dialogShowMask : function(dialog) {
-            $.proxy(editormd.dialogShowMask, this)(dialog);
+            $.proxy(this.editormd.dialogShowMask, this)(dialog);
 
             return this;
         },
 
         getToolbarHandles : function(name) {
-            var toolbarHandlers = this.toolbarHandlers = editormd.toolbarHandlers;
+            var toolbarHandlers = this.toolbarHandlers = this.editormd.toolbarHandlers;
 
             return (name && typeof toolbarIconHandlers[name] !== "undefined") ? toolbarHandlers[name] : toolbarHandlers;
         },
@@ -1331,6 +1333,7 @@
             var _this        = this;
 			var editor       = this.editor;
             var classPrefix  = this.classPrefix;
+	    var editormd = this.editormd;
 
             var infoDialogHTML = [
                 "<div class=\"" + classPrefix + "dialog " + classPrefix + "dialog-info\" style=\"\">",
@@ -1368,8 +1371,8 @@
 
         infoDialogPosition : function() {
             var infoDialog = this.infoDialog;
-
-			var _infoDialogPosition = function() {
+	    var editormd = this.editormd;
+	    var _infoDialogPosition = function() {
 				infoDialog.css({
 					top  : ($(editormd.window).height() - infoDialog.height()) / 2 + "px",
 					left : ($(editormd.window).width()  - infoDialog.width()) / 2  + "px"
@@ -1411,7 +1414,7 @@
 						backgroundColor : settings.dialogMaskBgColor
 					}).show();
 
-			infoDialog.css("z-index", editormd.dialogZindex).show();
+			infoDialog.css("z-index", this.editormd.dialogZindex).show();
 
 			this.infoDialogPosition();
 
@@ -1443,7 +1446,7 @@
          */
 
         lockScreen : function(lock) {
-            editormd.lockScreen(lock);
+            this.editormd.lockScreen(lock);
             this.resize();
 
             return this;
@@ -1600,6 +1603,7 @@
 
             var _this           = this;
             var cm              = this.cm;
+	    var editormd        = this.editormd;
             var settings        = this.settings;
             var toolbarHandlers = editormd.toolbarHandlers;
             var disabledKeyMaps = settings.disabledKeyMaps;
@@ -1681,6 +1685,7 @@
         bindScrollEvent : function() {
 
             var _this            = this;
+	    var editormd         = this.editormd;
             var preview          = this.preview;
             var settings         = this.settings;
             var codeMirror       = this.codeMirror;
@@ -1820,7 +1825,8 @@
             var editor           = this.editor;
             var preview          = this.preview;
             var settings         = this.settings;
-
+	    var editormd         = this.editormd;
+	    
             this.containerMask.hide();
 
             this.save();
@@ -1898,6 +1904,7 @@
 
             var state      = this.state;
             var editor     = this.editor;
+	    var editormd   = this.editormd;
             var preview    = this.preview;
             var toolbar    = this.toolbar;
             var settings   = this.settings;
@@ -2721,7 +2728,8 @@
             var _this    = this;
             var cm       = this.cm;
             var settings = this.settings;
-
+	    var editormd = this.editormd;
+	    
             path = settings.pluginPath + path;
 
             if (typeof define === "function")

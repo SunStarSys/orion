@@ -10,13 +10,13 @@
  * Env Vars: EDITOR_MD, MARKDOWN_SOCKET.
  * Example:
  *
- * % EDITOR_MD=editor.md MARKDOWN_SOCKET=markdown-socket ./markdownd.js &
+ * % EDITOR_MD=editor.md MARKDOWN_SOCKET=markdown.socket ./markdownd.js &
  *
  * SPDX License Identifier: Apache License 2.0
  */
 
-const EDITOR_MD             = process.env.EDITOR_MD       || "/x1/cms/webgui/content/editor.md";
-const MARKDOWN_SOCKET       = process.env.MARKDOWN_SOCKET || "/x1/cms/run/markdown-socket";
+const EDITOR_MD             = process.env.EDITOR_MD       || __dirname + "/editor.md";
+const MARKDOWN_SOCKET       = process.env.MARKDOWN_SOCKET || "/x1/cms/run/markdown.socket";
 const fs                    = require('fs');
 const net                   = require('net');
 
@@ -34,15 +34,19 @@ require.extensions['.html'] = function (module, filename) {
 global.IN_GLOBAL_SCOPE  = false;
 global.navigator        = require("navigator");
 global.jQuery           = require("jquery");
-const { JSDOM }         = require('jsdom');
+
+const { JSDOM } = jsdom = require('jsdom');
+
 const EMD               = require(EDITOR_MD + "/editormd.js");
 global.marked           = require(EDITOR_MD + "/lib/marked.min.js");
-global.CodeMirror       = require(EDITOR_MD + "/lib/codemirror/codemirror.min.js");
+global.CodeMirror       = require(EDITOR_MD + "/lib/codemirror/codemirror.min.node.js");
 global.CodeMirrorAddOns = require(EDITOR_MD + "/lib/codemirror/addons.min.js");
 global.CodeMirrorModes  = require(EDITOR_MD + "/lib/codemirror/modes.min.js");
 global.jQuery_flowchart = require(EDITOR_MD + "/lib/jquery.flowchart.min.js");
 global.prettify         = require(EDITOR_MD + "/lib/prettify.min.js");
 global.katex            = require(EDITOR_MD + "/lib/katex.min.js");
+global.Raphael          = require(EDITOR_MD + "/lib/raphael.min.js");
+global.flowchart        = require(EDITOR_MD + "/lib/flowchart.min.js");
 
 if (fs.existsSync(MARKDOWN_SOCKET)) {
     fs.unlinkSync(MARKDOWN_SOCKET);
@@ -55,21 +59,20 @@ const HTML =`<!doctype html>
 </html>
 `;
 
+const virtualConsole = new jsdom.VirtualConsole();
+virtualConsole.sendTo(console);
+
 const server = net.createServer(
     { allowHalfOpen: true },
     (c) => {
         var markdown = "";
 
         c.on('data', (data) => {
-            markdown += data.toString();//.replace(/@/g, '&#64;').replace(/([^\r])\n/g, "$1\r\n");
+            markdown += data.toString();
         });
 
         c.on('end', () => {
-	    var jsdom = new JSDOM(HTML, {
-		contentType: "text/html",
-		pretendToBeVisual: true,
-	    });
-            var editormd = EMD(jsdom.window);
+	    var editormd = EMD(new JSDOM(HTML, { virtualConsole }).window);
 	    const options = {
 		autoLoadModules: false,
 		readOnly: true,
@@ -81,7 +84,7 @@ const server = net.createServer(
 		previewTheme: "solarized",
 		searchReplace : false,
 		toolbar: false,
-		flowChart : true,
+//		flowChart : true,
 		htmlDecode : "foo",
 		taskList: true,		
 	    };
