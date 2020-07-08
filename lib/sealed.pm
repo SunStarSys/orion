@@ -5,6 +5,7 @@
 
 package sealed;
 use strict;
+use warnings;
 use B::Generate;
 
 my (%method, @code);
@@ -25,7 +26,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 	if ($lex->TYPE->isa("B::HV")) {
 	  my $class = $lex->TYPE->NAME;
 	  while ($op->next->name ne "entersub") {
-	    if ($op->next->name eq "method_named" and exists $method{${$op->next}}) {
+	    if ($op->next->name eq "method_named" and defined $method{${$op->next}}) {
 	      my $method = delete $method{${$op->next}};
 	      no strict 'refs';
 	      my $sym    = *{"$class\::$method"};
@@ -36,7 +37,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 	      my $targ   = $methop->targ;
 	      my $avref = $pads[0]->object_2svref;
 	      $avref->[$targ] = *$sym{CODE};
-	      my $newop = bless $start->new($start->name, $op->flags), ref $start;
+	      my $newop = bless $start->new($start->name, $start->flags), ref $start;
 	      $newop->targ($targ);
 	      $newop->padix($targ);
 	      $op->next($newop);
