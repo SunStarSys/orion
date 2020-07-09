@@ -39,18 +39,18 @@ sub MODIFY_CODE_ATTRIBUTES {
             my $class = $lex->TYPE->NAME;
 
 	    while ($op->next->name ne "entersub") {
-	      if ($op->next->name eq "method_named" and exists $method{${$op->next}}) {
-	        my $method = delete $method{${$op->next}};
-	        no strict 'refs';
-	        my $sym    = *{"$class\::$method"};
-	        *$sym = $class->can($method) or die "WTF?: $method";
+              if ($op->next->name eq "method_named" and my $method = delete $method{${$op->next}})
+	      {
+		  defined and ($method = $_)
+		    or die "Invalid method $method for $class"
+		      for $class->can($method);
 	        my $p_obj = B::svref_2object(sub {&import});
 	        my $start = $p_obj->START->next->next;
 	        my $methop = $op->next;
 		my $targ;
 		for my $aref (my @a = map $_->object_2svref, @pads) {
 		    $targ //= max map scalar @$_, @a;
-		    $aref->[$targ] =  *$sym{CODE};
+		    $aref->[$targ] =  $method;
 	        }
 	        my $rv2cv = bless $start->new($start->name, $start->flags), ref $start;
 	        $rv2cv->padix($targ);
