@@ -1,15 +1,17 @@
 # SPDX License Identifier: Apache License 2.0
 #
 # provides ithread-safe :sealed subroutine attributes: use with care!
-# (lots of segfaults in optimizer package, not workable with recursive subs)
+# (lots of segfaults in optimizer package, not workable with eg recursive subs)
 
 package sealed;
 use strict;
 use warnings;
 use optimizer ();
+use B::Deparse ();
 
 my %method;
 my %valid_attrs = (sealed => 1);
+use List::Util 'max';
 
 sub MODIFY_CODE_ATTRIBUTES {
   my ($class, $rv, @attrs) = @_;
@@ -17,22 +19,25 @@ sub MODIFY_CODE_ATTRIBUTES {
   if (grep exists $valid_attrs{$_}, @attrs) {
 
     my $cv_obj = B::svref_2object($rv);
-    my @opstack = ($cv_obj->START);
+    my @opstack = ($cv_obj->START->next);
     my ($pad_names, @pads) = $cv_obj->PADLIST->ARRAY;
     my @lexical_names = $pad_names->ARRAY;
     my %processed_op;
-
+    my $tweaked;
     while (my $op = shift @opstack) {
-
-      next unless $$op and not $processed_op{$$op}++;
+      $$op and not $processed_op{$$op}++
+        or next;
 
       if ($op->name eq "pushmark") {
 
         if ($op->next->name eq "padsv") {
 	  $op = $op->next;
 	  my $lex = $lexical_names[$op->targ];
+
 	  if ($lex->TYPE->isa("B::HV")) {
-	    my $class = $lex->TYPE->NAME;
+	    $tweaked++;
+            my $class = $lex->TYPE->NAME;
+
 	    while ($op->next->name ne "entersub") {
 	      if ($op->next->name eq "method_named" and exists $method{${$op->next}}) {
 	        my $method = delete $method{${$op->next}};
@@ -42,27 +47,28 @@ sub MODIFY_CODE_ATTRIBUTES {
 	        my $p_obj = B::svref_2object(sub {&import});
 	        my $start = $p_obj->START->next->next;
 	        my $methop = $op->next;
-	        my $targ   = $methop->targ;
-	        for my $aref (map $_->object_2svref, @pads) {
-	  	  $aref->[$targ] = *$sym{CODE};
+		my $targ;
+		for my $aref (my @a = map $_->object_2svref, @pads) {
+		    $targ //= max map scalar @$_, @a;
+		    $aref->[$targ] =  *$sym{CODE};
 	        }
 	        my $rv2cv = bless $start->new($start->name, $start->flags), ref $start;
-	        $rv2cv->targ($targ);
 	        $rv2cv->padix($targ);
 		$op->next($rv2cv);
 		$rv2cv->next($methop->next);
 	      }
 	      $op = $op->next;
 	    }
+
 	    $op = $op->next;
 	  }
+
 	}
-	$op = $op->next until $op->name eq "entersub";
-	push @opstack, $op->next;
+	$op = $op->next if $$op and $op->name ne "entersub";
+	push @opstack, $op;
       }
 
       elsif ($op->isa("B::PMOP")) {
-	# broken (USR2)
 	push @opstack, $op->pmreplroot;	  
       }
 
@@ -70,11 +76,15 @@ sub MODIFY_CODE_ATTRIBUTES {
 	for (my $kid = $op->first; $$kid; $kid = $kid->sibling) {
 	  push @opstack, $kid;
 	}
+	push @opstack, $op->next;
       }
 
       else {
-	push @opstack, $op->next;
+        push @opstack, $op->next;
       }
+    }
+    if ($tweaked) {
+      warn B::Deparse->new->coderef2text($rv), "\n";
     }
   }
 
@@ -82,23 +92,23 @@ sub MODIFY_CODE_ATTRIBUTES {
 }
 
 sub method_marker {
-    my $op = shift;
-    if ($op->can("name") and $op->name eq "method_named") {
-	bless $op, "B::METHOP";
-	my $method = ${$op->meth_sv->object_2svref};
-	$method{$$op} = $method unless grep $method eq $_, qw/import unimport/;
-    }
+  my $op = shift;
+  if ($op->can("name") and $op->name eq "method_named") {
+      bless $op, "B::METHOP";
+      my $method = ${$op->meth_sv->object_2svref};
+      $method{$$op} = $method unless grep $method eq $_, qw/import unimport/;
+  }
 }
 
-no strict 'refs';
 sub import {
-    my $pkg = caller;
-    *{"$pkg\::MODIFY_CODE_ATTRIBUTES"} = shift->can("MODIFY_CODE_ATTRIBUTES");
-    optimizer->import('extend-c' => \&method_marker) unless shift;
+  my $pkg = caller;
+  no strict 'refs';
+  *{"$pkg\::MODIFY_CODE_ATTRIBUTES"} = shift->can("MODIFY_CODE_ATTRIBUTES");
+  optimizer->import('extend-c' => \&method_marker) unless shift;
 }
 
 sub unimport {
-    optimizer::uninstall;
+  optimizer::uninstall;
 }
 
 1;
