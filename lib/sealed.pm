@@ -9,9 +9,8 @@ use strict;
 use warnings;
 use B::Generate ();
 use B::Deparse ();
-use List::Util 'max';
 
-our $VERSION = v0.1.0;
+our $VERSION = v0.2.0;
 our $DEBUG = 0;
 
 my %valid_attrs = (sealed => 1);
@@ -49,15 +48,14 @@ sub MODIFY_CODE_ATTRIBUTES {
               if ($op->next->name eq "method_named") {
 		my $methop = $op->next;
 		my $targ = $methop->targ;
-		my $new_targ = max map scalar @$_, @lex_arr;
 		my ($method_name, $idx);
 		$method_name = $lex_arr[$idx++]->[$targ] while not defined $method_name;
 		warn __PACKAGE__, ": compiling $class->$method_name lookup.\n";
 		my $method = $class->can($method_name)
 		    or die "Invalid lookup: $class->$method_name";
-		$_->[$new_targ] = $method for @lex_arr;
+		$_->[$targ] = $method for @lex_arr;
 	        my $rv2cv = bless $start->new($start->name, $start->flags), ref $start;
-	        $rv2cv->padix($new_targ);
+	        $rv2cv->padix($targ);
 		$op->next($rv2cv);
 		$rv2cv->next($methop->next);
 		$rv2cv->sibling($methop->sibling);
