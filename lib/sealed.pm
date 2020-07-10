@@ -38,7 +38,7 @@ sub tweak {
 	  $method_name = $$lexicals[$idx++]->[$targ] while not defined $method_name;
 	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n";
 	  my $method = $class->can($method_name)
-	    or die "Invalid lookup: $class->$method_name";
+	    or die "Invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 	  $_->[$targ] = $method for @$lexicals;
 	  my $rv2cv = bless $start->new($start->name, $start->flags), ref $start;
 	  $rv2cv->padix($targ);
