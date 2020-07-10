@@ -73,7 +73,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 	unshift @opstack, $op;
       }
 
-      elsif ($op->can("pmrelproot")) {
+      elsif ($op->can("pmreplroot")) {
         push @opstack, $op->pmreplroot, $op->next;
       }
       
