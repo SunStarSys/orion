@@ -10,7 +10,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse ();
 
-our $VERSION = v0.4.0;
+our $VERSION = v0.9.0;
 our $DEBUG = 0;
 
 my %valid_attrs = (sealed => 1);
