@@ -35,12 +35,15 @@ sub tweak {
 	elsif ($op->next->name eq "method_named") {
 	  my $methop = $op->next;
 	  my $targ = $methop->targ;
+
+	  # a little prayer
 	  my ($method_name, $idx);
 	  $method_name = $$lexicals[$idx++]->[$targ] while not defined $method_name;
 	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n";
 	  my $method = $class->can($method_name)
 	    or die "Invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
-	  $_->[$targ] = $method for @$lexicals;
+	  $_->[$targ] = $method for @$lexicals; # bulletproof, blanket bludgeon
+
 	  my $rv2cv = bless $start->new($start->name, $start->flags), ref $start;
 	  $rv2cv->padix($targ);
 	  $op->next($rv2cv);
@@ -55,7 +58,6 @@ sub tweak {
   push @$op_stack, $op->next;
   return ($tweaked, $op);
 }
-
 
 sub MODIFY_CODE_ATTRIBUTES {
   my ($class, $rv, @attrs) = @_;
