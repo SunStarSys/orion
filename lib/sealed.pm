@@ -14,8 +14,8 @@ our $VERSION = v0.9.9;
 our $DEBUG;
 
 my %valid_attrs = (sealed => 1);
-my $p_obj = B::svref_2object(sub {&tweak});
-my $start = $p_obj->START->next->next;
+my $p_obj       = B::svref_2object(sub {&tweak});
+my $padop       = $p_obj->START->next->next;
 
 sub tweak {
   my ($op, $lexical_names, $lexicals, $op_stack) = @_;
@@ -45,7 +45,7 @@ sub tweak {
 	    or die "Invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 	  $_->[$targ] = $method for @$lexicals; # bulletproof, blanket bludgeon
 
-	  my $rv2cv = bless $start->new($start->name, $start->flags), ref $start;
+	  my $rv2cv = bless $padop->new($padop->name, $padop->flags), ref $padop;
 	  $rv2cv->padix($targ);
 	  $op->next($rv2cv);
 	  $rv2cv->next($methop->next);
