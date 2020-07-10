@@ -14,7 +14,7 @@ our $VERSION = v0.9.0;
 our $DEBUG = 0;
 
 my %valid_attrs = (sealed => 1);
-my $p_obj = B::svref_2object(sub {&import});
+my $p_obj = B::svref_2object(sub {&tweak});
 my $start = $p_obj->START->next->next;
 
 sub tweak {
