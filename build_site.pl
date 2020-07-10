@@ -117,7 +117,7 @@ sub main :sealed {
   goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
 
   shutdown $_, 1 for map $_->{socket}, @runners;
-  syswrite_all "Waiting for kids\n";
+  syswrite_all "Waiting for kids...\n";
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
   syswrite_all "All done.\n";
   _exit -1 if $saw_error;
