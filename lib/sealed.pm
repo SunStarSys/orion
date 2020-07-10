@@ -133,4 +133,8 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
     use sealed 'deparse'; # additionally warns with the B::Deparse output
     use sealed;           # disables all warnings
 
+=item See Also:
+
+    https://www.sunstarsys.com/essays/perl7-sealed-lexicals
+
 =back
