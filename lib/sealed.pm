@@ -1,7 +1,8 @@
 # SPDX License Identifier: Apache License 2.0
 #
 # provides ithread-safe :sealed subroutine attributes: use with care!
-# (lots of segfaults in optimizer package, not workable with eg recursive subs)
+#
+# Author: Joe Schaefer <joe@sunstarsys.com>
 
 package sealed;
 use strict;
