@@ -95,7 +95,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 }
 
 sub import {
-  $DEBUG = $_[-1];
+  $DEBUG = $_[1];
 }
 
 1;
