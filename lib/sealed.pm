@@ -10,8 +10,8 @@ use warnings;
 use B::Generate ();
 use B::Deparse ();
 
-our $VERSION = v0.9.1;
-our $DEBUG = 0;
+our $VERSION = v0.9.9;
+our $DEBUG;
 
 my %valid_attrs = (sealed => 1);
 my $p_obj = B::svref_2object(sub {&tweak});
@@ -39,7 +39,8 @@ sub tweak {
 	  # a little prayer
 	  my ($method_name, $idx);
 	  $method_name = $$lexicals[$idx++]->[$targ] while not defined $method_name;
-	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n";
+	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
+	      if $DEBUG;
 	  my $method = $class->can($method_name)
 	    or die "Invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 	  $_->[$targ] = $method for @$lexicals; # bulletproof, blanket bludgeon
@@ -94,7 +95,7 @@ sub MODIFY_CODE_ATTRIBUTES {
         unshift @op_stack, $op->next;
       }
     }
-    if ($DEBUG and $tweaked) {
+    if (defined $DEBUG and $DEBUG eq "deparse" and $tweaked) {
       warn B::Deparse->new->coderef2text($rv), "\n";
     }
   }

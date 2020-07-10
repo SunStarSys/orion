@@ -32,6 +32,7 @@ use Data::Dumper ();
 use SunStarSys::ASF;
 sub syswrite_all;
 use base 'sealed';
+use sealed 'deparse';
 
 my ($target_base, $source_base, $runners, $offline, @errors);
 
