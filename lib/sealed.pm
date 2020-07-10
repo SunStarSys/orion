@@ -108,3 +108,29 @@ sub import {
 }
 
 1;
+
+__END__
+
+=head1 sealed
+
+Subroutine attribute for compile-time typed lexical method lookups.
+
+=over 4
+
+=item Sample Usage:
+
+    use Apache2::RequestRec;
+    use base 'sealed';
+
+    sub handler :sealed {
+      my Apache2::RequestRec $r = shift;
+      $r->content_type("text/html"); # compile-time method lookup.
+    ...
+
+=item import() Options:
+
+    use sealed 'debug';   # warns about 'method_named' op tweaks
+    use sealed 'deparse'; # additionally warns with the B::Deparse output
+    use sealed;           # disables all warnings
+
+=back
