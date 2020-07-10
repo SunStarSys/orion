@@ -95,11 +95,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 }
 
 sub import {
-  my $isa = caller . "::ISA";
-  no strict 'refs'; 
-  push @$isa, shift;
-  $DEBUG = shift;
+  $DEBUG = $_[-1];
 }
-
 
 1;
