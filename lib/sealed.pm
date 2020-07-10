@@ -10,7 +10,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse ();
 
-our $VERSION = v0.9.0;
+our $VERSION = v0.9.1;
 our $DEBUG = 0;
 
 my %valid_attrs = (sealed => 1);
@@ -18,7 +18,7 @@ my $p_obj = B::svref_2object(sub {&tweak});
 my $start = $p_obj->START->next->next;
 
 sub tweak {
-  my ($op, $lexical_names, $lexicals, $opstack) = @_;
+  my ($op, $lexical_names, $lexicals, $op_stack) = @_;
   my $tweaked = 0;
   if ($op->next->name eq "padsv") {
     $op = $op->next;
@@ -29,7 +29,8 @@ sub tweak {
       while ($op->next->name ne "entersub") {	  
 	if ($op->next->name eq "pushmark") {
 	  splice @_, 0, 1, $op->next;
-	  $tweaked += &tweak;
+	  (my $t, $op) = &tweak;
+	  $tweaked += $t;
 	}
 	elsif ($op->next->name eq "method_named") {
 	  my $methop = $op->next;
@@ -51,8 +52,8 @@ sub tweak {
       $op = $op->next;
     }
   }
-  unshift @$opstack, $op->next;
-  return $tweaked;
+  push @$op_stack, $op->next;
+  return ($tweaked, $op);
 }
 
 
@@ -74,7 +75,8 @@ sub MODIFY_CODE_ATTRIBUTES {
         or next;
 
       if ($op->name eq "pushmark") {
-	  $tweaked += tweak($op, \@lexical_names, \@lex_arr, \@op_stack);
+	  my ($t, $op) = tweak($op, \@lexical_names, \@lex_arr, \@op_stack);	  
+	  $tweaked += $t;
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
