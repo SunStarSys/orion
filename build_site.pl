@@ -152,6 +152,8 @@ sub process_dir {
     }
 }
 
+my %method_cache;
+
 sub process_file {
     my $file = shift;
     my ($filename, $dirname) = parse_filename $file;
@@ -177,7 +179,7 @@ sub process_file {
             $d->Deepcopy(1)->Purity(1);
             eval $d->Dump;
         }
-        my $s = view->can($method) or die "Can't locate method: $method\n";
+        my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
         my ($content, $ext) = $s->(path => $path, %$args);
         open my $fh, ">", "$target_base/$target_file.$ext"
             or die "Can't open $target_base/$target_file.$ext: $!\n";
