@@ -11,6 +11,8 @@ use B::Generate ();
 use B::Deparse ();
 use List::Util 'max';
 
+our $VERSION = v0.1.0;
+
 my %method;
 my %valid_attrs = (sealed => 1);
 my $p_obj = B::svref_2object(sub {&import});
