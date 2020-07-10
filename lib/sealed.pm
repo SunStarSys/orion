@@ -24,8 +24,9 @@ sub tweak {
     $op = $op->next;
     my $lex = $$lexical_names[$op->targ];
     if ($lex->TYPE->isa("B::HV")) {
+      $tweaked++;
       my $class = $lex->TYPE->NAME;
-      while ($op->next->name ne "entersub") {
+      while ($op->next->name ne "entersub") {	  
 	if ($op->next->name eq "pushmark") {
 	  splice @_, 0, 1, $op->next;
 	  $tweaked += &tweak;
