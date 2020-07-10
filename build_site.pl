@@ -31,8 +31,9 @@ use SunStarSys::Util qw/copy_if_newer parse_filename/;
 use Data::Dumper ();
 use SunStarSys::ASF;
 sub syswrite_all;
+use base 'sealed';
 
-my ($target_base, $source_base, $runners, $offline);
+my ($target_base, $source_base, $runners, $offline, @errors);
 
 GetOptions ( "target-base=s", \$target_base,
              "source-base=s", \$source_base,
@@ -59,68 +60,68 @@ require view;
     $SunStarSys::Value::Offline = 1 if $offline;
 }
 
-my @errors;
-my @dirqueue = ("cgi-bin", "content");
 
-$runners = $path::runners if defined $path::runners and $path::runners < $runners;
-my @runners = map fork_runner(), 1..$runners;
-my @fd2rid;
-$fd2rid[fileno $runners[$_]->{socket}] = $_ for 0..$#runners;
+sub main :sealed {
+  my $saw_error = 0;
+  $runners = $path::runners if defined $path::runners and $path::runners < $runners;
+  syswrite_all "Building site (runners = $runners)...\n";
+  my @runners = map fork_runner(), 1..$runners;
+  my @fd2rid;
+  $fd2rid[fileno $runners[$_]->{socket}] = $_ for 0..$#runners;
 
-my $sockets = IO::Select->new;
-$sockets->add(map $_->{socket}, @runners);
+ my @dirqueue = ("cgi-bin", "content");
+ my IO::Select $sockets = IO::Select->new;
+ $sockets->add(map $_->{socket}, @runners);
 
-syswrite_all "Building site (runners = $runners)...\n";
-
-my $saw_error = 0;
-
-LOOP: while (@dirqueue) {
+ LOOP: while (@dirqueue) {
     my $would_block = 1;
 
     for my $p (shuffle $sockets->can_write(0)) {
-        $would_block = 0;
-        my $dir = shift @dirqueue or last;
+      $would_block = 0;
+      my $dir = shift @dirqueue or last;
 
-        if (syswrite_all($p, "$dir\n") <= 0) {
-            warn "syswrite_all failed: $! ", fileno $p;
-            unshift @dirqueue, $dir;
-            $sockets->remove($p);
-            $runners[$fd2rid[fileno $p]]->{wait} = 1;
-            close $p;
-            $saw_error++;
-            next;
-        }
-        $runners[$fd2rid[fileno $p]]->{wait} = 0;
+      if (syswrite_all($p, "$dir\n") <= 0) {
+	warn "syswrite_all failed: $! ", fileno $p;
+	unshift @dirqueue, $dir;
+	$sockets->remove($p);
+	$runners[$fd2rid[fileno $p]]->{wait} = 1;
+	close $p;
+	$saw_error++;
+	next;
+      }
+      $runners[$fd2rid[fileno $p]]->{wait} = 0;
     }
     last if $would_block;
-}
+  }
 
-for my $p ($sockets->can_read(3)) {
+  for my $p ($sockets->can_read(3)) {
     local $_ = '';
     my $bytes;
 
     while (($bytes = sysread $p, $_, 4096, length) > 0) {
-        last if substr($_, -1, 1) eq "\n";
+      last if substr($_, -1, 1) eq "\n";
     }
     if ($bytes <= 0) {
-        warn "sysread failed: $! ", fileno $p;
-        $sockets->remove($p);
-        $runners[$fd2rid[fileno $p]]->{wait} = 1;
-        close $p;
-        $saw_error++;
-        next;
+      warn "sysread failed: $! ", fileno $p;
+      $sockets->remove($p);
+      $runners[$fd2rid[fileno $p]]->{wait} = 1;
+      close $p;
+      $saw_error++;
+      next;
     }
     push @dirqueue, grep length && $_ ne "working...", split /\n/;
     $runners[$fd2rid[fileno $p]]->{wait} = /(?:^$)\Z/m;
+  }
+
+  goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
+
+  shutdown $_, 1 for map $_->{socket}, @runners;
+  syswrite_all "Waiting for kids\n";
+  $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
+  syswrite_all "All done.\n";
+  _exit -1 if $saw_error;
+  _exit 0; # avoid global cleanup segfault
 }
-
-goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
-
-shutdown $_, 1 for map $_->{socket}, @runners;
-$? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
-syswrite_all "All done.\n";
-_exit -1 if $saw_error;
-_exit 0; # avoid global cleanup segfault
 
 sub process_dir {
     my ($root, $wtr, $final) = @_;
@@ -152,9 +153,10 @@ sub process_dir {
     }
 }
 
+
 my %method_cache;
 
-sub process_file {
+sub process_file :sealed {
     my $file = shift;
     my ($filename, $dirname) = parse_filename $file;
 
@@ -175,8 +177,9 @@ sub process_file {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
         if ($args->{headers}) {
-            my $d = Data::Dumper->new([$args->{headers}], ['$args->{headers}']);
-            $d->Deepcopy(1)->Purity(1);
+            my Data::Dumper $d = Data::Dumper->new([$args->{headers}], ['$args->{headers}']);
+            $d->Deepcopy(1);
+	    $d->Purity(1);
             eval $d->Dump;
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
@@ -194,7 +197,7 @@ sub process_file {
     }
 }
 
-sub fork_runner {
+sub fork_runner :sealed {
     socketpair my $child, my $parent, AF_UNIX, SOCK_STREAM, PF_UNSPEC
         or die "socketpair: $!";
     binmode $_ for $child, $parent;
@@ -206,7 +209,7 @@ sub fork_runner {
     }
     # in child
     close $child;
-    my $r = IO::Select->new;
+    my IO::Select $r = IO::Select->new;
     $r->add($parent);
 
     while (1) {
@@ -250,6 +253,8 @@ sub syswrite_all {
     }
     return $bytes;
 }
+
+main();
 
 =head1 LICENSE
 
