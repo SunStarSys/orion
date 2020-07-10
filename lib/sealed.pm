@@ -98,6 +98,7 @@ sub import {
   my $pkg = caller;
   no strict 'refs';
   *{"$pkg\::MODIFY_CODE_ATTRIBUTES"} = shift->can("MODIFY_CODE_ATTRIBUTES");
+  $DEBUG = shift;
 }
 
 
