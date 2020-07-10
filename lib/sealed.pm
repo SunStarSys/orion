@@ -113,7 +113,7 @@ __END__
 
 =head1 sealed
 
-Subroutine attribute for compile-time typed lexical method lookups.
+Subroutine attribute for compile-time method lookups on its typed lexicals.
 
 =over 4
 
