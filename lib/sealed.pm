@@ -10,7 +10,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse ();
 
-our $VERSION = v0.2.0;
+our $VERSION = v0.3.0;
 our $DEBUG = 0;
 
 my %valid_attrs = (sealed => 1);
@@ -67,8 +67,8 @@ sub MODIFY_CODE_ATTRIBUTES {
 	  }
 
 	}
-	$op = $op->next if $$op and $op->name ne "entersub";
-	unshift @opstack, $op;
+	unshift @opstack, $op->next;
+
       }
 
       elsif ($op->can("pmreplroot")) {
@@ -95,9 +95,9 @@ sub MODIFY_CODE_ATTRIBUTES {
 }
 
 sub import {
-  my $pkg = caller;
-  no strict 'refs';
-  *{"$pkg\::MODIFY_CODE_ATTRIBUTES"} = shift->can("MODIFY_CODE_ATTRIBUTES");
+  my $isa = caller . "::ISA";
+  no strict 'refs'; 
+  push @$isa, shift;
   $DEBUG = shift;
 }
 
