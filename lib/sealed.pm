@@ -12,8 +12,8 @@ use B::Deparse ();
 use List::Util 'max';
 
 our $VERSION = v0.1.0;
+our $DEBUG = 0;
 
-my %method;
 my %valid_attrs = (sealed => 1);
 my $p_obj = B::svref_2object(sub {&import});
 my $start = $p_obj->START->next->next;
@@ -52,7 +52,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 		my $new_targ = max map scalar @$_, @lex_arr;
 		my ($method_name, $idx);
 		$method_name = $lex_arr[$idx++]->[$targ] while not defined $method_name;
-		warn __PACKAGE__, ": caching $class->$method_name lookup.\n";
+		warn __PACKAGE__, ": compiling $class->$method_name lookup.\n";
 		my $method = $class->can($method_name)
 		    or die "Invalid lookup: $class->$method_name";
 		$_->[$new_targ] = $method for @lex_arr;
@@ -88,7 +88,7 @@ sub MODIFY_CODE_ATTRIBUTES {
         unshift @opstack, $op->next;
       }
     }
-    if ($tweaked) {
+    if ($DEBUG and $tweaked) {
       warn B::Deparse->new->coderef2text($rv), "\n";
     }
   }
