@@ -20,7 +20,7 @@ my $start = $p_obj->START->next->next;
 sub tweak {
   my ($op, $lexical_names, $lexicals, $opstack) = @_;
   my $tweaked = 0;
-  if (index($op->next->name, "padsv") == 0) {
+  if ($op->next->name eq "padsv") {
     $op = $op->next;
     my $lex = $$lexical_names[$op->targ];
     if ($lex->TYPE->isa("B::HV")) {
