@@ -56,9 +56,9 @@ sub tweak {
 	  # replace $methop
 	  my $rv2cv    = bless $padop->new($padop->name, $padop->flags), ref $padop;
 	  $rv2cv->padix($targ);
-	  $op->next($rv2cv);
 	  $rv2cv->next($methop->next);
 	  $rv2cv->sibling($methop->sibling);
+	  $op->next($rv2cv);
 	}
 
 	$op = $op->next;
