@@ -33,6 +33,7 @@ sub tweak ($\@\@\@) {
       while ($op->next->name ne "entersub") {	  
 
 	if ($op->next->name eq "pushmark") {
+	  # we need to process this arg stack recursively
 	  splice @_, 0, 1, $op->next;
 	  ($op, my $t)         = &tweak;
 	  $tweaked            += $t;
