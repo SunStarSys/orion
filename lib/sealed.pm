@@ -77,7 +77,7 @@ sub tweak {
 sub MODIFY_CODE_ATTRIBUTES {
   my ($class, $rv, @attrs) = @_;
 
-  if (grep exists $valid_attrs{$_}, @attrs) {
+  if (grep $valid_attrs{$_}, @attrs) {
 
     my $cv_obj             = B::svref_2object($rv);
     my @op_stack           = ($cv_obj->START);
