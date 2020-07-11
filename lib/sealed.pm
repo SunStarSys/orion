@@ -148,6 +148,11 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
     use sealed 'deparse'; # additionally warns with the B::Deparse output
     use sealed;           # disables all warnings
 
+=item BUGS:
+
+You may need to simplify your named method call argument stack,
+because this op-tree walker isn't as robust as it needs to be. 
+
 =item See Also:
 
     https://www.sunstarsys.com/essays/perl7-sealed-lexicals
