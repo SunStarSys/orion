@@ -20,11 +20,11 @@ my $p_obj       = B::svref_2object(sub {&tweak});
 my $padop       = $p_obj->START->next->next;
 
 sub tweak {
-  my ($op, $lexical_names, $lexicals, $op_stack) = @_;
+  my ($op, $lexical_names, $pads, $op_stack) = @_;
   my $tweaked = 0;
 
   if ($op->next->name eq "padsv") {
-    $op = $op->next;
+    $op     = $op->next;
     my $lex = $$lexical_names[$op->targ];
 
     if ($lex->TYPE->isa("B::HV")) {
@@ -40,21 +40,21 @@ sub tweak {
 	}
 
 	elsif ($op->next->name eq "method_named") {
-	  my $methop = $op->next;
-	  my $targ = $methop->targ;
+	  my $methop   = $op->next;
+	  my $targ     = $methop->targ;
 
 	  # a little prayer
 	  my ($method_name, $idx);
-	  $method_name = $$lexicals[$idx++]->[$targ] while not defined $method_name;
+	  $method_name = $$pads[$idx++][$targ] while not defined $method_name;
 	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
 	      if $DEBUG;
 
-	  my $method = $class->can($method_name)
+	  my $method   = $class->can($method_name)
 	    or die "Invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
-	  $_->[$targ] = $method for @$lexicals; # bulletproof, blanket bludgeon
+	  $$_[$targ]   = $method for @$pads; # bulletproof, blanket bludgeon
 
 	  # replace $methop
-	  my $rv2cv = bless $padop->new($padop->name, $padop->flags), ref $padop;
+	  my $rv2cv    = bless $padop->new($padop->name, $padop->flags), ref $padop;
 	  $rv2cv->padix($targ);
 	  $op->next($rv2cv);
 	  $rv2cv->next($methop->next);
@@ -80,8 +80,8 @@ sub MODIFY_CODE_ATTRIBUTES {
 
     my $cv_obj             = B::svref_2object($rv);
     my @op_stack           = ($cv_obj->START);
-    my ($pad_names, @pads) = $cv_obj->PADLIST->ARRAY;
-    my @lex_arr            = map $_->object_2svref, @pads;
+    my ($pad_names, @p)    = $cv_obj->PADLIST->ARRAY;
+    my @pads               = map $_->object_2svref, @p;
     my @lexical_names      = $pad_names->ARRAY;
     my %processed_op;
     my $tweaked;
@@ -91,7 +91,7 @@ sub MODIFY_CODE_ATTRIBUTES {
         or next;
 
       if ($op->name eq "pushmark") {
-	  $tweaked += tweak($op, \@lexical_names, \@lex_arr, \@op_stack);	  
+	  $tweaked += tweak($op, \@lexical_names, \@pads, \@op_stack);	  
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
