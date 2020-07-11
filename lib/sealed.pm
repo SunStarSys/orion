@@ -28,7 +28,6 @@ sub tweak {
     my $lex = $$lexical_names[$op->targ];
 
     if ($lex->TYPE->isa("B::HV")) {
-      $tweaked++;
       my $class = $lex->TYPE->NAME;
 
       while ($op->next->name ne "entersub") {	  
@@ -59,6 +58,8 @@ sub tweak {
 	  $rv2cv->next($methop->next);
 	  $rv2cv->sibling($methop->sibling);
 	  $op->next($rv2cv);
+
+	  $tweaked++;
 	}
 
 	$op = $op->next;
