@@ -34,26 +34,26 @@ sub tweak {
 
 	if ($op->next->name eq "pushmark") {
 	  splice @_, 0, 1, $op->next;
-	  ($op, my $t) = &tweak;
-	  $tweaked    += $t;
+	  ($op, my $t)         = &tweak;
+	  $tweaked            += $t;
 	}
 
 	elsif ($op->next->name eq "method_named") {
-	  my $methop   = $op->next;
-	  my $targ     = $methop->targ;
+	  my B::METHOP $methop = $op->next;
+	  my $targ             = $methop->targ;
 
 	  # a little prayer
 	  my ($method_name, $idx);
-	  $method_name = $$pads[$idx++][$targ] while not defined $method_name;
+	  $method_name         = $$pads[$idx++][$targ] while not defined $method_name;
 	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
 	      if $DEBUG;
 
-	  my $method   = $class->can($method_name)
+	  my $method           = $class->can($method_name)
 	    or die "Invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
-	  $$_[$targ]   = $method for @$pads; # bulletproof, blanket bludgeon
+	  $$_[$targ]           = $method for @$pads; # bulletproof, blanket bludgeon
 
 	  # replace $methop
-	  my $rv2cv    = bless $padop->new($padop->name, $padop->flags), ref $padop;
+	  my B::PADOP $rv2cv   = bless $padop->new($padop->name, $padop->flags), ref $padop;
 	  $rv2cv->padix($targ);
 	  $rv2cv->next($methop->next);
 	  $rv2cv->sibling($methop->sibling);
