@@ -53,7 +53,7 @@ sub tweak ($\@\@\@) {
 	    or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 	  $$_[$targ]           = $method for @$pads; # bulletproof, blanket bludgeon
 
-	  # replace $methop
+	  # replace $methop (this bless below is needed because B::Generate is too old)
 	  my B::PADOP $rv2cv   = bless $padop->new($padop->name, $padop->flags), ref $padop;
 	  $rv2cv->padix($targ);
 	  $rv2cv->next($methop->next);
