@@ -15,9 +15,9 @@ use B::Deparse  ();
 our $VERSION    = v0.9.9;
 our $DEBUG;
 
-my %valid_attrs = (sealed => 1);
-my $p_obj       = B::svref_2object(sub {&tweak});
-my $padop       = $p_obj->START->next->next;
+my %valid_attrs    = (sealed => 1);
+my $p_obj          = B::svref_2object(sub {&tweak});
+my B::PADOP $padop = $p_obj->START->next->next;
 
 sub tweak {
   my ($op, $lexical_names, $pads, $op_stack) = @_;
