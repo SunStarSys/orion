@@ -49,7 +49,7 @@ sub tweak {
 	      if $DEBUG;
 
 	  my $method           = $class->can($method_name)
-	    or die __PACKAGE . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
+	    or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 	  $$_[$targ]           = $method for @$pads; # bulletproof, blanket bludgeon
 
 	  # replace $methop
