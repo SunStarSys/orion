@@ -153,6 +153,11 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
 You may need to simplify your named method call argument stack,
 because this op-tree walker isn't as robust as it needs to be. 
 
+Don't use this if you are writing a reusable OO module (on CPAN, say).
+This module targets end-applications: virtual method lookups and
+duck typing are core elements of any dynamic language's OO feature
+design, and Perl is no different.
+
 =item See Also:
 
     https://www.sunstarsys.com/essays/perl7-sealed-lexicals
