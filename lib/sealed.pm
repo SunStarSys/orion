@@ -19,7 +19,7 @@ my %valid_attrs    = (sealed => 1);
 my $p_obj          = B::svref_2object(sub {&tweak});
 my B::PADOP $padop = $p_obj->START->next->next;
 
-sub tweak {
+sub tweak ($\@\@\@) {
   my ($op, $lexical_names, $pads, $op_stack) = @_;
   my $tweaked = 0;
 
@@ -92,7 +92,7 @@ sub MODIFY_CODE_ATTRIBUTES {
         or next;
 
       if ($op->name eq "pushmark") {
-	$tweaked += tweak($op, \@lexical_names, \@pads, \@op_stack);	  
+	$tweaked += tweak($op, @lexical_names, @pads, @op_stack);	  
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
