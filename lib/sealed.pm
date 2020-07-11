@@ -36,7 +36,7 @@ sub tweak {
 	if ($op->next->name eq "pushmark") {
 	  splice @_, 0, 1, $op->next;
 	  ($op, my $t) = &tweak;
-	  $tweaked += $t;
+	  $tweaked    += $t;
 	}
 
 	elsif ($op->next->name eq "method_named") {
