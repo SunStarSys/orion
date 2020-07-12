@@ -24,8 +24,8 @@ sub tweak ($\@\@\@) {
   my $tweaked = 0;
 
   if ($op->next->name eq "padsv") {
-    $op     = $op->next;
-    my $type = $$lexical_names[$op->targ]->TYPE;
+    $op         = $op->next;
+    my $type    = $$lexical_names[$op->targ]->TYPE;
 
     if ($type->isa("B::HV")) {
       my $class = $type->NAME;
