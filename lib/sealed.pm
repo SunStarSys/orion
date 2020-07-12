@@ -133,7 +133,7 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
 
 =over 4
 
-=item Sample Usage:
+=item Sample Usage
 
     use Apache2::RequestRec;
     use base 'sealed';
@@ -143,20 +143,20 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
       $r->content_type("text/html"); # compile-time method lookup.
     ...
 
-=item import() Options:
+=item import() Options
 
     use sealed 'debug';   # warns about 'method_named' op tweaks
     use sealed 'deparse'; # additionally warns with the B::Deparse output
     use sealed;           # disables all warnings
 
-=item BUGS:
+=item BUGS
 
 You may need to simplify your named method call argument stack,
 because this op-tree walker isn't as robust as it needs to be. 
 For example, any "branching" done in the target method's argument
 stack, eg by using the '?:' ternary operator, will break this logic.
 
-=item CAVEATS:
+=item CAVEATS
 
 Don't use this if you are writing a reusable OO module (on CPAN, say).
 This module targets end-applications: virtual method lookups and
@@ -164,8 +164,8 @@ duck typing are core elements of any dynamic language's OO feature
 design, and Perl is no different.  Look into XS if you want peak
 performance in reusable OO methods you wish to provide.
 
-=item See Also:
+=item See Also
 
-    https://www.sunstarsys.com/essays/perl7-sealed-lexicals
+L<https://www.sunstarsys.com/essays/perl7-sealed-lexicals>
 
 =back
