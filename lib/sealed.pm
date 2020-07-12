@@ -30,7 +30,7 @@ sub tweak ($\@\@\@) {
     if ($lex->TYPE->isa("B::HV")) {
       my $class = $lex->TYPE->NAME;
 
-      while ($op->next->name ne "entersub") {	  
+      while ($op->next->name ne "entersub") {
 
 	if ($op->next->name eq "pushmark") {
 	  # we need to process this arg stack recursively
