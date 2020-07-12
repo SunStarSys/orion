@@ -143,7 +143,7 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
       $r->content_type("text/html"); # compile-time method lookup.
     ...
 
-=item import() Options
+=item C<import()> Options
 
     use sealed 'debug';   # warns about 'method_named' op tweaks
     use sealed 'deparse'; # additionally warns with the B::Deparse output
