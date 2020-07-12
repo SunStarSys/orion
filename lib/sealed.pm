@@ -47,7 +47,7 @@ sub tweak ($\@\@\@) {
 	  my ($method_name, $idx);
 	  $method_name         = $$pads[$idx++][$targ] while not defined $method_name;
 	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
-	      if $DEBUG;
+	    if $DEBUG;
 
 	  my $method           = $class->can($method_name)
 	    or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
@@ -93,7 +93,7 @@ sub MODIFY_CODE_ATTRIBUTES {
         or next;
 
       if ($op->name eq "pushmark") {
-	$tweaked += tweak($op, @lexical_names, @pads, @op_stack);	  
+	$tweaked += tweak($op, @lexical_names, @pads, @op_stack);
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
