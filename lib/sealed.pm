@@ -25,10 +25,10 @@ sub tweak ($\@\@\@) {
 
   if ($op->next->name eq "padsv") {
     $op     = $op->next;
-    my $lex = $$lexical_names[$op->targ];
+    my $type = $$lexical_names[$op->targ]->TYPE;
 
-    if ($lex->TYPE->isa("B::HV")) {
-      my $class = $lex->TYPE->NAME;
+    if ($type->isa("B::HV")) {
+      my $class = $type->NAME;
 
       while ($op->next->name ne "entersub") {
 
