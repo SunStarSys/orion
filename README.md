@@ -24,6 +24,8 @@
            - view.pm
        - templates/
 
+    See <https://vcs.sunstarsys.com/repos/svn/public/site> for a live example.
+
 2. Launch the markdown.js daemon in the background.
 
 3. Run build_site.pl --source-base /path/to/sources/trunk --target-base /wherever/you/want
