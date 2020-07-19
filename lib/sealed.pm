@@ -91,7 +91,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       ref $op and $$op and not $processed_op{$$op}++
         or next;
 
-      $op->dump if $DEBUG eq 'dump';
+      $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
 	$tweaked += tweak($op, @lexical_names, @pads, @op_stack);
