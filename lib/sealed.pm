@@ -12,7 +12,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION       = v1.0.0;
+our $VERSION       = v1.0.1;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
@@ -54,15 +54,14 @@ sub tweak ($\@\@\@) {
 	  $$_[$targ]           = $method for @$pads; # bulletproof, blanket bludgeon
 
 	  # replace $methop (this bless below is needed because B::Generate is too old)
-	  my B::PADOP $rv2cv   = bless $padop->new($padop->name, $padop->flags), ref $padop;
-	  $rv2cv->padix($targ);
-	  $rv2cv->next($methop->next);
-	  $rv2cv->sibling($methop->sibling);
-	  $op->next($rv2cv);
+	  my B::PADOP $gv      = bless $padop->new($padop->name, $padop->flags), ref $padop;
+	  $gv->padix($targ);
+	  $gv->next($methop->next);
+	  $gv->sibling($methop->sibling);
+	  $op->next($gv);
 
 	  $tweaked++;
 	}
-
 	$op = $op->next;
       }
 
@@ -89,8 +88,10 @@ sub MODIFY_CODE_ATTRIBUTES {
     my $tweaked;
 
     while (my $op = shift @op_stack) {
-      $$op and not $processed_op{$$op}++
+      ref $op and $$op and not $processed_op{$$op}++
         or next;
+
+      $op->dump if $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
 	$tweaked += tweak($op, @lexical_names, @pads, @op_stack);
@@ -147,12 +148,13 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
 
     use sealed 'debug';   # warns about 'method_named' op tweaks
     use sealed 'deparse'; # additionally warns with the B::Deparse output
+    use sealed 'dump';    # warns with the $op->dump during the tree walk
     use sealed;           # disables all warnings
 
 =item BUGS
 
 You may need to simplify your named method call argument stack,
-because this op-tree walker isn't as robust as it needs to be. 
+because this op-tree walker isn't as robust as it needs to be.
 For example, any "branching" done in the target method's argument
 stack, eg by using the '?:' ternary operator, will break this logic.
 
