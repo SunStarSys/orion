@@ -4,34 +4,31 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#Core.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#Core.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
 ###############################################################################
 
 package Dotiac::DTL::Core;
-
-our $VERSION = 0.8;
-
-package Dotiac::DTL;
-require Dotiac::DTL::Value;
-require Dotiac::DTL::Template;
-require Dotiac::DTL::Filter;
-require Dotiac::DTL::Compiled;
-
+use Dotiac::DTL::Value ();
+use Dotiac::DTL::Template ();
+use Dotiac::DTL::Filter ();
+use Dotiac::DTL::Compiled ();
+our $VERSION = 0.9;
 use strict;
 use warnings;
 use Scalar::Util qw/reftype blessed/;
 use Carp;
-require File::Spec;
-require File::Basename;
-
-#These go into the context.
+use File::Spec ();
+use File::Basename ();
+use base 'sealed';
+{
+package Dotiac::DTL;
 our $TEMPLATE_STRING_IF_INVALID=""; #If there was no parameter found
 our $ALLOW_METHOD_CALLS=1;
 our $ALLOWED_INCLUDE_ROOTS=0; #Allows the ssi tag
@@ -53,15 +50,16 @@ our %globals; #Well we already have other globals, this saves me the init() trou
 our %included;
 our %params;
 
+}
 
 # Template cache, needs to be global
 my %cache;
 
 sub new {
 	my $class=shift;
-	my $data=shift; 
+	my $data=shift;
 	my $t="";
-	%params=();
+	%Dotiac::DTL::params=();
 	if (ref $data eq "SCALAR") {
 		die "Dotiac::DTL::Reduced can only work with compiled templates, use Dotiac::DTL for the full interface";
 	}
@@ -90,7 +88,7 @@ sub new {
 					} or do {
 						croak "Error while getting compiled template $data.pm and can't use $data, because this is Reduced:\n $@\n.";
 						undef $@;
-					};	
+					};
 				}
 				else {
 					carp "$data seem to outdate $data.pm, but Dotiac::DTL::Reduced can only work with compiled templates, use Dotiac::DTL to recompile";
@@ -124,10 +122,10 @@ sub new {
 				} or do {
 					croak "Error while getting compiled template $data.pm and $data is gone:\n $@\n.";
 					undef $@;
-				};	
+				};
 			}
 		}
-		unless ($cache{$t})  {	
+		unless ($cache{$t})  {
 			croak "Dotiac::DTL::Reduced can only work with compiled templates, use Dotiac::DTL for the full interface";
 		}
 	}
@@ -149,7 +147,7 @@ our $currentdir="";
 sub safenew {
 	my $class=shift;
 	my $file=shift;
-	unless ($ALLOWED_INCLUDE_ROOTS and int($ALLOWED_INCLUDE_ROOTS) > 2) {
+	unless ($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS and int($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS) > 2) {
 		$file=~s/^[\\\/]//g;
 		$file=~s/^\w+\://g; #Windows GRR
 		1 while $file=~s/^\.\.[\\\/]//g;
@@ -174,19 +172,25 @@ sub compiled {
 	my $name=shift;
 	my $f;
 	$Dotiac::DTL::currentdir=$Dotiac::DTL::CURRENTDIR;
-	%params=();
+	%Dotiac::DTL::params=();
 	eval {
 		$f=Dotiac::DTL::Compiled->new($name);
 		1;
 	} or do {
 		croak "Error while getting compiled template from $name\n $@\n.";
 		undef $@;
-	};	
+	};
 	undef $@;
 	return "Dotiac::DTL::Template"->new($f,$Dotiac::DTL::CURRENTDIR);
 }
 
+use APR::Request qw/encode decode/;
+BEGIN {
+*urlencode = \&encode;
+*descap = \&decode;
+}
 
+=pod
 
 sub urlencode {
 	my $val=shift;
@@ -194,6 +198,8 @@ sub urlencode {
 	$val=~s/([^a-zA-Z0-9_.~-])/uc sprintf("%%%02x",ord($1))/eg;
 	return $val;
 }
+
+=cut
 
 sub escap { #Escape is used too much these days.
 	my $string=shift;
@@ -207,17 +213,21 @@ sub escap { #Escape is used too much these days.
 	$string=~s/\\U([\dA-Fa-f]{8})/chr(hex($1))/eg;
 	$string=~s/\\(["'{}])/$1/g;
 	#$string=~s/\\([^\\])/die/eg;
-	$string=~s/\\\\/\\/g; 
+	$string=~s/\\\\/\\/g;
 	#TODO more pyhton escape seq.
 	$string=~s/([\|\s\,\"\'\`\%\:;=])/sprintf("%%%02X",ord($1))/eg;
 	return "`$string`";
 }
+
+=pod
 
 sub descap {
 	my $string=shift;
 	$string=~s/%([\da-fA-F]{2})/chr(hex($1))/eg;
 	return $string;
 }
+
+=cut
 
 sub get_variables {
 	my $x=shift;
@@ -270,7 +280,7 @@ sub get_variables {
 			}
 			else {
 				$ret{$k}=[];
-			}	
+			}
 		}
 		return %ret;
 	}
@@ -283,7 +293,8 @@ sub get_variables {
 
 sub Escape {
 	my $var=shift;
-	return Dotiac::DTL::Value->escape($var)->string() if $_[0];
+        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
+	return $dtlv->escape($var)->string() if $_[0];
 	return $var;
 }
 
@@ -298,14 +309,15 @@ sub Conditional {
 	return 1;
 }
 
-sub apply_filters {
-	my $value=shift; 
+sub apply_filters :sealed {
+	my $value=shift;
 	my $vars=shift;
 	my $escape=shift;
+        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
 	#$escape=0 if $STRING_IS_LITERAL; #TODO
 	#$VARIABLE_IS_SAFE=!$escape;
 	unless (Scalar::Util::blessed($value) and $value->isa("Dotiac::DTL::Value")) {
-		$value=Dotiac::DTL::Value->new($value,!$escape);
+		$value=$dtlv->new($value,!$escape);
 	}
 	foreach my $f (@_) {
 		my ($filter,$param)=split /:/,$f,2;
@@ -406,10 +418,11 @@ sub devar_repr {
 
 }
 
-sub devar_var {
+sub devar_var :sealed {
 	my $name=shift;
 	my $n=$name;
-	return Dotiac::DTL::Value->safe(undef) unless defined $name;
+        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
+        return $dtlv->safe(undef) unless defined $name;
 	my $param=shift;
 	my $f=substr $name,0,1;
 	my $l=substr $name,-1,1;
@@ -420,24 +433,24 @@ sub devar_var {
 	confess $escape unless defined $escape;
 	#confess @_ unless @_;
 	#TODO
-	return Dotiac::DTL::Value->safe(substr $name,1,-1) if $f eq "'" and $l eq "'" or $f eq '"' and $l eq '"';
-	return Dotiac::DTL::Value->safe(descap(substr $name,1,-1)) if $f eq "`" and $l eq "`";
+        return $dtlv->safe(substr $name, 1, -1) if $f eq "'" and $l eq "'" or $f eq '"' and $l eq '"';
+	return $dtlv->safe(descap(substr $name, 1, -1)) if $f eq "`" and $l eq "`";
 	if ($name eq "block.super" and $param->{"block.super"}) {
-		return Dotiac::DTL::Value->safe($param->{"block.super"}->string($param,@_)) if Scalar::Util::blessed($param->{"block.super"});
-		return Dotiac::DTL::Value->safe($param->{"block.super"}->($param,@_)) if ref $param->{"block.super"} eq "CODE";
+		return $dtlv->safe($param->{"block.super"}->string($param,@_)) if Scalar::Util::blessed($param->{"block.super"});
+		return $dtlv->safe($param->{"block.super"}->($param,@_)) if ref $param->{"block.super"} eq "CODE";
 	}
-	return Dotiac::DTL::Value->new($param->{$name},!$escape) if exists $param->{$name};
+	return $dtlv->new($param->{$name},!$escape) if exists $param->{$name};
 	my @tree=split/\./,$name;
 	$name=shift @tree;
 	unless (exists $param->{$name}) {
-		return Dotiac::DTL::Value->safe($n) if $n!~/[^\d\-\.\,\e]/;
-		if ($cycle{$name} and $cycle{$name}->[1]) {
-			return Dotiac::DTL::Value->safe("") if $included{"cycle_$name"}++;
-			my $r=devar_raw($cycle{$name}->[2]->[$cycle{$name}->[0]-1 % $cycle{$name}->[1]],$param,$escape,@_);
-			$included{"cycle_$name"}=0;
+		return $dtlv->safe($n) if $n!~/[^\d\-\.\,\e]/;
+		if ($Dotiac::DTL::cycle{$name} and $Dotiac::DTL::cycle{$name}->[1]) {
+			return $dtlv->safe("") if $Dotiac::DTL::included{"cycle_$name"}++;
+			my $r=devar_raw($Dotiac::DTL::cycle{$name}->[2]->[$Dotiac::DTL::cycle{$name}->[0]-1 % $Dotiac::DTL::cycle{$name}->[1]],$param,$escape,@_);
+			$Dotiac::DTL::included{"cycle_$name"}=0;
 			return $r;
 		}
-		return Dotiac::DTL::Value->safe(undef) ;
+		return $dtlv->safe(undef) ;
 	}
 	$param=$param->{$name};
 	while (defined(my $name = shift @tree)) {
@@ -445,7 +458,7 @@ sub devar_var {
 		if ($r) {
 			if ($r eq "HASH") {
 				if (not exists $param->{$name}) {
-					return Dotiac::DTL::Value->safe(undef) unless blessed $param;
+					return $dtlv->safe(undef) unless blessed $param;
 				}
 				else {
 					$param=$param->{$name};
@@ -454,11 +467,11 @@ sub devar_var {
 			}
 			elsif ($r eq "ARRAY") {
 				if ($name=~m/[^-\d]/) {
-					return Dotiac::DTL::Value->safe(undef) unless blessed $param;
+					return $dtlv->safe(undef) unless blessed $param;
 				}
 				else {
 					if (not exists $param->[$name]) {
-						return Dotiac::DTL::Value->safe(undef) unless blessed $param;
+						return $dtlv->safe(undef) unless blessed $param;
 					}
 					else {
 						$param=$param->[$name];
@@ -468,7 +481,7 @@ sub devar_var {
 			}
 		}
 		if (blessed $param) {
-			return Dotiac::DTL::Value->safe(undef) unless $ALLOW_METHOD_CALLS; 
+			return $dtlv->safe(undef) unless $Dotiac::DTL::ALLOW_METHOD_CALLS;
 			if ($param->can($name)) {
 				$param=$param->$name();
 				next;
@@ -478,24 +491,39 @@ sub devar_var {
 				eval {
 					$x=$param->__getitem__($name);
 					1;
-				} or return Dotiac::DTL::Value->safe(undef);
+				} or return $dtlv->safe(undef);
 				if (defined $x) {
 					$param=$x;
 					next;
 				}
 			}
-			return Dotiac::DTL::Value->safe(undef);
+			return $dtlv->safe(undef);
 		}
-		return Dotiac::DTL::Value->safe($n) if $n!~/[^\d\-\.\,\e]/;
-		return Dotiac::DTL::Value->safe(undef);
+		return $dtlv->safe($n) if $n!~/[^\d\-\.\,\e]/;
+		return $dtlv->safe(undef);
 	}
-	return Dotiac::DTL::Value->new($param,!$escape);
+	return $dtlv->new($param,!$escape);
 }
+
 
 sub devar_var_default {
 	my $var = devar_var(@_);
 	return $var->string();
 }
+
+*Dotiac::DTL::new = \&new;
+*Dotiac::DTL::safenew = \&safenew;
+*Dotiac::DTL::compiled = \&compiled;
+*Dotiac::DTL::get_variables = \&get_variables;
+*Dotiac::DTL::get_variables = \&get_variables;
+*Dotiac::DTL::apply_filters = \&apply_filters;
+*Dotiac::DTL::devar = \&devar;
+*Dotiac::DTL::devar_raw = \&devar_raw;
+*Dotiac::DTL::devar_var = \&devar_var;
+*Dotiac::DTL::devar_content = \&devar_content;
+*Dotiac::DTL::devar_var_default = \&devar_var_default;
+*Dotiac::DTL::Escape =\&Escape;
+*Dotiac::DTL::Conditional =\&Conditional;
 
 1;
 __END__
@@ -616,7 +644,7 @@ Contains the content of the named blocks, either as a Dotiac::DTL::Tag like obje
 		$Dotiac::DTLs::blocks{"compiled"}=\$sub;
 	}
 
-=head3 %Dotiac::DTLs::cycle 
+=head3 %Dotiac::DTLs::cycle
 
 Used by the cycle tag to store state information, there should be no need to play around with this
 
@@ -636,7 +664,7 @@ Storage space for other tags. You should never store any information that change
 	}
 	#And for the compiled output
 	sub perlprint {
-		my ($fh,$id,$level,$digest)=(shift(),shift(),shift(),shift()); 
+		my ($fh,$id,$level,$digest)=(shift(),shift(),shift(),shift());
 		#...
 		my $name='"'.$digest."-".$id.'"'; #$digest will be unique in combination with $id.
 		print $fh "\t" x $level,"\$Dotiac::DTLs::globals{counter}->{$name}=1 unless \$Dotiac::DTLs::globals{counter}->{$name}=1;\n";
@@ -651,7 +679,7 @@ Storage space for other tags. You should never store any information that change
 
 See L<Dotiac::DTL::Tag> for details on what those methods should do.
 
-=head3 %Dotiac::DTLs::included 
+=head3 %Dotiac::DTLs::included
 
 Stores information on which template is already included to detect cyclic includes. Used by the tags ssi and include. There shouldn't also be any need to change this.
 
@@ -669,7 +697,7 @@ By setting $ALLOWED_INCLUDE_ROOTS to "2" this will be disabeled.
 
 Also depends on if you are using L<Dotiac::DTL> or L<Dotiac::DTL::Reduced>.
 
-=head3 compiled(PACKAGENAME) 
+=head3 compiled(PACKAGENAME)
 
 Treats PACKAGENAME as a compiled template. See L<Dotiac::DTL::Compiled>.
 
@@ -698,7 +726,7 @@ Returns a Dotiac::DTL object
 	my $templatedata="{% for x in array %}{% include template %}{% endfor %}";
 	my $t = Dotiac::DTL->new(\$templatedata); #File templates work just as well.
 	$t->print({array=>[1..100],template=>$mytemplate);
-	# This will now include and print the above package a hundert times and 
+	# This will now include and print the above package a hundert times and
 	# will be a lot faster, depending on the contents of that for loop.
 
 =head3 param(NAME, VALUE)
@@ -742,7 +770,7 @@ Parameters to give to the template. See Variables below.
 
 Same as string(HASHREF) just for HTML::Template and Django syntax.
 
-=head3 print(HASHREF) 
+=head3 print(HASHREF)
 
 You can think of these two being equal:
 

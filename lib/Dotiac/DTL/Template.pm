@@ -4,26 +4,26 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#Template.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#Template.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
 ###############################################################################
 
 package Dotiac::DTL::Template;
-require Dotiac::DTL::Core;
-require Dotiac::DTL::Addon;
+use Dotiac::DTL::Core ();
+use Dotiac::DTL::Addon ();
 
 our $VERSION = 0.8;
 
 use strict;
 use warnings;
 use Carp;
- 
+
 sub new {
 	my $class=shift;
 	my $self={};
@@ -52,12 +52,12 @@ sub param {
 		$self->{vars}->{$name}=shift if @_;
 	}
 	return $self->{vars}->{$name} if $name;
-	
+
 }
 
 sub string {
 	my $self=shift;
-	my $vars=shift || {};	
+	my $vars=shift || {};
 	%Dotiac::DTL::blocks=();
 	%Dotiac::DTL::cycle=();
 	%Dotiac::DTL::globals=();
@@ -170,7 +170,7 @@ Parameters to give to the template. See Variables below.
 
 Same as string(HASHREF) just for HTML::Template and Django syntax.
 
-=head3 print(HASHREF) 
+=head3 print(HASHREF)
 
 You can think of these two being equal:
 

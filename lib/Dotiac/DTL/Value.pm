@@ -4,11 +4,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#Value.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#Value.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -17,8 +17,8 @@
 package Dotiac::DTL::Value;
 use strict;
 use warnings;
-require Scalar::Util;
-
+use Scalar::Util ();
+use base 'sealed';
 our $VERSION = 0.8;
 
 sub new {
@@ -35,18 +35,20 @@ sub new {
 
 }
 
-sub safe {
+sub safe :sealed {
 	my $self=shift;
-	return Dotiac::DTL::Value->new(shift(@_),1) unless ref $self;
+        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
+	return $dtlv->new(shift(@_),1) unless ref $self;
 	if (@_ and $_[0]) {
 		$self->[1]=1;
 	}
 	return $self->[1];
 }
 
-sub escape {
+sub escape :sealed {
 	my $self=shift;
-	return Dotiac::DTL::Value->new(shift(@_),0) unless ref $self;
+        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
+	return $dtlv->new(shift(@_),0) unless ref $self;
 	if (@_ and $_[0]) {
 		$self->[1]=0;
 	}
@@ -127,8 +129,8 @@ sub str {
 	return $data;
 }
 
-sub string {
-	my $self=shift;
+sub string :sealed {
+	my Dotiac::DTL::Value $self=shift;
 	my $data=$self->[0];
 	my $value="Error";
 	if ($self->undef()) {
@@ -200,8 +202,8 @@ sub rep {
 	return $data;
 }
 
-sub repr {
-	my $self=shift;
+sub repr :sealed {
+	my Dotiac::DTL::Value $self=shift;
 	my $data=$self->[0];
 	if ($self->undef()) {
 		return $Dotiac::DTL::TEMPLATE_STRING_IF_INVALID;
@@ -264,8 +266,8 @@ sub pyrep {
 	return $data;
 }
 
-sub pyrepr {
-	my $self=shift;
+sub pyrepr :sealed {
+	my Dotiac::DTL::Value $self=shift;
 	my $data=$self->[0];
 	if ($self->undef()) {
 		return "null";
@@ -275,7 +277,7 @@ sub pyrepr {
 	}
 	elsif ($self->scalar()) {
 		return '"'.$data.'"';
-	}	
+	}
 	elsif ($self->object and $data->can("repr")) {
 		return $data->repr();
 	}
@@ -352,13 +354,13 @@ Creates a new Dajango::Template::Value with the contents VALUE. It will be marke
 
 	$value=Dajango::Template::Value->new($data,!$autoescape);
 
-=head3 safe(VALUE) 
+=head3 safe(VALUE)
 
 Creates a new Dajango::Template::Value with the contents VALUE and marks it as safe for output.
 
 	$value=Dajango::Template::Value->safe($data);
 
-=head3 escape(VALUE) 
+=head3 escape(VALUE)
 
 Creates a new Dajango::Template::Value with the contents VALUE and marks it for escaping during output.
 
@@ -506,7 +508,7 @@ This is useful if you need to escape the value yourself.
 
 =head3 pyrepr()
 
-Same as repr(), but calls the repr() method on a contained object before it calls string(); 
+Same as repr(), but calls the repr() method on a contained object before it calls string();
 
 =head3 stringnodefault()
 
@@ -556,4 +558,3 @@ Marc-Sebastian Lucksch
 perl@marc-s.de
 
 =cut
-

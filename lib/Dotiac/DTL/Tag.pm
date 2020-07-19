@@ -4,11 +4,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#Addon.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#Addon.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -18,7 +18,6 @@ package Dotiac::DTL::Tag;
 #Default Tags
 use strict;
 use warnings;
-
 our $VERSION = 0.8;
 
 sub new {
@@ -39,7 +38,7 @@ sub perl {
 	print $fh "my ";
 	print $fh (Data::Dumper->Dump([$self->{p}],["\$text$id"]));
 	return $id;
-	
+
 }
 sub perlinit {
 	my $self=shift;
@@ -96,11 +95,11 @@ Dotiac::DTL::Tag - Terminates a template list
 
 The Dotiac::DTL::Tag is always the last element in a template list which just contains some text.
 
-It also serves as a base class for all the other tags. 
+It also serves as a base class for all the other tags.
 
 =head2 Included Tags
 
-=over 
+=over
 
 =item L<Dotiac::DTL::Tag::autoescape>
 
@@ -242,7 +241,7 @@ Here is a small example of a tag that does nothing:
 	sub string {
 		my $self=shift;
 		return $self->{p}.$self->{n}->string(@_); #Just the same thing as print() does only return it. Don't forget @_.
-		
+
 	}
 	sub eval {
 		my $self=shift;
@@ -255,7 +254,7 @@ Here is a small example of a tag that does nothing:
 		my $fh=shift;
 		my $id=shift;
 		$self->SUPER::perl($fh,$id,@_); #Use Dotiac::DTL::Tag's perl() method for the $self->{p} text.
-		return $self->{n}->perl($fh,$id+1,@_) if $self->{n};	
+		return $self->{n}->perl($fh,$id+1,@_) if $self->{n};
 		return $id;
 	}
 	sub perlprint {
@@ -377,7 +376,7 @@ This is easier done than said...
 		my $r="Some text";
 		#.. Do something to fill $r. Modify $vars and $escape if needed.
 		# And if this tag has some content: (/endtag)
-		# $r.=$self->{content}->string($vars,$escape,@_); 
+		# $r.=$self->{content}->string($vars,$escape,@_);
 		return $self->{p}.$r.$self->{n}->string($vars,$escape,@_); #NEVER forget @_ here.
 	}
 
@@ -409,7 +408,7 @@ This is either "1" (on) or "0" (off) and controls the autoescaping.
 
 Contains nothing for now, but it might in the future.
 
-Always give @_ to the next tags (and content tags) print() or string(). 
+Always give @_ to the next tags (and content tags) print() or string().
 
 =back
 
@@ -427,7 +426,7 @@ This is easier done than said...
 		#print something:
 		# print "Hello World";
 		# And if this tag has some content: (/endtag)
-		# $self->{content}->print($vars,$escape,@_); 
+		# $self->{content}->print($vars,$escape,@_);
 		$self->{n}->print($vars,$escape,@_); #Call print() or the next tag. NEVER forget @_ here.
 	}
 
@@ -459,7 +458,7 @@ This is either "1" (on) or "0" (off) and controls the autoescaping.
 
 Contains nothing for now, but it might in the future.
 
-Always give @_ to the next tags (and content tags) print() or string(). 
+Always give @_ to the next tags (and content tags) print() or string().
 
 =back
 
@@ -534,7 +533,7 @@ Level of indentation:
 
 I<Not perl(), perlinit() and perlcount()>
 
-=item MD5 
+=item MD5
 
 MD5 sum of the file. Used by block/cycle/ifchanged tags to save their global content.
 
@@ -611,12 +610,12 @@ sub perlprint {
 	my $id=shift;
 	my $level=shift;
 	$self->SUPER::perlprint($fh,$id,$level,@_);
-	# 
+	#
 	# The Code goes here
 	#
 	# If you have content and want to get it's code, use this (increase level)
 	# print $fh "\t" x $level,"if (...) {\n;" #or whatever you want with this code.
-	# $id = $self->{content}->perlprint($fh,$id+1,$level+1,@_); 
+	# $id = $self->{content}->perlprint($fh,$id+1,$level+1,@_);
 	# print $fh "\t" x $level,"}\n;"
 	return $self->{n}->perlprint($fh,$id+1,$level,@_);
 }
@@ -645,7 +644,7 @@ If you change variables or the autoescape stuff, you will have to code a special
 
 These are all quite useless, but they show how to do it.
 
-=head3 The {% variable %} tag. 
+=head3 The {% variable %} tag.
 
 This just renders a variable it gets, much like {{ variable }}, but less optimized...
 
@@ -684,7 +683,7 @@ Almost all tags need to call Dotiac::DTL::devar to get variable contents. You sh
 		my $self=shift;
 		my $vars=shift;
 		return $self->{p}.Dotiac::DTL::devar($self->{var},$vars,@_).$self->{n}->string($vars,@_); #About the same as print()
-		
+
 	}
 	sub eval {
 		my $self=shift;
@@ -693,7 +692,7 @@ Almost all tags need to call Dotiac::DTL::devar to get variable contents. You sh
 	sub perl {
 		my $self=shift;
 		my $fh=shift;
-		my $id=shift; 
+		my $id=shift;
 		$self->SUPER::perl($fh,$id,@_); #Call Dotiac::DTL::Tag's stuff to save $self->{p};
 		print $fh "my "; #My is needed, since all compiled templates contain a use strict;
 		print $fh Data::Dumper->Dump([$self->{var}],["\$var$id"]);
@@ -714,7 +713,7 @@ Almost all tags need to call Dotiac::DTL::devar to get variable contents. You sh
 		print $fh "\t" x $level,"print Dotiac::DTL::devar(\$var$id,\$vars,\$escape,\@_);\n";
 		return $self->{n}->perlprint($fh,$id+1,$level,@_);
 	}
-	sub perlstring { 
+	sub perlstring {
 		my $self=shift;
 		my $fh=shift;
 		my $id=shift;
@@ -736,7 +735,7 @@ Almost all tags need to call Dotiac::DTL::devar to get variable contents. You sh
 		$id=$self->{content}->perlcount($id+1,@_);
 		return $self->{n}->perlcount($id+1);
 	}
-	
+
 =head3 The {% double %}-Tag: Renders everything two times.
 
 This shows nicely how to do endtags and controlstructures.
@@ -775,7 +774,7 @@ This shows nicely how to do endtags and controlstructures.
 	sub string {
 		my $self=shift;
 		return $self->{p}.$self->{content}->string(@_).$self->{content}->string(@_).$self->{n}->string(@_);
-		
+
 	}
 	sub eval {
 		my $self=shift;
@@ -804,7 +803,7 @@ This shows nicely how to do endtags and controlstructures.
 		my $level=shift;
 		$self->SUPER::perlprint($fh,$id,$level,@_);
 		# We can't just call $id = $self->{content}->perlprint($fh,$id+1,$level,@_); twice, it would blow up the code and destroy the ID scheme.
-		print $fh "\t" x $level,"for my \$double (0 .. 1){\n"; #Don't need \$double$id since it is limited in scope. 
+		print $fh "\t" x $level,"for my \$double (0 .. 1){\n"; #Don't need \$double$id since it is limited in scope.
 		$id = $self->{content}->perlprint($fh,$id+1,$level+1,@_); #$level+1 will indent this nicely
 		print $fh "\t" x $level,"}\n";
 		return $self->{n}->perlprint($fh,$id+1,$level,@_);
@@ -834,7 +833,7 @@ This shows nicely how to do endtags and controlstructures.
 		$id=$self->{content}->perlcount($id+1,@_);#Don't forget $id here.
 		return $self->{n}->perlcount($id+1);
 	}
-	
+
 
 
 =head1 BUGS
