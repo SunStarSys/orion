@@ -1,6 +1,6 @@
 # SPDX License Identifier: Apache License 2.0
 #
-# provides ithread-safe :sealed subroutine attributes: use with care!
+# provides ithread-safe :Sealed subroutine attributes: use with care!
 #
 # Author: Joe Schaefer <joe@sunstarsys.com>
 
@@ -12,7 +12,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION       = v1.0.1;
+our $VERSION       = v1.0.2;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
@@ -77,7 +77,7 @@ sub tweak ($\@\@\@) {
 sub MODIFY_CODE_ATTRIBUTES {
   my ($class, $rv, @attrs) = @_;
 
-  if (grep $valid_attrs{$_}, @attrs) {
+  if (grep $valid_attrs{+lc}, @attrs) {
 
     my $cv_obj             = B::svref_2object($rv);
     my @op_stack           = ($cv_obj->START);
@@ -117,7 +117,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 
   }
 
-  return grep !$valid_attrs{$_}, @attrs;
+  return grep !$valid_attrs{+lc}, @attrs;
 }
 
 sub import {
@@ -139,7 +139,7 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
     use Apache2::RequestRec;
     use base 'sealed';
 
-    sub handler :sealed {
+    sub handler :Sealed {
       my Apache2::RequestRec $r = shift;
       $r->content_type("text/html"); # compile-time method lookup.
     ...
