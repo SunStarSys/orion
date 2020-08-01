@@ -1123,6 +1123,13 @@ sub title {
 	return $val->set($value);
 }
 
+sub truncate {
+	my $value=shift;
+	my $chars=shift;
+	return $value unless $chars and $chars->number;
+	return $value->set(substr $value->repr, 0, $chars->content);
+}
+
 sub truncatewords {
 	my $value=shift;
 	my $words=shift;

@@ -21,7 +21,7 @@ use warnings;
 #use Text::Markdown;
 use File::Temp qw/ :POSIX tempfile /;
 #use Text::Restructured;
-use IO::Socket;
+use IO::Socket::INET;
 #If it is not already loaded.
 require Dotiac::DTL::Filter;
 require Dotiac::DTL::Value;
@@ -42,7 +42,6 @@ sub import {
 	*{Dotiac::DTL::Filter::restructuredtext}=\&restructuredtext;
 	*{Dotiac::DTL::Filter::markdown}=\&markdown;
 	*{Dotiac::DTL::Filter::textile}=\&textile;
-
 }
 sub unimport {
 	no warnings qw/redefine/;
@@ -53,8 +52,10 @@ sub unimport {
 
 sub markdown {
         my $val=shift;
-        my $sock = IO::Socket::UNIX->new(
-            Peer    => $ENV{MARKDOWN_SOCKET} || "/x1/cms/run/markdown-socket",
+        my $sock = IO::Socket::INET->new(
+	    PeerAddr => '127.0.0.1',
+            PeerPort => $ENV{MARKDOWN_PORT} // 2070,
+	    Proto    => 'tcp',
             Type    => SOCK_STREAM,
             Timeout => 30,
         ) or die "Can't open markdown socket: $!";

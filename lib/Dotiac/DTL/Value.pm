@@ -35,7 +35,7 @@ sub new {
 
 }
 
-sub safe :sealed {
+sub safe :Sealed {
 	my $self=shift;
         my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
 	return $dtlv->new(shift(@_),1) unless ref $self;
@@ -45,7 +45,7 @@ sub safe :sealed {
 	return $self->[1];
 }
 
-sub escape :sealed {
+sub escape :Sealed {
 	my $self=shift;
         my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
 	return $dtlv->new(shift(@_),0) unless ref $self;
@@ -129,7 +129,7 @@ sub str {
 	return $data;
 }
 
-sub string :sealed {
+sub string :Sealed {
 	my Dotiac::DTL::Value $self=shift;
 	my $data=$self->[0];
 	my $value="Error";
@@ -202,7 +202,7 @@ sub rep {
 	return $data;
 }
 
-sub repr :sealed {
+sub repr :Sealed {
 	my Dotiac::DTL::Value $self=shift;
 	my $data=$self->[0];
 	if ($self->undef()) {
@@ -266,7 +266,7 @@ sub pyrep {
 	return $data;
 }
 
-sub pyrepr :sealed {
+sub pyrepr :Sealed {
 	my Dotiac::DTL::Value $self=shift;
 	my $data=$self->[0];
 	if ($self->undef()) {

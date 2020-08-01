@@ -3,22 +3,24 @@
 /*
  * markdownd.js: Unix socket daemon responding to markdown inputs with html outputs.
  * thread-safe, with some dynamic window-passing hacking to editormd.js's ctor.
- * jQuery is thread-safe if you ask it nicely (key here is jsdom).
+ * jQuery can be contextualized if you ask it nicely (key here is jsdom).
  * this runs forever, so daemonize it if needed.
  *
  * NPM Prerequisites: jsdom, navigator, and jquery.
- * Env Vars: EDITOR_MD, MARKDOWN_SOCKET.
+ * Env Vars: EDITOR_MD, MARKDOWN_PORT
  * Example:
  *
- * % EDITOR_MD=editor.md MARKDOWN_SOCKET=markdown.socket ./markdownd.js &
+ * % EDITOR_MD=editor.md MARKDOWN_PORT=9999 ./markdownd.js &
  *
  * SPDX License Identifier: Apache License 2.0
  */
 
-const EDITOR_MD             = process.env.EDITOR_MD       || __dirname + "/editor.md";
-const MARKDOWN_SOCKET       = process.env.MARKDOWN_SOCKET || "/x1/cms/run/markdown.socket";
+const EDITOR_MD             = process.env.EDITOR_MD || __dirname + "/editor.md";
+const MARKDOWN_PORT         = process.env.MARKDOWN_PORT || 2070;
 const fs                    = require('fs');
 const net                   = require('net');
+const cluster               = require('cluster');
+const nproc                 = require('os').cpus().length * 2;
 
 require.extensions['.css']  = function (module, filename) {
     module.exports = fs.readFileSync(filename, 'utf8');
@@ -43,14 +45,10 @@ global.CodeMirror       = require(EDITOR_MD + "/lib/codemirror/codemirror.min.no
 global.CodeMirrorAddOns = require(EDITOR_MD + "/lib/codemirror/addons.min.js");
 global.CodeMirrorModes  = require(EDITOR_MD + "/lib/codemirror/modes.min.js");
 global.jQuery_flowchart = require(EDITOR_MD + "/lib/jquery.flowchart.min.js");
-global.prettify         = require(EDITOR_MD + "/lib/prettify.min.js");
+global.prettify         = require(EDITOR_MD + "/lib/prettify.js");
 global.katex            = require(EDITOR_MD + "/lib/katex.min.js");
 global.Raphael          = require(EDITOR_MD + "/lib/raphael.min.js");
 global.flowchart        = require(EDITOR_MD + "/lib/flowchart.min.js");
-
-if (fs.existsSync(MARKDOWN_SOCKET)) {
-    fs.unlinkSync(MARKDOWN_SOCKET);
-}
 
 const HTML =`<!doctype html>
 <html>
@@ -62,49 +60,74 @@ const HTML =`<!doctype html>
 const virtualConsole = new jsdom.VirtualConsole();
 virtualConsole.sendTo(console);
 
-const server = net.createServer(
-    { allowHalfOpen: true },
-    (c) => {
-        var markdown = "";
+if (cluster.isMaster) {
+    console.log(`Master ${process.pid} is running`);
 
-        c.on('data', (data) => {
-            markdown += data.toString();
-        });
+    for (let i = 0; i < nproc; i++) {
+	cluster.fork();
+    }
 
-        c.on('end', () => {
-	    var editormd = EMD(new JSDOM(HTML, { virtualConsole }).window);
-	    const options = {
-		autoLoadModules: false,
-		readOnly: true,
-		markdown: markdown,
-		tocm : true,
-		tex : true,
-		theme: "solarized",
-		editorTheme: "solarized",
-		previewTheme: "solarized",
-		searchReplace : false,
-		toolbar: false,
-//		flowChart : true,
-		htmlDecode : "foo",
-		taskList: true,		
-	    };
-	    if (markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
-		var editor = editormd("editor", options, editormd);
-		c.end(editor.getPreviewedHTML());
-	    }
-	    else {
-		options.tex = false;
-		options.flowChart = false;		
-		var div = editormd.markdownToHTML("editor", options);
-		c.end(div.html());
-	    }
-	});
+    cluster.on('exit', (worker, code, signal) => {
+	console.log(`worker ${worker.process.pid} died`);
+	cluster.fork();
     });
+} else {
+    console.log(`Worker ${process.pid} started`);
+    const server = net.createServer(
+	{ allowHalfOpen: true },
+	(c) => {
+            var markdown;
+	    var mode = "gfm";
+            c.on('data', (data) => {
+		if (markdown) {
+ 		    markdown += data;
+		}
+		else {
+		    markdown = data;
+		}
+	    });
 
-server.on('error', (err) => {
-    console.log(err);
-});
-
-server.listen(MARKDOWN_SOCKET, 128, () => {
-    fs.chmodSync(MARKDOWN_SOCKET, 0o777);
-});
+            c.on('end', () => {
+		const editormd = EMD(new JSDOM(HTML, { virtualConsole }).window);
+		if (! markdown) { return c.end("\n"); }
+		markdown = markdown.toString();
+		const m  = markdown.match(/^(.{2,10})\x00(.+)$/s);
+		if (m) {
+		    mode     = m[1];
+		    markdown = m[2];
+		}
+		const options = {
+		    autoLoadModules: false,
+		    readOnly:        true,
+                    mode:            mode,
+		    markdown:    markdown,
+		    tocm :           true,
+		    tex :            true,
+		    searchReplace : false,
+		    toolbar:        false,
+		    // flowChart : true,
+		    saveHTMLToTextarea: true,
+		    htmlDecode :     true,
+		    taskList:        true,
+                    delay:              1,
+		};
+		if (mode != "gfm" || markdown.indexOf("\`\`\`") >= 0 || markdown.indexOf("\$\$") >= 0) {
+		    const editor = editormd("editor", options, editormd);
+		    setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? 5 : 100);
+		}
+		else {
+		    options.readOnly = true;
+		    options.saveHTMLToTextarea = false;
+		    options.tex       = false;
+		    options.flowChart = false;
+		    const div = editormd.markdownToHTML("editor", options);
+		    c.end(div.html());
+		}
+	    });
+	});
+    server.on('error', (err) => {
+	console.log(err);
+    });
+    server.listen(MARKDOWN_PORT, "127.0.0.1", 128, () => {
+    });
+}

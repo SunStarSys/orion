@@ -309,7 +309,7 @@ sub Conditional {
 	return 1;
 }
 
-sub apply_filters :sealed {
+sub apply_filters :Sealed {
 	my $value=shift;
 	my $vars=shift;
 	my $escape=shift;
@@ -418,7 +418,7 @@ sub devar_repr {
 
 }
 
-sub devar_var :sealed {
+sub devar_var :Sealed {
 	my $name=shift;
 	my $n=$name;
         my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";

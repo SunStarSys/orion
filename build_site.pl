@@ -62,7 +62,7 @@ require view;
 }
 
 
-sub main :sealed {
+sub main :Sealed {
   my $saw_error = 0;
   $runners = $path::runners if defined $path::runners and $path::runners < $runners;
   syswrite_all "Building site (runners = $runners)...\n";
@@ -157,7 +157,7 @@ sub process_dir {
 
 my %method_cache;
 
-sub process_file :sealed {
+sub process_file :Sealed {
     my $file = shift;
     my ($filename, $dirname) = parse_filename $file;
 
@@ -198,7 +198,7 @@ sub process_file :sealed {
     }
 }
 
-sub fork_runner :sealed {
+sub fork_runner :Sealed {
     socketpair my $child, my $parent, AF_UNIX, SOCK_STREAM, PF_UNSPEC
         or die "socketpair: $!";
     binmode $_ for $child, $parent;
