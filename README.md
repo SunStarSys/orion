@@ -30,7 +30,7 @@
 
 3. Run build_site.pl --source-base /path/to/sources/trunk --target-base /wherever/you/want
 
-# Python 3 Port Plan
+# Python 3.8 Port Plan
 
 ## Reuse /lib:
 
