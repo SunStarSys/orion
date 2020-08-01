@@ -29,3 +29,15 @@
 2. Launch the markdown.js daemon in the background.
 
 3. Run build_site.pl --source-base /path/to/sources/trunk --target-base /wherever/you/want
+
+# Python 3 Port Plan
+
+## Reuse /lib:
+
+   - lib/
+     - SunStarSys/
+       - View.py (volunteers needed!)
+       - Util.py (I will handle this)
+
+   - build_file.py (volunteers?)
+   - build_site.py (volunteers?)
