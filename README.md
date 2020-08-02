@@ -8,7 +8,7 @@
 
 ### npm prerequisites: jquery, navigator, jsdom.
 
-### markdown.js ENV VARS: NODE_PATH, EDITOR_MD, and MARKDOWN_SOCKET.
+### markdown.js ENV VARS: NODE_PATH, EDITOR_MD, and MARKDOWN_PORT.
 
 ### Enjoy: no more deltas between online editor previews and build system markdown rendering
 
