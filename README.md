@@ -41,3 +41,24 @@
 
    - build_file.py (volunteers?)
    - build_site.py (volunteers?)
+
+
+## Site Build Developer API
+
+    - lib/path.py:
+      - NOT OO, only data structure population
+      - path.patterns:
+        - array of arrays:
+          - outer array:
+            - orders priority of pattern matches from first elt of inner arrays
+            - falls back to SunStarSys.Util.copy_if_newer behavior
+          - inner arrays:
+            - pattern: regex to text source file's path against
+            - view: method name in view class to invoke
+            - args: dict of **args passed to view method in prior slot
+    - lib/view.py:
+      - OO, should inherit from SunStarSys.View
+      - defines class methods to be invoked by build script as follows <
+        s = view.getattr(method, None)
+        args[path] = path
+        content, ext, args = s(**args)
