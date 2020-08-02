@@ -486,7 +486,8 @@
 		    abort();
 		}
 		if (typeof prettify   !== "undefined") {
-		    this.editormd.$prettify = prettify(editormd.window);
+		    prettify(editormd.window);
+		    this.editormd.$prettify = editormd.window.PR.prettyPrint;
 		}
 		else {
 		    abort();
@@ -607,7 +608,7 @@
 			    if (settings.previewCodeHighlight)
 			    {
 				editormd.loadScript(loadPath + "prettify.min", function() {
-				    editormd.$prettify = typeof prettify !== "undefined" ? prettify(w) : prettyPrint;
+				    editormd.$prettify = prettyPrint;
 				    loadFlowChartOrSequenceDiagram();
 				});
 			    }
@@ -2011,7 +2012,13 @@
             if (settings.mode !== "gfm" && settings.mode !== "markdown")
             {
                 this.markdownTextarea.val(cmValue);
-
+		if (settings.saveHTMLToTextarea)
+		{
+		    $("#editor").append(`<pre id="htmlPre" class="prettyprint linenums"></pre>`);
+		    $("#htmlPre").text(cmValue);
+		    this.htmlTextarea = $("#htmlPre");
+		    this.editormd.$prettify();
+		}
                 return this;
             }
 	    var editormd        = this.editormd;
@@ -2060,7 +2067,8 @@
             if (settings.saveHTMLToTextarea)
             {
                 this.htmlTextarea.text(newMarkdownDoc);
-            }
+
+	    }
 
             if(settings.watch || (!settings.watch && state.preview))
             {
@@ -2344,7 +2352,7 @@
                 return false;
             }
 
-            return this.htmlTextarea.val();
+            return this.htmlTextarea.html();
         },
 
         /**
