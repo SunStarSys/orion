@@ -34,13 +34,13 @@
 
 ## Reuse /lib:
 
-   - lib/
-     - SunStarSys/
-       - View.py (volunteers needed!)
-       - Util.py (I will handle this)
+    - lib/
+      - SunStarSys/
+      - View.py (volunteers needed!)
+      - Util.py (I will handle this)
 
-   - build_file.py (volunteers?)
-   - build_site.py (volunteers?)
+    - build_file.py (volunteers?)
+    - build_site.py (volunteers?)
 
 
 ## Site Build Developer API
@@ -56,8 +56,13 @@
             - pattern: regex to text source file's path against
             - view: method name in view class to invoke
             - args: dict of **args passed to view method in prior slot
+      - path.dependencies:
+        - dict of arrays:
+        - keys are paths to sources rooted in source tree's "content" dir
+        - values are array of similarly rooted files the key depends on
+
     - lib/view.py:
-      - OO, should inherit from SunStarSys.View
+      - OO: view class should inherit from SunStarSys.View
       - defines class methods to be invoked by build script as follows <
         s = view.getattr(method, None)
         args[path] = path
