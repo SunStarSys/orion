@@ -43,7 +43,7 @@ sub read_text_file {
                     $headers = 0, next LOOP;
                 }
             }
-            $headers = 0, next if /^\r?\n$/;
+            $headers = 0, next if /^\r?\n/;
             my ($name, $val) = split /:\s+/, $_, 2;
             $headers = 0, redo LOOP
                 unless $name =~ /^[\w-]+$/ and defined $val;
@@ -180,7 +180,8 @@ sub shuffle {
 sub sort_tables {
     my @orig = split /\n/, shift, -1;
     my @out;
-    while (defined(local $_ = shift @orig))  {
+    local $_;
+    while (defined($_ = shift @orig))  {
         push @out, $_;
         /^(\|[ :vn^-]+)+\|$/ or next;
         my($data, $col, $direction, $cur, $numeric);
@@ -199,11 +200,12 @@ sub sort_tables {
             }
             $cur++;
         }
+	$out[-1] =~ tr/vn^//d;
+        $numeric = 1 if $data =~ tr/n/n/;
         unless (defined $col) {
             push @out, shift @orig while @orig and $orig[0] =~ /^\|/;
             next;
         }
-        $numeric = 1 if $data =~ tr/n/n/;
         my @rows;
         push @rows, [split /\s*\|\s*/, shift(@orig), -1]
             while @orig and $orig[0] =~ /^\|/;
@@ -220,9 +222,8 @@ sub sort_tables {
 
 sub parse_filename {
     my ($f) = (@_, $_);
-    my ($filename, $dirname, $ext) = fileparse $f, qr/\.[^.]*/;
-    undef $ext unless $ext =~ tr/.//d;
-    return $filename, $dirname, $ext;
+    my ($filename, $dirname, $ext) = fileparse $f, qr!\.[^/]+$!;
+    return $filename, $dirname, substr $ext, 1;
 }
 
 sub fixup_code {

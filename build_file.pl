@@ -68,9 +68,9 @@ for my $s (@sources) {
     # in child
     print "Building $s ...\n";
 
-    my ($filename, $dirname) = parse_filename $s;
+    my ($filename, $dirname, $extension) = parse_filename $s;
+    s/^[^.]+// for my $lang = $extension;
     my $target_file = $dirname . $filename;
-
     mkpath "$target_base/$dirname";
 
     if ( -d "$target_file.page") {
@@ -93,8 +93,9 @@ for my $s (@sources) {
         next unless $path =~ $re;
         eval {
             my $sub = view->can($method) or die "Can't locate method: $method\n";
-            my ($content, $ext) = $sub->(path => $path, %$args);
-            $s = "$target_file.$ext";
+            my ($content, $ext) = $sub->(path => $path, lang => $lang, %$args);
+
+            $s = "$target_file.$ext$lang";
             open my $fh, ">", "$target_base/$s"
                 or die "Can't open $target_base/$s: $!\n";
             print $fh $content;

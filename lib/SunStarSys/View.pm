@@ -161,6 +161,13 @@ sub fetch_deps {
 # ditto for 'preprocess' arg to preprocess content with a Template() pass
 # takes a 'deps' hashref to override deps fetching
 
+
+my %title_by_lang = (
+    en => "Index of ",
+    es => "Índice de",
+    de => "Index von ",
+);
+
 sub sitemap {
     my %args = @_;
     my $template = "content$args{path}";
@@ -171,19 +178,21 @@ sub sitemap {
     my $content = "";
 
     my $pre_title = $args{headers}->{title};
-    if ($pre_title eq "Index" and $args{path} =~ m!/index\.html$!) {
-	my ($filename, $dirname) = parse_filename($args{path});
-	$args{headers}->{title} .= " of "
+    if ($pre_title eq "Index" and $args{path} =~ m!/index\.html\b!) {
+	my ($filename, $dirname, $extension) = parse_filename $args{path};
+	s/^[^.]+\.// for my $lang = $extension;
+	$args{headers}->{title} = $title_by_lang{$lang}
 	    . File::Basename::basename($dirname) . "/";
 
     }
 
     for (sort keys %{$args{deps}}) {
         my $title = $args{deps}->{$_}->{headers}->{title};
-        warn $title if $title =~ /^Index of/;
         if ($title eq "Index" and m!/$!) {
-            my ($filename, $dirname) = parse_filename;
-            $title .= " of " . File::Basename::basename($dirname) . "/";
+            my ($filename, $dirname, $extension) = parse_filename;
+	    s/^[^.]+\.// for my $lang = $extension;
+	    $title = $title_by_lang{$lang}
+	        . File::Basename::basename($dirname) . "/";
         }
         $content .= "- [$title]($_)\n";
         for my $hdr (grep /^#/, split "\n", $args{deps}->{$_}->{content} // "") {
@@ -212,8 +221,8 @@ sub sitemap {
                  "$prefix$link$subpaths"
              }xme;
     }
-
     $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
+
     # the extra (3rd) return value is for sitemap support
     return Template($template)->render(\%args), html => \%args;
 }

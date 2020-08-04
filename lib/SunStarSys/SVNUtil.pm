@@ -18,7 +18,7 @@ sub auth {
     my $authcb = sub {
         my $cred = shift;
         $cred->username($user);
-        $cred->password($password);
+        $cred->password($pw);
         $cred->may_save(0);
     };
     return [
@@ -36,7 +36,9 @@ sub svn_up {
     my %dispatch = (
         $SVN::Wc::Notify::Action::add           => \@add,
         $SVN::Wc::Notify::Action::update_add    => \@add,
+	$SVN::Wc::Notify::Action::commit_added  => \@add,
         $SVN::Wc::Notify::Action::update_delete => \@delete,
+        $SVN::Wc::Notify::Action::commit_replaced => \@update,
         $SVN::Wc::Notify::Action::restore       => \@restore,
         $SVN::Wc::Notify::Action::update_update => \@update,
     );

@@ -159,7 +159,8 @@ my %method_cache;
 
 sub process_file :Sealed {
     my $file = shift;
-    my ($filename, $dirname) = parse_filename $file;
+    my ($filename, $dirname, $extension) = parse_filename $file;
+    s/^[^.]+// for my $lang = $extension;
 
     if ($dirname =~ m!\b\.page/$!) {
         copy_if_newer $file, "$target_base/$file";
@@ -184,12 +185,12 @@ sub process_file :Sealed {
             eval $d->Dump;
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
-        my ($content, $ext) = $s->(path => $path, %$args);
-        open my $fh, ">", "$target_base/$target_file.$ext"
-            or die "Can't open $target_base/$target_file.$ext: $!\n";
+        my ($content, $ext) = $s->(path => $path, lang => $lang, %$args);
+        open my $fh, ">", "$target_base/$target_file.$ext$lang"
+            or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
         print $fh $content;
         $matched = 1;
-        syswrite_all "Built $target_base/$target_file.$ext.\n";
+        syswrite_all "Built $target_base/$target_file.$ext$lang.\n";
         last;
     }
 
