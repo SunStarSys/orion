@@ -223,6 +223,7 @@ sub sort_tables {
 sub parse_filename {
     my ($f) = (@_, $_);
     my ($filename, $dirname, $ext) = fileparse $f, qr!\.[^/]+$!;
+    $ext = "." unless length $ext;
     return $filename, $dirname, substr $ext, 1;
 }
 
