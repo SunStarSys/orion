@@ -149,7 +149,7 @@ sub fetch_deps {
             }
             last;
         }
-        $data->{$file}->{headers}->{title} //= ucfirst $filename;
+        $data->{$file}{headers}{title} //= ucfirst $filename;
     }
 }
 
@@ -192,8 +192,8 @@ sub sitemap {
     for (sort keys %{$args{deps}}) {
         my $title = $args{deps}{$_}{headers}{title};
         my ($filename, $dirname) = parse_filename;
-        if (m!/(index|sitemap|$)[^/]*$!) {
-            $title //= $title{$1 || "index"}{$lang}
+        if (m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
+            $title = $title{+($1 || "index")}{$lang}
                 . ucfirst File::Basename::basename($dirname);
         }
         $content .= "- [$title]($_)\n";
