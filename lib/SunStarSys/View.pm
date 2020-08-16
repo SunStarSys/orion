@@ -161,10 +161,17 @@ sub fetch_deps {
 # ditto for 'preprocess' arg to preprocess content with a Template() pass
 # takes a 'deps' hashref to override deps fetching
 
-my %title_by_lang = (
-    en => "Index of ",
-    es => "Índice de ",
-    de => "Index von ",
+my %title = (
+    index => {
+        en => "Index of ",
+        es => "Índice de ",
+        de => "Index von ",
+    },
+    sitemap => {
+        en => "Sitemap of ",
+        es => "Mapa del sitio de ",
+        de => "Seitenverzeichnis von ",
+    }
 );
 
 sub sitemap {
@@ -177,19 +184,17 @@ sub sitemap {
     my $content = "";
     my ($filename, $dirname, $extension) = parse_filename $args{path};
     s/^[^.]+\.// for my $lang = $extension;
-    my $pre_title = $args{headers}->{title};
-    if ($pre_title eq "Index" and $args{path} =~ m!/index\b[^/]*!) {
-	$args{headers}{title} = $title_by_lang{$lang}
-	    . File::Basename::basename($dirname) . "/";
-
+    if ($args{path} =~ m!/(index|sitemap)\b[^/]*$!) {
+	$args{headers}{title} //= $title{$1}{$lang}
+	    . ucfirst File::Basename::basename($dirname);
     }
 
     for (sort keys %{$args{deps}}) {
         my $title = $args{deps}{$_}{headers}{title};
-        if ($title eq "Index") {
-            my ($filename, $dirname) = parse_filename;
-	    $title = $title_by_lang{$lang}
-	        . File::Basename::basename($dirname) . "/";
+        my ($filename, $dirname) = parse_filename;
+        if (m!/(index|sitemap|$)[^/]*$!) {
+            $title //= $title{$1 || "index"}{$lang}
+                . ucfirst File::Basename::basename($dirname);
         }
         $content .= "- [$title]($_)\n";
         for my $hdr (grep /^#/, split "\n", $args{deps}{$_}{content} // "") {

@@ -10,15 +10,13 @@ use base 'Exporter';
 
 our @EXPORT = qw/svn_up svn_status svn_add svn_rm svn_ps is_version_controlled *USERNAME *PASSWORD/;
 our $VERSION = "1.0";
-our ($USERNAME, $PASSWORD) = (svn => undef);
+our ($USERNAME, $PASSWORD) = @ENV{qw/SVN_USERNAME SVN_PASSWORD/};
 
 sub auth {
-    my $user = $USERNAME;
-    my $pw   = $PASSWORD;
     my $authcb = sub {
         my $cred = shift;
-        $cred->username($user);
-        $cred->password($pw);
+        $cred->username($USERNAME);
+        $cred->password($PASSWORD);
         $cred->may_save(0);
     };
     return [
@@ -32,15 +30,16 @@ sub new { return SVN::Client->new( auth => auth ) }
 sub svn_up {
     my $ctx = shift->new;
     my $svn_base = shift;
+    my $revision = shift;
     my (@add, @delete, @restore, @update);
     my %dispatch = (
-        $SVN::Wc::Notify::Action::add           => \@add,
-        $SVN::Wc::Notify::Action::update_add    => \@add,
-	$SVN::Wc::Notify::Action::commit_added  => \@add,
-        $SVN::Wc::Notify::Action::update_delete => \@delete,
+        $SVN::Wc::Notify::Action::add             => \@add,
+        $SVN::Wc::Notify::Action::update_add      => \@add,
+	$SVN::Wc::Notify::Action::commit_added    => \@add,
+        $SVN::Wc::Notify::Action::update_delete   => \@delete,
         $SVN::Wc::Notify::Action::commit_replaced => \@update,
-        $SVN::Wc::Notify::Action::restore       => \@restore,
-        $SVN::Wc::Notify::Action::update_update => \@update,
+        $SVN::Wc::Notify::Action::restore         => \@restore,
+        $SVN::Wc::Notify::Action::update_update   => \@update,
     );
 
     $ctx->notify(sub {
@@ -49,12 +48,12 @@ sub svn_up {
         push @{$dispatch{$action}}, $path if exists $dispatch{$action};
     });
 
-    my $revision = eval { $ctx->update($svn_base, "HEAD", 1) };
+    $revision = eval { $ctx->update($svn_base, $revision, 1) } // $revision;
     if ($@) {
         my ($wc_root_path) = map /^Working Copy Root Path: (.*)$/, `svn info '$svn_base'`
             or die "Can't find Working Copy Root Path!\n";
         $ctx->cleanup($wc_root_path);
-        $revision = $ctx->update($svn_base, "HEAD", 1);
+        $revision = $ctx->update($svn_base, $revision, 1);
     }
 
     print "Updated $svn_base to revision $revision.\n";
