@@ -4,10 +4,12 @@ package SunStarSys::SVNUtil;
 
 use SVN::Client;
 use SVN::Wc;
+use SVN::Delta;
+use SVN::Core;
 use strict;
 use warnings;
 use base 'Exporter';
-
+use SunStarSys::Util qw/normalize_svn_path/;
 our @EXPORT = qw/svn_up svn_status svn_add svn_rm svn_ps is_version_controlled *USERNAME *PASSWORD/;
 our $VERSION = "1.0";
 our ($USERNAME, $PASSWORD) = @ENV{qw/SVN_USERNAME SVN_PASSWORD/};
@@ -74,12 +76,41 @@ my %st_dispatch = (
     '~'  => "obstructed",
 );
 
+
+my @status;
+eval '$status[$SVN::Wc::Status::' . "$_]=qq/\u$_/"
+    for qw/modified conflicted added deleted unversioned
+           normal ignored missing replaced obstructed/;
+
+sub _status {
+    my $client = shift->new;
+    my ($filename, $depth) = (@_, wantarray ? $SVN::Depth::infinity : $SVN::Depth::empty);
+    my $prefix = $filename;
+    $prefix =~ s![^/]+$!!;
+    normalize_svn_path $filename;
+    my @rv;
+    my $callback = sub {
+        my $path = shift;
+	my _p_svn_wc_status2_t $status = shift;
+	$path =~ s!^\Q$prefix\E!!
+	    or $path = "./";
+	push @rv, [$path => $status[$_]] for $status->text_status;
+	return 0;
+    };
+
+    $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef);
+    return map @$_, @rv if wantarray;
+    return $rv[0]->[1];
+}
+
+
 sub svn_status {
-    my $svn_base = shift;
-    chomp(my @status = `svn status '$svn_base'`);
+    my %status = _status(@_);
     my %rv;
     # ignores property mods, etc.; turns out we don't need them for our use-case
-    /^([MAD?!CIRX~]).{7}(.+)$/ and push @{$rv{$st_dispatch{$1}}}, $2 for @status;
+    while (my($k, $v) = each %status) {
+        push @{$rv{+lc  $v}}, $k;
+    }
     return %rv;
 }
 
