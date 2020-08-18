@@ -52,7 +52,7 @@ sub single_narrative {
         $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
     }
 
-    $args{path} =~ s/\.\w+$/\.html/;
+    $args{path} =~ s!\.[^.]+(?=[^/]+$)!\.html!;
     $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
 
     my $page_path = $file;

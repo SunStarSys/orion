@@ -50,6 +50,8 @@ sub svn_up {
         push @{$dispatch{$action}}, $path if exists $dispatch{$action};
     });
 
+    $ctx->cleanup($svn_base);
+    $ctx->revert($svn_base, 1);
     $revision = eval { $ctx->update($svn_base, $revision, 1) } // $revision;
     if ($@) {
         my ($wc_root_path) = map /^Working Copy Root Path: (.*)$/, `svn info '$svn_base'`
