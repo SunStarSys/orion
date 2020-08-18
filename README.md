@@ -24,7 +24,7 @@
            - view.pm
        - templates/
 
-    See <https://vcs.sunstarsys.com/repos/svn/public/site> for a live example.
+    See <https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.sunstarsys.com/> for a live example.
 
 2. Launch the markdown.js daemon in the background.
 
