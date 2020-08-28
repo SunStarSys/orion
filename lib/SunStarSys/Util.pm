@@ -159,9 +159,11 @@ sub touch {
 
 sub normalize_svn_path {
     for (@_) {
+        $_ //= "";
         tr!/!/!s;
         s!/$!!;
         s!^(https?):/!$1://!;
+        1 while s!/[^/]+/\.\.(/|$)!$1!;
     }
 }
 

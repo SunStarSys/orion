@@ -94,8 +94,8 @@ sub _status {
     my $callback = sub {
         my $path = shift;
 	my _p_svn_wc_status2_t $status = shift;
-	$path =~ s!^\Q$prefix\E!!
-	    or $path = "./";
+	#$path =~ s!^\Q$prefix\E!!
+	#    or $path = "./";
 	push @rv, [$path => $status[$_]] for $status->text_status;
 	return 0;
     };
