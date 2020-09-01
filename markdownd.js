@@ -20,7 +20,7 @@ const MARKDOWN_PORT         = process.env.MARKDOWN_PORT || 2070;
 const fs                    = require('fs');
 const net                   = require('net');
 const cluster               = require('cluster');
-const nproc                 = require('os').cpus().length * 2;
+const nproc                 = require('os').cpus().length;
 
 require.extensions['.css']  = function (module, filename) {
     module.exports = fs.readFileSync(filename, 'utf8');
@@ -116,7 +116,6 @@ if (cluster.isMaster) {
 		    setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? 5 : 100);
 		}
 		else {
-		    options.readOnly = true;
 		    options.saveHTMLToTextarea = false;
 		    options.tex       = false;
 		    options.flowChart = false;
