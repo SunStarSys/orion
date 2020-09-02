@@ -4,11 +4,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#Filter.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#Filter.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -36,7 +36,7 @@ sub addslashes {
 	$value->set($val);
 	return $value;
 }
-	
+
 sub capfirst {
 	my $value=shift;
 	return $value->set(ucfirst $value->repr);
@@ -207,7 +207,7 @@ sub date {
 					$res.=" ".$timeampm[1];
 				}
 			}
-			
+
 		}
 		elsif ($s eq "r") {
 			$res.=$weekdays[$t[6]];
@@ -551,7 +551,7 @@ sub iriencode {
 	#require Encode;
 	#$value=Encode::encode_utf8($value) if Encode::is_utf8($value);
 	$value = eval { pack("C*", unpack("U0C*", $value))} || pack("C*", unpack("C*", $value));
-	$value=~s/([^a-zA-Z0-9\[\]\(\)\$\%\&\/:;#=,!\?\*_.~-])/uc sprintf("%%%02x",ord($1))/eg;	
+	$value=~s/([^a-zA-Z0-9\[\]\(\)\$\%\&\/:;#=,!\?\*_.~-])/uc sprintf("%%%02x",ord($1))/eg;
 	$val->set($value);
 	return $val;
 }
@@ -837,7 +837,7 @@ sub slice {
 	return $value unless $slice;
 	$slice=$slice->repr;
 	my @slice=split /:/,$slice,2;
-	
+
 	my @value;
 	@value=@{$value->content} if $value->array;
 	@value=sort keys %{$value->content} if $value->hash;
@@ -848,7 +848,7 @@ sub slice {
 		return $value->set($value[int($slice[0])]) if $value->array;
 		return $value->set($value->content->{$value[int($slice[0])]}) if $value->hash;
 	}
-	
+
 	$slice[1] = int($slice[1] || 0) || 0;
 	$slice[1]-=$slice[0] if ($slice[1] > 0);
 	$slice[1]=scalar(@value)-$slice[0] unless $slice[1];
@@ -998,7 +998,7 @@ sub time {
 					$res.=" ".$timeampm[1];
 				}
 			}
-			
+
 		}
 		elsif ($s eq "s") {
 			$res.=sprintf("%02d",$t[0]);
@@ -1060,7 +1060,7 @@ sub timesince {
 	}
 	my $y=int($m/12);
 	$m=$m%12;
-	if (@_) { 
+	if (@_) {
 		my $r=($y?"$y ".($y==1?"$timenames[0] ":"$timenames[1] "):"").($m?"$m ".($m==1?"$timenames[2] ":"$timenames[3] "):($w?"$w ".($w==1?"$timenames[4] ":"$timenames[5] "):"")).($d?"$d ".($d==1?"$timenames[6] ":"$timenames[7] "):"").($h?"$h ".($h==1?"$timenames[8] ":"$timenames[9] "):"").($mi?"$mi ".($mi==1?"$timenames[10] ":"$timenames[11] "):"");
 		$r=~s/\s$//;
 		return Dotiac::DTL::Value->safe($r);
@@ -1071,7 +1071,7 @@ sub timesince {
 	return Dotiac::DTL::Value->safe("$d ".($d==1?$timenames[6]:$timenames[7])) if ($d);
 	return Dotiac::DTL::Value->safe("$h ".($h==1?$timenames[8]:$timenames[9]).($mi?" $mi ".($mi==1?$timenames[10]:$timenames[11]):"")) if $h;
 	return Dotiac::DTL::Value->safe("$mi ".($mi==1?$timenames[10]:$timenames[11])) if ($mi);
-	
+
 }
 
 sub timeuntil {
@@ -1113,7 +1113,7 @@ sub timeuntil {
 	return Dotiac::DTL::Value->safe("$d ".($d==1?$timenames[6]:$timenames[7])) if ($d);
 	return Dotiac::DTL::Value->safe("$h ".($h==1?$timenames[8]:$timenames[9]).($mi?" $mi ".($mi==1?$timenames[10]:$timenames[11]):"")) if $h;
 	return Dotiac::DTL::Value->safe("$mi ".($mi==1?$timenames[10]:$timenames[11])) if ($mi);
-	
+
 }
 
 sub title {
@@ -1128,6 +1128,13 @@ sub truncate {
 	my $chars=shift;
 	return $value unless $chars and $chars->number;
 	return $value->set(substr $value->repr, 0, $chars->content);
+}
+
+sub append {
+	my $value=shift;
+	my $extra=shift;
+	return $value unless $extra;
+	return $value->set($value->repr . $extra->repr);
 }
 
 sub truncatewords {
@@ -1199,7 +1206,7 @@ sub truncatewords_html {
 		else {
 			pos($value)=$pos;
 		}
-		
+
 	}
 	return $val if $words > 0; #Should be allright then.
 	$ret=~s/\s+$//g;
@@ -1233,7 +1240,7 @@ $unordered_list = sub {
 			$res.="\t"x($level)."</ul>\n";
 			$res.="\t"x($level);
 		}
-		
+
 		$res.="</li>\n"
 	}
 	return $res;
@@ -1447,7 +1454,7 @@ Django only supports numbers to be added (and substracted).
 
 Adds backslashes before any quotes in the variable. This is useful for CSV output
 
-If you want some more 
+If you want some more
 
 	{{ 'Daimos "TheKing" Miller / Peter \'TheMan\' Miller'|addslashes }} {# Daimos \"TheKing\" Miller \\ Peter \'TheMan\' Miller #}
 
@@ -1529,7 +1536,7 @@ B<This might change if a locale module is loaded.>
 
 =item "A"
 
-Returns AM or PM. 
+Returns AM or PM.
 
 	{{ var|date: "A" }} {# AM #}
 
@@ -1571,31 +1578,31 @@ Returns the month in long form.
 
 B<This might change if a locale module is loaded.>
 
-=item "g" 
+=item "g"
 
 Returns the hour in 12-hour format without leading zeros.
 
 	{{ var|date: "g" }} {# 1 #} to {# 12 #}
 
-=item "G" 
+=item "G"
 
 Returns the hour in 24-hour format without leading zeros.
 
 	{{ var|date: "G" }} {# 0 #} to {# 24 #}
 
-=item "h" 
+=item "h"
 
 Returns the hour in 12-hour format with a leading zero.
 
 	{{ var|date: "h" }} {# 01 #} to {# 12 #}
 
-=item "H" 
+=item "H"
 
 Returns the hour in 24-hour format with a leading zero.
 
 	{{ var|date: "H" }} {# 00 #} to {# 24 #}
 
-=item "i" 
+=item "i"
 
 Returns the minutes with a leading zero.
 
@@ -1707,15 +1714,15 @@ Returns the ISO-8601 week number of year (uses the POSIX module), weeks start on
 
 	{{ var|date: "w" }} {# 1 #} to {# 53 #}
 
-=item "y" 
+=item "y"
 
-Returns the year in two digits (with leading zeros) 
+Returns the year in two digits (with leading zeros)
 
 	{{ var|date: "y" }} {# 08 #}
 
 =item "Y"
 
-Returns the year in four (or more) digits (with leading zeros) 
+Returns the year in four (or more) digits (with leading zeros)
 
 	{{ var|date: "Y" }} {# 2008 #}
 
@@ -1740,7 +1747,7 @@ Since Perl has no default DateTime Object, this expects a normal unix timestamp 
 It also excepts the result of localtime as an array reference, this is useful for timestamps > 2038 on 32-Bit machines.
 
 	var=>[36,31,21,2,0,109,5,1,0];
-	
+
 	{{ var|date:"jS F Y H:i" }} {# 2nd January 2009 21:31 #}
 
 =head2 default :STRING
@@ -1784,7 +1791,7 @@ Sorts an array of hashes, objects or arrays by a common PROPERTY. (See C<|dictso
 
 =head3 Bugs and Differences to Django
 
-If PROPERTY is omitted, it just sorts by name, you can use this to sort an array of strings. 
+If PROPERTY is omitted, it just sorts by name, you can use this to sort an array of strings.
 
 
 	ListofWords=>["Foo","Bar","Baz"]
@@ -1831,7 +1838,7 @@ Returns 1 (true value) if the value is divisible by NUMBER.
 
 Django's divisibleby returns a C<True> or C<False>. There is no binary type in perl, so it will return C<1> or C<0>
 
-=head2 escape 
+=head2 escape
 
 Marks a string as unsafe, i.e. in need of escaping for output.
 
@@ -1847,7 +1854,7 @@ B<Beware:> Escaping is done only once and only after all filters are applied. If
 
 If you find any, please report them.
 
-=head2 escapejs 
+=head2 escapejs
 
 Escapes a Javascript (JSON) String. This will not generate JSON Code out of datastructures, use L<Dotiac::DTL::Addon::JSON> for that.
 
@@ -1891,7 +1898,7 @@ Also returns the first value in a hash.
 
 =head2 fix_ampersands
 
-Replace C<&> with C<&amp;>. See C<escape> and C<force_escape> for a better solution. 
+Replace C<&> with C<&amp;>. See C<escape> and C<force_escape> for a better solution.
 
 Doesn't mark the value safe.
 
@@ -1917,9 +1924,9 @@ DIGITS defaults to -1
 
 If you find any, please put them  in the tracker or drop me a mail.
 
-=head2 force_escape 
+=head2 force_escape
 
-Escapes the string at this point in the filter stack (not at the end like C<escape>) 
+Escapes the string at this point in the filter stack (not at the end like C<escape>)
 
 C< < >, C<< > >>, C<'>, C<"> and C<&> are converted to C<&lt;>, C<&gt;>, C<&#39;>, C<&quot;> and C<&amp;> respectively.
 
@@ -2044,7 +2051,7 @@ This might mess up your HTML if the variable is marked safe, this will appear if
 You will have to use C<linebreaksbr> (See below) for that.
 
 	{{ "<b>...\n\n..</b>"|safe|linebreaks }} {# <p><b>...</p><p>..</b></p> #} {# Invalid: You can see how the <b> tag is split up #}
-	<p>{{ "<b>...\n\n..</b>"|safe|linebreaksbr }}</p> {# <p><b>...<br /><br />..</b></p> #} {# Valid! #} 
+	<p>{{ "<b>...\n\n..</b>"|safe|linebreaksbr }}</p> {# <p><b>...<br /><br />..</b></p> #} {# Valid! #}
 
 Many BBCode interpreters don't replace linebreaks by themselves. (In most forums for example you can as a user switch on "Post is HTML" "Post is BBCode" "Convert linebreaks")
 
@@ -2065,10 +2072,10 @@ If you find any, please report them
 
 Writes a linenumber before each line.
 
-	{{ "Hello\nWorld"|linenumbers }} 
+	{{ "Hello\nWorld"|linenumbers }}
 	{# 1: Hello
 	2: World #}
-	{{ "Hello\nWorld\n\n<b>Foo</b>"|escape|linenumbers|safe }} 
+	{{ "Hello\nWorld\n\n<b>Foo</b>"|escape|linenumbers|safe }}
 	{# 1: Hello
 	2: World
 	3:
@@ -2203,7 +2210,7 @@ Also supports a padding parameter, if you want something other than spaces:
 	{{ "Hello":ljust:"20";"-" }} {# "---------------Hello" #}
 
 
-=head2 safe 
+=head2 safe
 
 Marks a string as safe, i.e. in no need of escaping for output.
 
@@ -2244,7 +2251,7 @@ Also works on hashes. Then it slices the value list orderd by their keys.
 
 =cut
 
-=head2 slugify 
+=head2 slugify
 
 Converts the value to lowercase, removes all non word characters, removes trailing and leading whitespaces and replaces all other spaces with a "-".
 
@@ -2259,7 +2266,7 @@ This is useful if you want to generate a save ID for something like a name an us
 
 If you find any, please report them.
 
-=head2 stringformat :FORMAT 
+=head2 stringformat :FORMAT
 
 FORMATs a value according to python's format rules. (str.format: L<http://docs.python.org/library/stdtypes.html#str.format>)
 
@@ -2325,7 +2332,7 @@ B<This might change if a locale module is loaded.>
 
 =item "A"
 
-Returns AM or PM. 
+Returns AM or PM.
 
 	{{ var|time: "A" }} {# AM #}
 
@@ -2337,31 +2344,31 @@ Returns the time with hours and minutes, but minutes are left out if they are 0.
 
 	{{ var|time: "f" }} o'clock {# 11:30 o'clock #} {# 3 o'clock #}
 
-=item "g" 
+=item "g"
 
 Returns the hour in 12-hour format without leading zeros.
 
 	{{ var|time: "g" }} {# 1 #} to {# 12 #}
 
-=item "G" 
+=item "G"
 
 Returns the hour in 24-hour format without leading zeros.
 
 	{{ var|time: "G" }} {# 0 #} to {# 24 #}
 
-=item "h" 
+=item "h"
 
 Returns the hour in 12-hour format with a leading zero.
 
 	{{ var|time: "h" }} {# 01 #} to {# 12 #}
 
-=item "H" 
+=item "H"
 
 Returns the hour in 24-hour format with a leading zero.
 
 	{{ var|time: "H" }} {# 00 #} to {# 24 #}
 
-=item "i" 
+=item "i"
 
 Returns the minutes with a leading zero.
 
@@ -2400,7 +2407,7 @@ Since Perl has no default DateTime Object, this expects a normal unix timestamp 
 It also excepts the result of localtime as an array reference, this is useful for timestamps > 2038 on 32-Bit machines.
 
 	var=>[36,31,21,2,0,109,5,1,0];
-	
+
 	{{ var|time:"H:i" }} {# 21:31 #}
 
 =head2 timesince :REFERNCETIME
@@ -2521,10 +2528,10 @@ Converts a list-value of list into a HTML-unordered list without the surrounding
 			"Australia"
 			"Asia"
 		]
-			
+
 	]
 
-	{{ var|unordered_list:"3" }} 
+	{{ var|unordered_list:"3" }}
 	{#
 	<li>Continents
 		<ul>
