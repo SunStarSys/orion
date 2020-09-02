@@ -126,7 +126,8 @@ sub fetch_deps {
     $quick //= 0;
     for (@{$path::dependencies{$path}}) {
         my $file = $_;
-        my ($filename, $dirname) = parse_filename;
+        my ($filename, $dirname, $extension) = parse_filename;
+        s/^[^.]+// for my $lang = $extension;
         for my $p (@path::patterns) {
             my ($re, $method, $args) = @$p;
             next unless $file =~ $re;
@@ -136,7 +137,7 @@ sub fetch_deps {
                 eval $d->Dump;
             }
             if ($quick == 1 or $quick == 2) {
-                $file = "$filename" eq "index" ? $dirname : "$dirname$filename"; # no extension
+                $file = "$dirname$filename.html$lang";
                 $data->{$file} = { path => $file, %$args };
                 read_text_file "content/$_", $data->{$file}, $quick == 1 ? 0 : undef;
             }
@@ -144,7 +145,7 @@ sub fetch_deps {
                 local $SunStarSys::Value::Offline = 1 if $quick == 3;
                 my $s = view->can($method) or die "Can't locate method: $method\n";
                 my (undef, $ext, $vars) = $s->(path => $file, %$args);
-                $file = "$filename.$ext" eq "index.html" ? $dirname : "$dirname$filename.$ext";
+                $file = "$dirname$filename.$ext$lang";
                 $data->{$file} = $vars;
             }
             last;
@@ -166,11 +167,13 @@ my %title = (
         en => "Index of ",
         es => "Índice de ",
         de => "Index von ",
+        fr => "Indice de ",
     },
     sitemap => {
         en => "Sitemap of ",
         es => "Mapa del sitio de ",
         de => "Seitenverzeichnis von ",
+        fr => "Plan du site de ",
     }
 );
 
