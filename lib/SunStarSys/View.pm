@@ -214,7 +214,7 @@ sub sitemap {
                   (                                        # \2, link
                       \[ [^\]]+ \]
                       \(
-                      (  [^\)]* / )                        # \3, (dir with trailing slash)
+                      (  [^\)]* / ) index\.html\b\S*         # \3, (dir with trailing slash)
                       \)
                   )
                   (                                        # \4, subpaths
