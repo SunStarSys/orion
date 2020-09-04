@@ -192,7 +192,7 @@ sub sitemap {
 	    . ucfirst File::Basename::basename($dirname);
     }
 
-    for (sort keys %{$args{deps}}) {
+    for (map $_->[1], sort {$a->[0] cmp $b->[0]} map {s/index\.html\b[\w.]*$// for my $path = $_; [$path, $_]} keys %{$args{deps}}) {
         my $title = $args{deps}{$_}{headers}{title};
         my ($filename, $dirname) = parse_filename;
         if (m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
@@ -210,15 +210,15 @@ sub sitemap {
     }
 
     if ($args{nest}) {
-        1 while $content =~ s{^(\s*-\s)                    # \1, prefix
-                  (                                        # \2, link
+        1 while $content =~ s{^(\s*-\s)                 # \1, prefix
+                  (                                     # \2, link
                       \[ [^\]]+ \]
                       \(
-                      (  [^\)]* / ) index\.html\b\S*         # \3, (dir with trailing slash)
+                      (  [^\)]* / ) index\.html\b[\w.]* # \3, (dir with trailing slash)
                       \)
                   )
-                  (                                        # \4, subpaths
-                      (?:\n\1\[ [^\]]+ \]\( \3 [^\#?] .*)+
+                  (                                          # \4, subpaths
+                      (?:\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\w.]*)[^\#?] .*)+
                   )
              }{
                  my ($prefix, $link, $subpaths) = ($1, $2, $4);
