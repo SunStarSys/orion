@@ -12,7 +12,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION       = v1.0.3;
+our $VERSION       = v1.0.4;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
@@ -30,7 +30,7 @@ sub tweak ($\@\@\@) {
     if ($type->isa("B::HV")) {
       my $class = $type->NAME;
 
-      while ($op->next->name ne "entersub") {
+      while (ref $op->next and $op->next->name ne "entersub") {
 
 	if ($op->next->name eq "pushmark") {
 	  # we need to process this arg stack recursively
@@ -54,7 +54,7 @@ sub tweak ($\@\@\@) {
 	  $$_[$targ]           = $method for @$pads; # bulletproof, blanket bludgeon
 
 	  # replace $methop (this bless below is needed because B::Generate is too old)
-	  my B::PADOP $gv      = bless $padop->new($padop->name, $padop->flags), ref $padop;
+	  my B::PADOP $gv      = bless $padop->new($padop->name, $padop->flags), ref $padop or die "Can't create B::PADOP from $padop!";
 	  $gv->padix($targ);
 	  $gv->next($methop->next);
 	  $gv->sibling($methop->sibling);
@@ -65,7 +65,7 @@ sub tweak ($\@\@\@) {
 	$op = $op->next;
       }
 
-      $op = $op->next;
+      $op = $op->next if ref $op->next;
     }
 
   }
@@ -77,7 +77,7 @@ sub tweak ($\@\@\@) {
 sub MODIFY_CODE_ATTRIBUTES {
   my ($class, $rv, @attrs) = @_;
 
-  if (grep $valid_attrs{+lc}, @attrs) {
+  if ((not defined $DEBUG or $DEBUG ne "disabled") and grep $valid_attrs{+lc}, @attrs) {
 
     my $cv_obj             = B::svref_2object($rv);
     my @op_stack           = ($cv_obj->START);
@@ -149,6 +149,7 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
     use sealed 'debug';   # warns about 'method_named' op tweaks
     use sealed 'deparse'; # additionally warns with the B::Deparse output
     use sealed 'dump';    # warns with the $op->dump during the tree walk
+    use sealed 'disabled';# disables all CV tweaks
     use sealed;           # disables all warnings
 
 =item BUGS
