@@ -12,7 +12,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION       = v1.0.4;
+our $VERSION       = v1.0.5;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
@@ -54,20 +54,20 @@ sub tweak ($\@\@\@) {
 	  $$_[$targ]           = $method for @$pads; # bulletproof, blanket bludgeon
 
 	  # replace $methop (this bless below is needed because B::Generate is too old)
-	  my B::PADOP $gv      = bless $padop->new($padop->name, $padop->flags), ref $padop or die "Can't create B::PADOP from $padop!";
-	  $gv->padix($targ);
-	  $gv->next($methop->next);
-	  $gv->sibling($methop->sibling);
-	  $op->next($gv);
+	  my B::PADOP $gv      = bless $padop->new($padop->name, $padop->flags), ref $padop;
 
-	  $tweaked++;
-	}
-	$op = $op->next;
+          if (defined $gv and ref $gv eq "B::PADOP") {
+            $gv->padix($targ);
+            $gv->next($methop->next);
+            $gv->sibling($methop->sibling);
+            $op->next($gv);
+            $tweaked++;
+          }
+        }
+        $op = $op->next;
       }
-
       $op = $op->next if ref $op->next;
     }
-
   }
 
   push @$op_stack, $op->next;
