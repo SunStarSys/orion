@@ -23,6 +23,7 @@ BEGIN {
     unshift @INC, "$script_path/lib";
 }
 
+use utf8;
 use strict;
 use warnings;
 use Getopt::Long;
@@ -185,7 +186,7 @@ sub process_file :Sealed {
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
         my ($content, $ext) = $s->(path => $path, lang => $lang, %$args);
-        open my $fh, ">", "$target_base/$target_file.$ext$lang"
+        open my $fh, ">:encoding(UTF-8)", "$target_base/$target_file.$ext$lang"
             or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
         print $fh $content;
         $matched = 1;
