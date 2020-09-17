@@ -1,5 +1,4 @@
 package SunStarSys::Util;
-
 use base 'Exporter';
 use YAML::XS;
 use File::Basename;
@@ -21,7 +20,8 @@ our $VERSION = "1.9";
 
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
-    open my $fh, "<", $file or die "Can't open file $file: $!\n";
+    $file =~ /(.*)/;
+    open my $fh, "<:encoding(UTF-8)", $1 or die "Can't open file $file: $!\n";
 
     my $headers = 1;
     local $_;

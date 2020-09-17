@@ -12,7 +12,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION       = v1.0.5;
+our $VERSION       = v1.0.6;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
@@ -41,19 +41,21 @@ sub tweak ($\@\@\@) {
 
 	elsif ($op->next->name eq "method_named") {
 	  my B::METHOP $methop = $op->next;
+          my $targ             = $methop->targ;
+
           # this bless below is needed because B::Generate is too old
 	  my B::PADOP $gv      = bless $padop->new($padop->name, $padop->flags), ref $padop;
           # we check $gv post-assignment since B::Generate's new
           # has ithread-related refcount bugs
-          if (defined $gv and ref $gv eq "B::PADOP") {
-            # replace $methop
-            my $targ           = $methop->targ;
-            $gv->padix($targ);
+          # replace $methop
+          eval {
+            $gv->padix("$targ");
             $gv->next($methop->next);
             $gv->sibling($methop->sibling);
             $op->next($gv);
+          };
+          unless ($@) {
             $tweaked++;
-
             # a little prayer
 	    my ($method_name, $idx);
 	    $method_name         = $$pads[$idx++][$targ] while not defined $method_name;
@@ -65,9 +67,9 @@ sub tweak ($\@\@\@) {
 	    $$_[$targ]           = $method for @$pads; # bulletproof, blanket bludgeon
           }
         }
+
         $op = $op->next;
       }
-      $op = $op->next if ref $op->next;
     }
   }
 

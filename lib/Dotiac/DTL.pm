@@ -14,7 +14,6 @@
 #http://www.opensource.org/licenses/mit-license.php .
 ###############################################################################
 
-
 package Dotiac::DTL;
 use Dotiac::DTL::Core; #This is only used to make Test::Pod::Coverage, since most functions in the Dotiac::DTL namespace are documented in that file.
 use Dotiac::DTL::Tag ();
@@ -29,7 +28,6 @@ use File::Basename ();
 our @EXPORT=();
 our @EXPORT_OK=qw/Context Template *TEMPLATE_DIRS/;
 our $VERSION = 0.8;
-
 
 sub Template {
     no warnings;
@@ -138,8 +136,7 @@ sub newandcompile {
 				delete $cache{$t};
 			}
 			unless ($cache{$t})  {
-				open my $fh,"<",$data or croak "Can't open template $data: $!";
-				binmode $fh;
+				open my $fh,"<:encoding(UTF-8)",$data or croak "Can't open template $data: $!";
 				my $a=do {local $/,<$fh>};
 				close $fh;
 				$filename="\"$data\"";
