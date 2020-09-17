@@ -40,7 +40,7 @@ sub tweak ($\@\@\@) {
 	}
 
 	elsif ($op->next->name eq "method_named") {
-	  my B::METHOP $methop = $op->next;
+          my B::METHOP $methop = $op->next;
           my $targ             = $methop->targ;
 
           # this bless below is needed because B::Generate is too old
