@@ -59,6 +59,7 @@ sub markdown {
             Type    => SOCK_STREAM,
             Timeout => 30,
         ) or die "Can't open markdown socket: $!";
+        binmode $sock, ":utf8";
         print $sock $val->repr();
         shutdown $sock, 1;
         my $html = "";
