@@ -172,7 +172,7 @@ sub newandcompile {
 			};
 		}
 		if ($compile and $compile > 0) {
-			if (open my $cp,">:encoding(UTF-8)","$t.pm") {
+			if (open my $cp,">","$t.pm") {
 				eval {
 					require Data::Dumper;
 					$Data::Dumper::Indent=2;

@@ -65,7 +65,7 @@ sub markdown {
         shutdown $sock, 1;
         my $html = "";
         1 while sysread $sock, $html, 65536, length $html;
-
+        utf8::decode $html;
         return Dotiac::DTL::Value->safe($html);
 }
 sub textile {
