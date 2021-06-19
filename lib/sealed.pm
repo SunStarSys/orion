@@ -12,12 +12,14 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION       = v1.0.6;
+our $VERSION       = v1.0.7;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
 my $p_obj          = B::svref_2object(sub {&tweak});
-my B::PADOP $padop = $p_obj->START->next->next;
+my B::PADOP $padop = $p_obj->START;
+
+while ($$padop and ref($padop) != B::PADOP) { $padop = $padop->next }
 
 sub tweak ($\@\@\@) {
   my ($op, $lexical_names, $pads, $op_stack) = @_;
