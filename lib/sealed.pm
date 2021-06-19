@@ -11,6 +11,9 @@ use warnings;
 
 use B::Generate ();
 use B::Deparse  ();
+use Config ();
+
+warn "Untested on non-ithreaded perls" unless $Config{useithreads};
 
 our $VERSION       = v1.0.7;
 our $DEBUG;
