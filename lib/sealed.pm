@@ -67,7 +67,7 @@ sub tweak ($\@\@\@) {
           };
           if ($@) {
             eval {
-              $gv = bless $p_op->new($p_op->name, $p_op->flags, $method), ref $p_op; # B::SVOP
+              $gv              = bless $p_op->new($p_op->name, $p_op->flags, $method), ref $p_op; # B::SVOP
 	      $gv->next($methop->next);
 	      $gv->sibling($methop->sibling);
 	      $op->next($gv);
