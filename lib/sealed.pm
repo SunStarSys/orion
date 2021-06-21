@@ -13,8 +13,6 @@ use B::Generate ();
 use B::Deparse  ();
 use Config;
 
-warn "Untested on non-ithreaded perls" unless $Config{useithreads};
-
 our $VERSION       = v1.0.8;
 our $DEBUG;
 
@@ -55,17 +53,20 @@ sub tweak ($\@\@\@) {
             if $DEBUG;
 	  my $method           = $class->can($method_name)
 	    or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
-	  
+
           # replace $methop
-          eval {
-	    $gv                = bless $p_op->new($p_op->name, $p_op->flags), ref $p_op; # B::PADOP
-            $gv->padix($targ);
-            $gv->next($methop->next);
-            $gv->sibling($methop->sibling);
-            $op->next($gv);
-	    $$_[$targ]         = $method for @$pads; # bulletproof, blanket bludgeon
-          };
-          if ($@) {
+
+          if ($Config{useithreads}) {
+            eval {
+              $gv              = bless $p_op->new($p_op->name, $p_op->flags), ref $p_op; # B::PADOP
+              $gv->padix($targ);
+              $gv->next($methop->next);
+              $gv->sibling($methop->sibling);
+              $op->next($gv);
+              $$_[$targ]       = $method for @$pads; # bulletproof, blanket bludgeon
+            }
+	  }
+          else {
             eval {
               $gv              = bless $p_op->new($p_op->name, $p_op->flags, $method), ref $p_op; # B::SVOP
 	      $gv->next($methop->next);
