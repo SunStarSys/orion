@@ -13,16 +13,15 @@ use B::Generate ();
 use B::Deparse  ();
 use Config;
 
-die "Unusable on non-ithreaded perls" unless $Config{useithreads};
+warn "Untested on non-ithreaded perls" unless $Config{useithreads};
 
-our $VERSION       = v1.0.7;
+our $VERSION       = v1.0.8;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
 my $p_obj          = B::svref_2object(sub {&tweak});
-my B::PADOP $padop = $p_obj->START;
+my $p_op           = $p_obj->START->next->next;
 
-while ($$padop and ref($padop) ne "B::PADOP") { $padop = $padop->next }
 
 sub tweak ($\@\@\@) {
   my ($op, $lexical_names, $pads, $op_stack) = @_;
@@ -47,30 +46,35 @@ sub tweak ($\@\@\@) {
 	elsif ($op->next->name eq "method_named") {
           my B::METHOP $methop = $op->next;
           my $targ             = $methop->targ;
+          my $gv;
 
-          # this bless below is needed because B::Generate is too old
-	  my B::PADOP $gv      = bless $padop->new($padop->name, $padop->flags), ref $padop;
-          # we check $gv post-assignment since B::Generate's new
-          # has ithread-related refcount bugs
+	  # a little prayer
+	  my ($method_name, $idx);
+	  $method_name         = $$pads[$idx++][$targ] while not defined $method_name;
+	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
+            if $DEBUG;
+	  my $method           = $class->can($method_name)
+	    or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
+	  
           # replace $methop
           eval {
-            $gv->padix("$targ");
+	    $gv                = bless $p_op->new($p_op->name, $p_op->flags), ref $p_op; # B::PADOP
+            $gv->padix($targ);
             $gv->next($methop->next);
             $gv->sibling($methop->sibling);
             $op->next($gv);
+	    $$_[$targ]         = $method for @$pads; # bulletproof, blanket bludgeon
           };
-          unless ($@) {
-            $tweaked++;
-            # a little prayer
-	    my ($method_name, $idx);
-	    $method_name         = $$pads[$idx++][$targ] while not defined $method_name;
-	    warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
-              if $DEBUG;
-
-	    my $method           = $class->can($method_name)
-	      or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
-	    $$_[$targ]           = $method for @$pads; # bulletproof, blanket bludgeon
+          if ($@) {
+            eval {
+              $gv = bless $p_op->new($p_op->name, $p_op->flags, $method), ref $p_op; # B::SVOP
+	      $gv->next($methop->next);
+	      $gv->sibling($methop->sibling);
+	      $op->next($gv);
+	    }
           }
+
+          $tweaked++ unless $@;
         }
 
         $op = $op->next;
