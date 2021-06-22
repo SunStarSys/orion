@@ -60,7 +60,7 @@ sub tweak ($\@\@\@) {
           $op->next($gv);
 
           if (ref($gv) eq "B::PADOP") {
-            # reset mess B::GVOP made of current sub's pads
+            # reset mess B::GVOP->new made of current sub's pads
             (undef, $lexical_names, $pads, $op_stack) = @_;
             # reuse the $targ from the proper target pads
             $gv->padix($targ);
