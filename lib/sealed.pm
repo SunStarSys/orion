@@ -35,26 +35,26 @@ sub tweak ($\@\@\@) {
 	if ($op->next->name eq "pushmark") {
 	  # we need to process this arg stack recursively
 	  splice @_, 0, 1, $op->next;
-	  ($op, my $t)         = &tweak;
-	  $tweaked            += $t;
+	  ($op, my $t)           = &tweak;
+	  $tweaked              += $t;
 	}
 
 	elsif ($op->next->name eq "method_named") {
-          my B::METHOP $methop = $op->next;
-          my $targ             = $methop->targ;
+          my B::METHOP $methop   = $op->next;
+          my $targ               = $methop->targ;
 
 	  # a little prayer
 
 	  my ($method_name, $idx);
-	  $method_name         = $$pads[$idx++][$targ] while not defined $method_name;
+	  $method_name           = $$pads[$idx++][$targ] while not defined $method_name;
 	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
             if $DEBUG;
-	  my $method           = $class->can($method_name)
+	  my $method             = $class->can($method_name)
 	    or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
           # replace $methop
 
-          my $gv               = B::GVOP->new($p_op->name, $p_op->flags, $method);
+          my $gv                 = B::GVOP->new($p_op->name, $p_op->flags, $method);
           $gv->next($methop->next);
           $gv->sibling($methop->sibling);
           $op->next($gv);
@@ -64,7 +64,7 @@ sub tweak ($\@\@\@) {
             (undef, $lexical_names, $pads, $op_stack) = @_;
             # reuse the $targ from the (passed) target pads
             $gv->padix($targ);
-            $$_[$targ]         = $method for @$pads;
+            $$pads[--$idx][$targ] = $method;
           }
 
           ++$tweaked;
@@ -159,7 +159,7 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
 
 =item BUGS
 
-You may need to simplify your named method call argument stack,
+You may need to simplify your my named method call argument stack,
 because this op-tree walker isn't as robust as it needs to be.
 For example, any "branching" done in the target method's argument
 stack, eg by using the '?:' ternary operator, will break this logic.
