@@ -63,8 +63,8 @@ sub tweak ($\@\@\@) {
           $op->next($gv);
 
           if (ref($gv) eq "B::PADOP") {
-              $gv->padix($targ);
-              $$_[$targ]       = $method for @$pads;
+            $gv->padix($targ);
+            $$_[$targ]         = $method for @$pads;
           }
 
           ++$tweaked;
