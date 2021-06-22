@@ -22,7 +22,7 @@ my $p_op           = $p_obj->START->next->next;  # B::PADOP (w/ ithreads) or B::
 sub tweak ($\@\@\@) {
   my ($op, $lexical_names, $pads, $op_stack) = @_;
   my $tweaked = 0;
-  warn $op_stack;
+
   if ($op->next->name eq "padsv") {
     $op         = $op->next;
     my $type    = $$lexical_names[$op->targ]->TYPE;
