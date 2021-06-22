@@ -62,8 +62,7 @@ sub tweak ($\@\@\@) {
           $gv->sibling($methop->sibling);
           $op->next($gv);
 
-          if (ref($p_op) eq "B::PADOP") {
-              bless $gv, ref $p_op;
+          if (ref($gv) eq "B::PADOP") {
               $gv->padix($targ);
               $$_[$targ]       = $method for @$pads;
           }
