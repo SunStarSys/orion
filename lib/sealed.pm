@@ -11,20 +11,18 @@ use warnings;
 
 use B::Generate ();
 use B::Deparse  ();
-use Config;
 
 our $VERSION       = v1.0.8;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
 my $p_obj          = B::svref_2object(sub {&tweak});
-my $p_op           = $p_obj->START->next->next;
-
+my $p_op           = $p_obj->START->next->next;  # B::PADOP (w/ ithreads) or B::SVOP
 
 sub tweak ($\@\@\@) {
   my ($op, $lexical_names, $pads, $op_stack) = @_;
   my $tweaked = 0;
-
+  warn $op_stack;
   if ($op->next->name eq "padsv") {
     $op         = $op->next;
     my $type    = $$lexical_names[$op->targ]->TYPE;
@@ -44,9 +42,9 @@ sub tweak ($\@\@\@) {
 	elsif ($op->next->name eq "method_named") {
           my B::METHOP $methop = $op->next;
           my $targ             = $methop->targ;
-          my $gv;
 
 	  # a little prayer
+
 	  my ($method_name, $idx);
 	  $method_name         = $$pads[$idx++][$targ] while not defined $method_name;
 	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
@@ -56,26 +54,21 @@ sub tweak ($\@\@\@) {
 
           # replace $methop
 
-          if ($Config{useithreads}) {
-            eval {
-              $gv              = bless $p_op->new($p_op->name, $p_op->flags), ref $p_op; # B::PADOP
+          my $tmp              = $op_stack;
+          my $gv               = B::GVOP->new($p_op->name, $p_op->flags, $method);
+          $op_stack            = $tmp;
+
+          $gv->next($methop->next);
+          $gv->sibling($methop->sibling);
+          $op->next($gv);
+
+          if (ref($p_op) eq "B::PADOP") {
+              bless $gv, ref $p_op;
               $gv->padix($targ);
-              $gv->next($methop->next);
-              $gv->sibling($methop->sibling);
-              $op->next($gv);
-              $$_[$targ]       = $method for @$pads; # bulletproof, blanket bludgeon
-            }
-	  }
-          else {
-            eval {
-              $gv              = bless $p_op->new($p_op->name, $p_op->flags, $method), ref $p_op; # B::SVOP
-	      $gv->next($methop->next);
-	      $gv->sibling($methop->sibling);
-	      $op->next($gv);
-	    }
+              $$_[$targ]       = $method for @$pads;
           }
 
-          $tweaked++ unless $@;
+          ++$tweaked;
         }
 
         $op = $op->next;
