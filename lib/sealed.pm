@@ -12,7 +12,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION       = v1.0.8;
+our $VERSION       = v1.0.9;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
@@ -54,15 +54,14 @@ sub tweak ($\@\@\@) {
 
           # replace $methop
 
-          my $tmp              = $op_stack;
           my $gv               = B::GVOP->new($p_op->name, $p_op->flags, $method);
-          $op_stack            = $tmp;
 
           $gv->next($methop->next);
           $gv->sibling($methop->sibling);
           $op->next($gv);
 
           if (ref($gv) eq "B::PADOP") {
+            (undef, $lexical_names, $pads, $op_stack) = @_;
             $gv->padix($targ);
             $$_[$targ]         = $method for @$pads;
           }
