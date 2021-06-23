@@ -115,7 +115,7 @@ sub MODIFY_CODE_ATTRIBUTES {
         push @op_stack, $op->pmreplroot, $op->next;
       }
       elsif ($op->can("first")) {
-	for (my $kid = $op->first; ref $kid && $$kid; $kid = $kid->sibling) {
+	for (my $kid = $op->first; ref($kid) && $$kid; $kid = $kid->sibling) {
 	  push @op_stack, $kid;
 	}
 	unshift @op_stack, $op->next;
