@@ -39,16 +39,23 @@ sub tweak ($\@\@\@) {
 
       elsif ($op->next->name eq "method_named" and defined $class) {
         my B::METHOP $methop    = $op->next;
-        my $targ                = $methop->targ;
 
         # a little prayer
 
-        my ($method_name, $idx);
-        $method_name            = $$pads[$idx++][$targ] while not defined $method_name;
-        warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
-          if $DEBUG;
+        my ($method_name, $idx, $targ);
+
+        if (ref($p_op) eq "B::PADOP") {
+          $targ                 = $methop->targ;
+          $method_name          = $$pads[$idx++][$targ] while not defined $method_name;
+          warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
+            if $DEBUG;
+        }
+        else {
+          $method_name          = ${$methop->meth_sv->object_2svref};
+        }
+
         my $method              = $class->can($method_name)
-	  or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
+          or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
         # replace $methop
 
