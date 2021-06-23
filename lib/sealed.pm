@@ -169,7 +169,7 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
 
 =item BUGS
 
-You may need to simplify your my named method call argument stack,
+You may need to simplify your named method call argument stack,
 because this op-tree walker isn't as robust as it needs to be.
 For example, any "branching" done in the target method's argument
 stack, eg by using the '?:' ternary operator, will break this logic.
