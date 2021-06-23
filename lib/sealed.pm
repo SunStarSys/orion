@@ -47,13 +47,13 @@ sub tweak ($\@\@\@) {
         if (ref($p_op) eq "B::PADOP") {
           $targ                 = $methop->targ;
           $method_name          = $$pads[$idx++][$targ] while not defined $method_name;
-          warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
-            if $DEBUG;
         }
         else {
           $method_name          = ${$methop->meth_sv->object_2svref};
         }
 
+        warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
+          if $DEBUG;
         my $method              = $class->can($method_name)
           or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
