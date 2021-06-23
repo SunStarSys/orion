@@ -43,12 +43,12 @@ sub tweak ($\@\@\@) {
       elsif ($op->next->name eq "method_named" and defined $class) {
         my B::METHOP $methop    = $op->next;
 
-        # a little prayer
-
         my ($method_name, $idx, $targ);
 
         if (ref($gv_op) eq "B::PADOP") {
           $targ                 = $methop->targ;
+
+          # a little prayer
           $method_name          = $$pads[$idx++][$targ] while not defined $method_name;
         }
         else {
