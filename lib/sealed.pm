@@ -90,11 +90,11 @@ sub MODIFY_CODE_ATTRIBUTES {
 
   if ((not defined $DEBUG or $DEBUG ne "disabled") and grep $valid_attrs{+lc}, @attrs) {
 
-    my $cv_obj             = B::svref_2object($rv);
-    my @op_stack           = ($cv_obj->START);
-    my ($pad_names, @p)    = $cv_obj->PADLIST->ARRAY;
-    my @pads               = map $_->object_2svref, @p;
-    my @lexical_varnames   = $pad_names->ARRAY;
+    my $cv_obj                  = B::svref_2object($rv);
+    my @op_stack                = ($cv_obj->START);
+    my ($pad_names, @p)         = $cv_obj->PADLIST->ARRAY;
+    my @pads                    = map $_->object_2svref, @p;
+    my @lexical_varnames        = $pad_names->ARRAY;
     my %processed_op;
     my $tweaked;
 
@@ -105,7 +105,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
-	$tweaked += tweak $op, @lexical_varnames, @pads, @op_stack;
+	$tweaked               += tweak $op, @lexical_varnames, @pads, @op_stack;
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
