@@ -48,7 +48,9 @@ sub tweak ($\@\@\@) {
         if (ref($gv_op) eq "B::PADOP") {
           $targ                 = $methop->targ;
 
-          # a little prayer
+          # A little prayer (the PL_curpad we need ain't available now).
+          # Not sure if this works better pre-ithread cloning, or post-ithread cloning.
+          # I've only used it post-ithread cloning, so YMMV.
           $method_name          = $$pads[$idx++][$targ] while not defined $method_name;
         }
         else {
