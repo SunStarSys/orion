@@ -15,13 +15,15 @@ use B::Deparse  ();
 our $VERSION       = v2.0.1;
 our $DEBUG;
 
-my %valid_attrs    = (sealed => 1);
-my $p_obj          = B::svref_2object(sub {&tweak});
-my $p_op           = $p_obj->START->next->next;  # B::PADOP (w/ ithreads) or B::SVOP
+my %valid_attrs                 = (sealed => 1);
+my $p_obj                       = B::svref_2object(sub {&tweak});
+
+# B::PADOP (w/ ithreads) or B::SVOP
+my $gv_op                       = $p_obj->START->next->next;
 
 sub tweak ($\@\@\@) {
   my ($op, $lexical_varnames, $pads, $op_stack) = @_;
-  my $tweaked = 0;
+  my $tweaked                   = 0;
 
   if ($op->next->name eq "padsv") {
     $op                         = $op->next;
@@ -44,7 +46,7 @@ sub tweak ($\@\@\@) {
 
         my ($method_name, $idx, $targ);
 
-        if (ref($p_op) eq "B::PADOP") {
+        if (ref($gv_op) eq "B::PADOP") {
           $targ                 = $methop->targ;
           $method_name          = $$pads[$idx++][$targ] while not defined $method_name;
         }
@@ -59,7 +61,7 @@ sub tweak ($\@\@\@) {
 
         # replace $methop
 
-        my $gv                  = B::GVOP->new($p_op->name, $p_op->flags, $method);
+        my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
         $gv->next($methop->next);
         $gv->sibling($methop->sibling);
         $op->next($gv);
