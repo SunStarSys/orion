@@ -63,6 +63,7 @@ sub tweak ($\@\@\@) {
 
         my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
         $gv->next($methop->next);
+        $gv->sibparent($methop->sibparent);
         $gv->sibling($methop->sibling);
         $op->next($gv);
 
