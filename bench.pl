@@ -24,10 +24,10 @@ sub also_sealed :Sealed {
     my main $a = shift;
     if ($a) {
         my Benchmark $bench;
-        my $inner;
+        my $inner = $a;
         return sub :Sealed {
             my Foo $b = $a;
-            $b->foo($bench->cmpthese, $inner);
+            $inner->foo($b->foo($inner->bar, $inner, $bench->cmpthese));
             $a->foo;
         };
     }

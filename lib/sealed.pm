@@ -12,7 +12,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION       = v2.0.0;
+our $VERSION       = v2.0.1;
 our $DEBUG;
 
 my %valid_attrs    = (sealed => 1);
@@ -24,54 +24,53 @@ sub tweak ($\@\@\@) {
   my $tweaked = 0;
 
   if ($op->next->name eq "padsv") {
-    $op         = $op->next;
-    my $type    = $$lexical_names[$op->targ]->TYPE;
+    $op                         = $op->next;
+    my $type                    = $$lexical_names[$op->targ]->TYPE;
+    my $class                   = $type->isa("B::HV") ? $type->NAME : undef;
 
-    if ($type->isa("B::HV")) {
-      my $class = $type->NAME;
+    while (ref $op->next and $op->next->name ne "entersub") {
 
-      while (ref $op->next and $op->next->name ne "entersub") {
+      if ($op->next->name eq "pushmark") {
+	# we need to process this arg stack recursively
+	splice @_, 0, 1, $op->next;
+        ($op, my $t)            = &tweak;
+        $tweaked               += $t;
+      }
 
-	if ($op->next->name eq "pushmark") {
-	  # we need to process this arg stack recursively
-	  splice @_, 0, 1, $op->next;
-	  ($op, my $t)           = &tweak;
-	  $tweaked              += $t;
-	}
+      elsif ($op->next->name eq "method_named" and defined $class) {
+        my B::METHOP $methop    = $op->next;
+        my $targ                = $methop->targ;
 
-	elsif ($op->next->name eq "method_named") {
-          my B::METHOP $methop   = $op->next;
-          my $targ               = $methop->targ;
+        # a little prayer
 
-	  # a little prayer
+        my ($method_name, $idx);
+        $method_name            = $$pads[$idx++][$targ] while not defined $method_name;
+        warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
+          if $DEBUG;
+        my $method              = $class->can($method_name)
+	  or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
-	  my ($method_name, $idx);
-	  $method_name           = $$pads[$idx++][$targ] while not defined $method_name;
-	  warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
-            if $DEBUG;
-	  my $method             = $class->can($method_name)
-	    or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
+        # replace $methop
 
-          # replace $methop
+        my $gv                  = B::GVOP->new($p_op->name, $p_op->flags, $method);
+        $gv->next($methop->next);
+        $gv->sibling($methop->sibling);
+        $op->next($gv);
 
-          my $gv                 = B::GVOP->new($p_op->name, $p_op->flags, $method);
-          $gv->next($methop->next);
-          $gv->sibling($methop->sibling);
-          $op->next($gv);
+        if (ref($gv) eq "B::PADOP") {
+          # reset mess B::GVOP->new made of current sub's (tweak's) pads
+          (undef, $lexical_names, $pads, $op_stack) = @_;
 
-          if (ref($gv) eq "B::PADOP") {
-            # reset mess B::GVOP->new made of current sub's (tweak's) pads
-            (undef, $lexical_names, $pads, $op_stack) = @_;
-            # reuse the $targ from the (passed) target pads
-            $gv->padix($targ);
-            $$pads[--$idx][$targ] = $method;
-          }
-
-          ++$tweaked;
+          # reuse the $targ from the (passed) target pads
+          $gv->padix($targ);
+          $$pads[--$idx][$targ] = $method;
         }
 
-        $op = $op->next;
+        ++$tweaked;
       }
+    }
+    continue {
+      $op = $op->next;
     }
   }
 
