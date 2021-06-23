@@ -20,12 +20,12 @@ my $p_obj          = B::svref_2object(sub {&tweak});
 my $p_op           = $p_obj->START->next->next;  # B::PADOP (w/ ithreads) or B::SVOP
 
 sub tweak ($\@\@\@) {
-  my ($op, $lexical_names, $pads, $op_stack) = @_;
+  my ($op, $lexical_varnames, $pads, $op_stack) = @_;
   my $tweaked = 0;
 
   if ($op->next->name eq "padsv") {
     $op                         = $op->next;
-    my $type                    = $$lexical_names[$op->targ]->TYPE;
+    my $type                    = $$lexical_varnames[$op->targ]->TYPE;
     my $class                   = $type->isa("B::HV") ? $type->NAME : undef;
 
     while (ref $op->next and $op->next->name ne "entersub") {
@@ -66,7 +66,7 @@ sub tweak ($\@\@\@) {
 
         if (ref($gv) eq "B::PADOP") {
           # reset mess B::GVOP->new made of current sub's (tweak's) pads
-          (undef, $lexical_names, $pads, $op_stack) = @_;
+          (undef, $lexical_varnames, $pads, $op_stack) = @_;
 
           # reuse the $targ from the (passed) target pads
           $gv->padix($targ);
@@ -94,7 +94,7 @@ sub MODIFY_CODE_ATTRIBUTES {
     my @op_stack           = ($cv_obj->START);
     my ($pad_names, @p)    = $cv_obj->PADLIST->ARRAY;
     my @pads               = map $_->object_2svref, @p;
-    my @lexical_names      = $pad_names->ARRAY;
+    my @lexical_varnames   = $pad_names->ARRAY;
     my %processed_op;
     my $tweaked;
 
@@ -105,7 +105,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
-	$tweaked += tweak $op, @lexical_names, @pads, @op_stack;
+	$tweaked += tweak $op, @lexical_varnames, @pads, @op_stack;
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
