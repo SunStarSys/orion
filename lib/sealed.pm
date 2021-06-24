@@ -52,7 +52,7 @@ sub tweak ($\@\@\@) {
           # Not sure if this works better pre-ithread cloning, or post-ithread cloning.
           # I've only used it post-ithread cloning, so YMMV.
           # $targ collisions (between different pads) still seem possible here.
-          $method_name          = $$pads[$idx++][$targ] while not defined $method_name;
+          $method_name          = $$pads[$idx++][$targ] until defined $method_name and not ref $method_name;
         }
         else {
           $method_name          = ${$methop->meth_sv->object_2svref};
