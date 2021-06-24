@@ -75,7 +75,7 @@ sub tweak ($\@\@\@) {
           # reset mess B::GVOP->new made of current sub's (tweak's) pads
           (undef, $lexical_varnames, $pads, $op_stack) = @_;
 
-          # reuse the $targ from the (passed) target pads
+          # answer the prayer, by reusing the $targ from the (passed) target pads
           $gv->padix($targ);
           $$pads[--$idx][$targ] = $method;
         }
