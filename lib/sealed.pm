@@ -51,7 +51,7 @@ sub tweak ($\@\@\@) {
           # A little prayer (the PL_curpad we need ain't available now).
           # Not sure if this works better pre-ithread cloning, or post-ithread cloning.
           # I've only used it post-ithread cloning, so YMMV.
-          # $targ collisions are fun; ordering is a WAG with the op_stack walker down below.
+          # $targ collisions are fun; ordering is a WAG with the @op_stack walker down below.
           # KISS and declare your typed lexicals in a common scope, and you'll be fine.
           $method_name          = $$pads[$idx++][$targ] until defined $method_name and not ref $method_name;
         }
