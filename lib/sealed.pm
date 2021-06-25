@@ -13,7 +13,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION                    = v2.0.1;
+our $VERSION                    = v2.0.2;
 our $DEBUG;
 
 my %valid_attrs                 = (sealed => 1);
@@ -31,7 +31,7 @@ sub tweak ($\@\@\@) {
     my $type                    = $$lexical_varnames[$op->targ]->TYPE;
     my $class                   = $type->isa("B::HV") ? $type->NAME : undef;
 
-    while (ref $op->next and $op->next->name ne "entersub") {
+    while (${$op->next} and $op->next->name ne "entersub") {
 
       if ($op->next->name eq "pushmark") {
 	# we need to process this arg stack recursively
@@ -53,7 +53,7 @@ sub tweak ($\@\@\@) {
           # I've only used it post-ithread cloning, so YMMV.
           # $targ collisions are fun; ordering is a WAG with the @op_stack walker down below.
           # KISS and declare your typed lexicals in a common scope, and you'll be fine.
-          $method_name          = $$pads[$idx++][$targ] until defined $method_name and not ref $method_name;
+          $method_name          = $$pads[$idx++][$targ] until defined $method_name and not (ref $method_name and warn __PACKAGE__ . "target colission: targ=$targ");
         }
         else {
           $method_name          = ${$methop->meth_sv->object_2svref};
@@ -65,8 +65,9 @@ sub tweak ($\@\@\@) {
           or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
         # replace $methop
-
+        my $t_op = $op;
         my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
+        $op = $t_op;
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
         $gv->sibling($methop->sibling);
@@ -82,10 +83,12 @@ sub tweak ($\@\@\@) {
         }
 
         ++$tweaked;
+        $op                     = $op-next;
       }
-    }
-    continue {
-      $op = $op->next;
+
+      else {
+        $op                     = $op->next;
+      }
     }
   }
 
