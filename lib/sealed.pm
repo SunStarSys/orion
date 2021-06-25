@@ -54,7 +54,7 @@ sub tweak ($\@\@\@) {
           # $targ collisions are fun; ordering is a WAG with the @op_stack walker down below.
           # KISS and declare your typed lexicals in a common scope, and you'll be fine.
           $method_name          = $$pads[$idx++][$targ] until defined $method_name and not
-            (ref $method_name and warn __PACKAGE__ . "target collision: targ=$targ");
+            (ref $method_name and warn __PACKAGE__ . ": target collision: targ=$targ");
         }
         else {
           $method_name          = ${$methop->meth_sv->object_2svref};
