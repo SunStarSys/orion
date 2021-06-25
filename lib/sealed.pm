@@ -178,7 +178,8 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
 You may need to simplify your named method call argument stack,
 because this op-tree walker isn't as robust as it needs to be.
 For example, any "branching" done in the target method's argument
-stack, eg by using the '?:' ternary operator, will break this logic.
+stack, eg by using the '?:' ternary operator, will break this logic
+(pushmark ops are processed linearly, by $op->next walking, in tweak()).
 
 =item CAVEATS
 
