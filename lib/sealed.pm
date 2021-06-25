@@ -67,9 +67,8 @@ sub tweak ($\@\@\@) {
           or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
         # replace $methop
-        my $t_op = $op;
+
         my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
-        $op = $t_op;
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
         $gv->sibling($methop->sibling);
