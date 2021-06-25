@@ -13,7 +13,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION                    = v3.0.0;
+our $VERSION                    = v3.0.1;
 our $DEBUG;
 
 my %valid_attrs                 = (sealed => 1);
@@ -22,8 +22,8 @@ my $p_obj                       = B::svref_2object(sub {&tweak});
 # B::PADOP (w/ ithreads) or B::SVOP
 my $gv_op                       = $p_obj->START->next->next;
 
-sub tweak ($\@\@) {
-  my ($op, $lexical_varnames, $pads) = @_;
+sub tweak ($\@\@\@) {
+  my ($op, $lexical_varnames, $pads, $op_stack) = @_;
   my $tweaked                   = 0;
 
   if (${$op->next} and $op->next->name eq "padsv") {
@@ -39,6 +39,7 @@ sub tweak ($\@\@) {
         ($op, my $t)            = &tweak;
         $tweaked               += $t;
         $op                     = $_[0]->next unless $$op and ${$op->next};
+        push @$op_stack, $op;
       }
 
       elsif ($op->next->name eq "method_named" and defined $class) {
@@ -77,7 +78,7 @@ sub tweak ($\@\@) {
 
         if (ref($gv) eq "B::PADOP") {
           # reset mess B::GVOP->new made of current sub's (tweak's) pads
-          (undef, $lexical_varnames, $pads) = @_;
+          (undef, $lexical_varnames, $pads, $op_stack) = @_;
 
           # answer the prayer, by reusing the $targ from the (passed) target pads
           $gv->padix($targ);
@@ -115,7 +116,9 @@ sub MODIFY_CODE_ATTRIBUTES {
       $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
-	$tweaked               += tweak $op, @lexical_varnames, @pads;
+	($op, my $t)            = tweak $op, @lexical_varnames, @pads, @op_stack;
+        $tweaked               += $t;
+        push @op_stack, $op;
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
