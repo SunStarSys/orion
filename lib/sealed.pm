@@ -116,7 +116,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 
       if ($op->name eq "pushmark") {
 	$tweaked               += tweak $op, @lexical_varnames, @pads;
-     }
+      }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
       }
