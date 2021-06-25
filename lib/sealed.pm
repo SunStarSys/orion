@@ -22,8 +22,8 @@ my $p_obj                       = B::svref_2object(sub {&tweak});
 # B::PADOP (w/ ithreads) or B::SVOP
 my $gv_op                       = $p_obj->START->next->next;
 
-sub tweak ($\@\@\@) {
-  my ($op, $lexical_varnames, $pads, $op_stack) = @_;
+sub tweak ($\@\@) {
+  my ($op, $lexical_varnames, $pads) = @_;
   my $tweaked                   = 0;
 
   if (${$op->next} and $op->next->name eq "padsv") {
@@ -78,7 +78,7 @@ sub tweak ($\@\@\@) {
 
         if (ref($gv) eq "B::PADOP") {
           # reset mess B::GVOP->new made of current sub's (tweak's) pads
-          (undef, $lexical_varnames, $pads, $op_stack) = @_;
+          (undef, $lexical_varnames, $pads) = @_;
 
           # answer the prayer, by reusing the $targ from the (passed) target pads
           $gv->padix($targ);
@@ -116,7 +116,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
-	$tweaked               += tweak $op, @lexical_varnames, @pads, @op_stack;
+	$tweaked               += tweak $op, @lexical_varnames, @pads;
      }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
