@@ -116,9 +116,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
-	($op, my $t)            = tweak $op, @lexical_varnames, @pads, @op_stack;
-        $tweaked               += $t;
-        push @op_stack, $op;
+	$tweaked               += tweak $op, @lexical_varnames, @pads, @op_stack;
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
