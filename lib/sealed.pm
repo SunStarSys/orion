@@ -87,7 +87,7 @@ sub tweak ($\@\@\@) {
       }
     }
     continue {
-        $op                     = $op->next;
+      $op                       = $op->next;
     }
   }
 
