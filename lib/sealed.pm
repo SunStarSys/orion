@@ -26,7 +26,7 @@ sub tweak ($\@\@\@) {
   my ($op, $lexical_varnames, $pads, $op_stack) = @_;
   my $tweaked                   = 0;
 
-  if ($op->next->name eq "padsv") {
+  if (${$op->next} and $op->next->name eq "padsv") {
     $op                         = $op->next;
     my $type                    = $$lexical_varnames[$op->targ]->TYPE;
     my $class                   = $type->isa("B::HV") ? $type->NAME : undef;
@@ -38,6 +38,7 @@ sub tweak ($\@\@\@) {
 	splice @_, 0, 1, $op->next;
         ($op, my $t)            = &tweak;
         $tweaked               += $t;
+        $op                     = $_[0]->next unless $$op and ${$op->next};
       }
 
       elsif ($op->next->name eq "method_named" and defined $class) {
@@ -84,16 +85,13 @@ sub tweak ($\@\@\@) {
         }
 
         ++$tweaked;
-        $op                     = $op-next;
       }
-
-      else {
+    }
+    continue {
         $op                     = $op->next;
-      }
     }
   }
 
-  push @$op_stack, $op->next;
   return ($op, $tweaked);
 }
 
@@ -118,7 +116,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 
       if ($op->name eq "pushmark") {
 	$tweaked               += tweak $op, @lexical_varnames, @pads, @op_stack;
-      }
+     }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
       }
