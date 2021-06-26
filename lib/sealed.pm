@@ -28,8 +28,8 @@ sub tweak ($\@\@\@) {
 
   if (${$op->next} and $op->next->name eq "padsv") {
     $op                         = $op->next;
-    local our $type             = $$lexical_varnames[$op->targ]->TYPE;
-    local our $class            = $type->isa("B::HV") ? $type->NAME : undef;
+    my $type                    = $$lexical_varnames[$op->targ]->TYPE;
+    my $class                   = $type->isa("B::HV") ? $type->NAME : undef;
 
     while (${$op->next} and $op->next->name ne "entersub") {
 
@@ -43,7 +43,7 @@ sub tweak ($\@\@\@) {
       }
 
       elsif ($op->next->name eq "method_named" and defined $class) {
-        local our $methop        = $op->next;
+        my $methop              = $op->next;
 
         my ($method_name, $idx, $targ);
 
