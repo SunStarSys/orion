@@ -16,6 +16,7 @@ BEGIN {
 }
 sub func   {Foo::foo($x)}
 BEGIN{@::ISA=('Foo')}
+
 my main $y = $x;
 sub sealed :Sealed {
     $y->foo();

@@ -13,7 +13,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION                    = v3.0.1;
+our $VERSION                    = v3.0.2;
 our $DEBUG;
 
 my %valid_attrs                 = (sealed => 1);
@@ -24,7 +24,7 @@ my $gv_op                       = $p_obj->START->next->next;
 
 sub tweak ($\@\@\@) {
   my ($op, $lexical_varnames, $pads, $op_stack) = @_;
-  local our $tweaked            = 0;
+  my $tweaked                   = 0;
 
   if (${$op->next} and $op->next->name eq "padsv") {
     $op                         = $op->next;
@@ -45,7 +45,7 @@ sub tweak ($\@\@\@) {
       elsif ($op->next->name eq "method_named" and defined $class) {
         local our $methop        = $op->next;
 
-        local our ($method_name, $idx, $targ);
+        my ($method_name, $idx, $targ);
 
         if (ref($gv_op) eq "B::PADOP") {
           $targ                 = $methop->targ;
@@ -64,12 +64,12 @@ sub tweak ($\@\@\@) {
 
         warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
           if $DEBUG;
-        local our $method       = $class->can($method_name)
+        my $method              = $class->can($method_name)
           or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
         # replace $methop
-        local $_                = $op;
-        local our $gv           = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
+
+        my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
 
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
@@ -77,10 +77,6 @@ sub tweak ($\@\@\@) {
         $op->next($gv);
 
         if (ref($gv) eq "B::PADOP") {
-          # reset mess B::GVOP->new made to this sub's (tweak's) pads
-          (undef, $lexical_varnames, $pads, $op_stack) = @_;
-          $op                   = $_;
-
           # answer the prayer, by reusing the $targ from the (passed) target pads
           $gv->padix($targ);
           $$pads[--$idx][$targ] = $method;
@@ -109,6 +105,8 @@ sub MODIFY_CODE_ATTRIBUTES {
     my @lexical_varnames        = $pad_names->ARRAY;
     my %processed_op;
     my $tweaked;
+
+    B::cv_pad($cv_obj);
 
     while (my $op = shift @op_stack) {
       ref $op and $$op and not $processed_op{$$op}++
