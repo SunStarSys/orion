@@ -24,12 +24,12 @@ my $gv_op                       = $p_obj->START->next->next;
 
 sub tweak ($\@\@\@) {
   my ($op, $lexical_varnames, $pads, $op_stack) = @_;
-  my $tweaked                   = 0;
+  local our $tweaked            = 0;
 
   if (${$op->next} and $op->next->name eq "padsv") {
     $op                         = $op->next;
-    my $type                    = $$lexical_varnames[$op->targ]->TYPE;
-    my $class                   = $type->isa("B::HV") ? $type->NAME : undef;
+    local our $type             = $$lexical_varnames[$op->targ]->TYPE;
+    local our $class            = $type->isa("B::HV") ? $type->NAME : undef;
 
     while (${$op->next} and $op->next->name ne "entersub") {
 
@@ -43,9 +43,9 @@ sub tweak ($\@\@\@) {
       }
 
       elsif ($op->next->name eq "method_named" and defined $class) {
-        my B::METHOP $methop    = $op->next;
+        local our $methop        = $op->next;
 
-        my ($method_name, $idx, $targ);
+        local our ($method_name, $idx, $targ);
 
         if (ref($gv_op) eq "B::PADOP") {
           $targ                 = $methop->targ;
@@ -64,12 +64,12 @@ sub tweak ($\@\@\@) {
 
         warn __PACKAGE__, ": compiling $class->$method_name lookup.\n"
           if $DEBUG;
-        my $method              = $class->can($method_name)
+        local our $method       = $class->can($method_name)
           or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
         # replace $methop
-
-        my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
+        local $_                = $op;
+        local our $gv           = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
 
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
@@ -77,8 +77,9 @@ sub tweak ($\@\@\@) {
         $op->next($gv);
 
         if (ref($gv) eq "B::PADOP") {
-          # reset mess B::GVOP->new made of current sub's (tweak's) pads
+          # reset mess B::GVOP->new made to this sub's (tweak's) pads
           (undef, $lexical_varnames, $pads, $op_stack) = @_;
+          $op                   = $_;
 
           # answer the prayer, by reusing the $targ from the (passed) target pads
           $gv->padix($targ);
