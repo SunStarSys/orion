@@ -106,7 +106,7 @@ sub MODIFY_CODE_ATTRIBUTES {
     my %processed_op;
     my $tweaked;
 
-    B::cv_pad($cv_obj);
+    my $old_pad = B::cv_pad($cv_obj);
 
     while (my $op = shift @op_stack) {
       ref $op and $$op and not $processed_op{$$op}++
@@ -136,7 +136,9 @@ sub MODIFY_CODE_ATTRIBUTES {
       warn B::Deparse->new->coderef2text($rv), "\n";
     }
 
+    B::cv_pad($old_pad);
   }
+
 
   return grep !$valid_attrs{+lc}, @attrs;
 }
