@@ -13,7 +13,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION                    = v3.0.2;
+our $VERSION                    = v3.0.3;
 our $DEBUG;
 
 my %valid_attrs                 = (sealed => 1);
@@ -22,8 +22,8 @@ my $p_obj                       = B::svref_2object(sub {&tweak});
 # B::PADOP (w/ ithreads) or B::SVOP
 my $gv_op                       = $p_obj->START->next->next;
 
-sub tweak ($\@\@\@) {
-  my ($op, $lexical_varnames, $pads, $op_stack) = @_;
+sub tweak ($\@\@\@$) {
+  my ($op, $lexical_varnames, $pads, $op_stack, $cv_obj) = @_;
   my $tweaked                   = 0;
 
   if (${$op->next} and $op->next->name eq "padsv") {
@@ -69,7 +69,9 @@ sub tweak ($\@\@\@) {
 
         # replace $methop
 
+        my $old_pad = B::cv_pad($cv_obj);
         my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
+        B::cv_pad($old_pad);
 
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
@@ -86,10 +88,12 @@ sub tweak ($\@\@\@) {
       }
     }
     continue {
+      last unless $$op and ${$op->next};
       $op                       = $op->next;
     }
   }
 
+  push @$op_stack, $op if $$op;
   return ($op, $tweaked);
 }
 
@@ -106,8 +110,6 @@ sub MODIFY_CODE_ATTRIBUTES {
     my %processed_op;
     my $tweaked;
 
-    my $old_pad = B::cv_pad($cv_obj);
-
     while (my $op = shift @op_stack) {
       ref $op and $$op and not $processed_op{$$op}++
         or next;
@@ -115,7 +117,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
-	$tweaked               += tweak $op, @lexical_varnames, @pads, @op_stack;
+	$tweaked               += tweak $op, @lexical_varnames, @pads, @op_stack, $cv_obj;
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
@@ -136,9 +138,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       warn B::Deparse->new->coderef2text($rv), "\n";
     }
 
-    B::cv_pad($old_pad);
   }
-
 
   return grep !$valid_attrs{+lc}, @attrs;
 }
