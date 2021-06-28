@@ -185,6 +185,10 @@ stack, eg by using the '?:' ternary operator, will break this logic
 Reentry on :Sealed subs under ithreads will segfault, but everything else
 seems fine in a mod_perl2 context.  Stay tuned for v4.0.0 for the fix.
 
+=item Compiling perl v5.30+ for functional mod_perl2 w/ithreads and httpd 2.4.x w/event mpm
+
+    % ./Configure -Dusemymalloc -Dusedtrace -Duseithreads -des && make -j$(nproc)
+
 =item CAVEATS
 
 Don't use this if you are writing a reusable OO module (on CPAN, say).
