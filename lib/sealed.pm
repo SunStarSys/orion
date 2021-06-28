@@ -183,7 +183,7 @@ stack, eg by using the '?:' ternary operator, will break this logic
 (pushmark ops are processed linearly, by $op->next walking, in tweak()).
 
 Reentry on :Sealed subs under ithreads (with multiple interpreters available)
-will segfault, but everything else seems fine in a mod_perl2 context.
+will occasionally segfault, but everything else seems fine in a mod_perl2 context.
 Stay tuned for v4.0.0 for the fix.
 
 =item Compiling perl v5.30+ for functional mod_perl2 w/ithreads and httpd 2.4.x w/event mpm
