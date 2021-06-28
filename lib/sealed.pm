@@ -97,7 +97,7 @@ sub tweak ($\@\@\@$) {
 }
 
 sub MODIFY_CODE_ATTRIBUTES {
-  my ($class, $rv, @attrs) = @_;
+  my ($class, $rv, @attrs)      = @_;
 
   if ((not defined $DEBUG or $DEBUG ne "disabled") and grep $valid_attrs{+lc}, @attrs) {
 
