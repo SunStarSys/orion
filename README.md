@@ -1,5 +1,12 @@
 # SunStar Systems CMS (Build Toolchain)
 
+- TO BUILD A SITE:
+
+```
+   % markdown.js &
+   % time ./build_site.pl --source-base ../$(src_dir) --target-base ../$(target_dir)
+```
+
 ## Obsoleted Python-Markdown-based build system
 
 ### This includes mdx_elementid.py support.
