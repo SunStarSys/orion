@@ -39,7 +39,6 @@ sub tweak ($\@\@\@$) {
         ($op, my $t)            = &tweak;
         $tweaked               += $t;
         $op                     = $_[0]->next unless $$op and ${$op->next};
-        push @$op_stack, $op;
       }
 
       elsif ($op->next->name eq "method_named" and defined $class) {
