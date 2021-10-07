@@ -1,0 +1,49 @@
+# -*- sh -*-
+
+case "$LINTER" in
+  # make sure the only lines that end in a closing parenthesis
+  # are these (simple) case matches for executables,
+  # because the linter greps for them using this pattern: '[)]$'
+  shellcheck)
+    PCRE_PAT='(\.sh|^\.?\w+\.?rc)$'
+    LINTER+=' -x -P . -s bash -e SC1004,SC2016,SC2034,SC2046,SC2128,SC2155,SC2181,SC2207,SC2145,SC2088,SC2015,SC2086,SC2154,SC2199,SC2120,SC2119,SC2142,SC1090,SC2206,SC2012,SC2174,SC1117,SC2035,SC2139,SC2030,SC2031'
+    ;;
+  shfmt)
+    PCRE_PAT='(\.sh|^\.?\w+\.?rc)$'
+    LINTER+=' -d -i 2 -ci'
+    ;;
+  clang-tidy)
+    PCRE_PAT='\.(c|cc|cpp|h|hh)?$'
+    ;;
+  perl)
+    PCRE_PAT='\.p[ml]$'
+    LINTER+=' -MO=Lint'
+    ;;
+  flake8)
+    PCRE_PAT='\.py$'
+    LINTER+=' --select=E999,E902'
+    ;;
+  tidy)
+    PCRE_PAT='\.html?$'
+    LINTER='sh -c "tidy -utf8 \"\$@\" || [ \$? -eq 1 ]" --'
+    ;;
+  eslint)
+    PCRE_PAT='(?<!\.min)\.js$'
+    ;;
+  tflint)
+    PCRE_PAT='\.tf$'
+    ;;
+  csharp)
+    PCRE_PAT='\.cs$'
+    LINTER='bash -c ". ~/.asdf/asdf.sh; . ~/.asdf/plugins/dotnet-core/set-dotnet-home.bash; dotnet format --include \"\$@\"" --'
+    ;;
+  golangci-lint)
+    PCRE_PAT='\.go(?:lang)?$'
+    LINTER='bash -c ". ~/.asdf/asdf.sh; golangci-lint run \"\$@\"" --'
+    ;;
+  jinjalint)
+    LINT_TEMPLATES=yes
+    PCRE_PAT='/templates/'
+    LINTER+=' --parse-only'
+    ;;
+esac
