@@ -3,7 +3,7 @@
 - TO BUILD A SITE:
 
 ```
-   % markdown.js &
+   % ./markdownd.js &
    % time ./build_site.pl --source-base ../$(src_dir) --target-base ../$(target_dir)
 ```
 
