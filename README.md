@@ -15,7 +15,7 @@
 
 ### npm prerequisites: jquery, navigator, jsdom.
 
-### markdown.js ENV VARS: NODE_PATH, EDITOR_MD, and MARKDOWN_PORT.
+### markdownd.js ENV VARS: NODE_PATH, EDITOR_MD, and MARKDOWN_PORT.
 
 ### Enjoy: no more deltas between online editor previews and build system markdown rendering
 
@@ -33,7 +33,7 @@
 
     See <https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.sunstarsys.com/> for a live example.
 
-2. Launch the markdown.js daemon in the background.
+2. Launch the markdownd.js server in the background.
 
 3. Run build_site.pl --source-base /path/to/sources/trunk --target-base /wherever/you/want
 
