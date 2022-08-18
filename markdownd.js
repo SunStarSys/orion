@@ -1,7 +1,7 @@
 #!/usr/local/bin/node
 
 /*
- * markdownd.js: Localhost TCP socket daemon responding to markdown inputs with html outputs.
+ * markdownd.js: Localhost TCP socket server responding to markdown inputs with html outputs.
  * thread-safe, with some dynamic window-passing hacking to editormd.js's ctor.
  * jQuery can be contextualized if you ask it nicely (key here is jsdom).
  * this runs forever, so daemonize it if needed.
