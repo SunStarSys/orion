@@ -11,7 +11,7 @@
 
 ### This includes mdx_elementid.py support.
 
-## New build system is based on node.js and Editor.md: markdown.js!
+## New build system is based on node.js and Editor.md: markdownd.js!
 
 ### npm prerequisites: jquery, navigator, jsdom.
 
