@@ -189,6 +189,7 @@ Stay tuned for v4.0.0 for the fix.
 =item Compiling perl v5.30+ for functional mod_perl2 w/ithreads and httpd 2.4.x w/event mpm
 
     % ./Configure -Uusemymalloc -Duseshrplib -Dusedtrace -Duseithreads -des && make -j$(nproc) && sudo make -j$(nproc) install
+    (may require glibc tuning for full ithread support in an embedded server context: see % man mallopt)
 
 =item CAVEATS
 
