@@ -13,26 +13,26 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION                    = v3.0.3;
+our $VERSION                    = v4.0.4;
 our $DEBUG;
-
+my $end;
 my %valid_attrs                 = (sealed => 1);
 my $p_obj                       = B::svref_2object(sub {&tweak});
 
 # B::PADOP (w/ ithreads) or B::SVOP
 my $gv_op                       = $p_obj->START->next->next;
 
-sub tweak ($\@\@\@$) {
-  my ($op, $lexical_varnames, $pads, $op_stack, $cv_obj) = @_;
+sub tweak ($\@\@\@$$) {
+  my ($op, $lexical_varnames, $pads, $op_stack, $cv_obj, $processed_op) = @_;
   my $tweaked                   = 0;
 
   if (${$op->next} and $op->next->name eq "padsv") {
     $op                         = $op->next;
     my $type                    = $$lexical_varnames[$op->targ]->TYPE;
     my $class                   = $type->isa("B::HV") ? $type->NAME : undef;
-
+    my $first;
     while (${$op->next} and $op->next->name ne "entersub") {
-
+      $op->can("children") and $first = $op if $op->can("children");
       if ($op->next->name eq "pushmark") {
 	# we need to process this arg stack recursively
 	splice @_, 0, 1, $op->next;
@@ -71,11 +71,12 @@ sub tweak ($\@\@\@$) {
         my $old_pad = B::cv_pad($cv_obj);
         my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
         B::cv_pad($old_pad);
-
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
         $gv->sibling($methop->sibling);
+        $$processed_op{$$_}++ for $methop, $op, $gv;
         $op->next($gv);
+        $methop->refcnt_dec(1);
 
         if (ref($gv) eq "B::PADOP") {
           # answer the prayer, by reusing the $targ from the (passed) target pads
@@ -84,6 +85,7 @@ sub tweak ($\@\@\@$) {
         }
 
         ++$tweaked;
+
       }
     }
     continue {
@@ -92,7 +94,7 @@ sub tweak ($\@\@\@$) {
     }
   }
 
-  push @$op_stack, $op if $$op;
+  eval {push @$op_stack, $op if $$op};
   return ($op, $tweaked);
 }
 
@@ -116,7 +118,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
-	$tweaked               += tweak $op, @lexical_varnames, @pads, @op_stack, $cv_obj;
+	$tweaked               += tweak $op, @lexical_varnames, @pads, @op_stack, $cv_obj, \%processed_op;
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
