@@ -76,7 +76,7 @@ sub tweak ($\@\@\@$$) {
         $gv->sibling($methop->sibling);
         $$processed_op{$$_}++ for $methop, $op, $gv;
         $op->next($gv);
-        $methop->refcnt_dec(1); # needs a patch to Generate.xs
+        $methop->refcnt_dec; # needs a patch to Generate.xs
 
         if (ref($gv) eq "B::PADOP") {
           # answer the prayer, by reusing the $targ from the (passed) target pads
@@ -136,7 +136,7 @@ sub MODIFY_CODE_ATTRIBUTES {
     }
 
     if (defined $DEBUG and $DEBUG eq "deparse" and $tweaked) {
-      warn B::Deparse->new->coderef2text($rv), "\n";
+      eval {warn B::Deparse->new->coderef2text($rv), "\n"};
     }
 
   }
