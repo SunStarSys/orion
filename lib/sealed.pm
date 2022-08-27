@@ -30,9 +30,9 @@ sub tweak ($\@\@\@$$) {
     $op                         = $op->next;
     my $type                    = $$lexical_varnames[$op->targ]->TYPE;
     my $class                   = $type->isa("B::HV") ? $type->NAME : undef;
-    my $first;
+
     while (${$op->next} and $op->next->name ne "entersub") {
-      $op->can("children") and $first = $op if $op->can("children");
+
       if ($op->next->name eq "pushmark") {
 	# we need to process this arg stack recursively
 	splice @_, 0, 1, $op->next;
@@ -76,7 +76,7 @@ sub tweak ($\@\@\@$$) {
         $gv->sibling($methop->sibling);
         $$processed_op{$$_}++ for $methop, $op, $gv;
         $op->next($gv);
-        $methop->refcnt_dec(1);
+        $methop->refcnt_dec(1); # needs a patch to Generate.xs
 
         if (ref($gv) eq "B::PADOP") {
           # answer the prayer, by reusing the $targ from the (passed) target pads
