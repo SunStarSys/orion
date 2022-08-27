@@ -43,4 +43,4 @@ my %tests = (
 );
 
 print sealed(), "\n", also_sealed($y), "\n";
-cmpthese 10_000_000, \%tests;
+cmpthese 20_000_000, \%tests;
