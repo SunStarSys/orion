@@ -76,7 +76,8 @@ sub tweak ($\@\@\@$$) {
         $gv->sibling($methop->sibling);
         $$processed_op{$$_}++ for $methop, $op, $gv;
         $op->next($gv);
-        $methop->refcnt_dec; # needs a patch to Generate.xs
+        # needs a patch to Generate.xs
+        $methop->refcnt_dec if $methop->can("refcnt_dec");
 
         if (ref($gv) eq "B::PADOP") {
           # answer the prayer, by reusing the $targ from the (passed) target pads
