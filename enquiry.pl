@@ -14,7 +14,7 @@ my $DOMAIN = q/sunstarsys.com/;
 my $to          = q/sales@sunstarsys.com/;
 my $date       = gmtime;
 
-my Apache2::RequestRec $r = Apache2::RequestUtil->request;
+my Apache2::RequestRec $r = shift;
 
 sub render :Sealed {
     my $template = shift;
