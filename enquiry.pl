@@ -20,8 +20,9 @@ sub render :Sealed {
     my $template = shift;
     my Apache2::RequestRec $r = shift;
     my APR::Request::Apache2 $apreq = "APR::Request::Apache2";
-    my $body      = $apreq->handle($r)->param // {};
-    my %args      = (%$body, @_);
+    my APR::Request $_r = $apreq->handle($r);
+    my APR::Request::Param::Table $params = $_r->param // {};
+    my %args      = (%$params, @_);
     local our @TEMPLATE_DIRS = qw(/home/joesuf4/src/trunk/templates);
     $r->content_type("text/html; charset='utf-8'");
     $r->print(Template($template)->render(\%args));
@@ -30,7 +31,8 @@ sub render :Sealed {
 
 if ($r->method eq "POST") {
     my APR::Request::Apache2 $apreq = "APR::Request::Apache2";
-    my $body = $apreq->handle($r)->body;
+    my APR::Request $_r = $apreq->handle($r);
+    my APR::Request::Param::Table $body = $_r->body;
     my ($name, $email, $subject, $content, $site, $hosting, $plang) = @{$body}{qw/name email subject content site hosting plang/};
     s/\r//g for $name, $email, $subject, $content, $site, $hosting, $plang;
     s/\n//g for $name, $email, $subject, $hosting, $site, $plang;
