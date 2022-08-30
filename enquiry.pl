@@ -14,12 +14,13 @@ my $DOMAIN = q/sunstarsys.com/;
 my $to          = q/sales@sunstarsys.com/;
 my $date       = gmtime;
 
-my $r = Apache2::RequestUtil->request;
+my Apache2::RequestRec $r = Apache2::RequestUtil->request;
 
-sub render {
+sub render :Sealed {
     my $template = shift;
-    my $r = shift;
-    my $body      = APR::Request::Apache2->handle($r)->param // {};
+    my Apache2::RequestRec $r = shift;
+    my APR::Request::Apache2 $apreq;
+    my $body      = $apreq->handle($r)->param // {};
     my %args      = (%$body, @_);
     local our @TEMPLATE_DIRS = qw(/home/joesuf4/src/trunk/templates);
     $r->content_type("text/html; charset='utf-8'");
@@ -28,7 +29,8 @@ sub render {
 }
 
 if ($r->method eq "POST") {
-    my $body = APR::Request::Apache2->handle($r)->body;
+    my APR::Request::Apache2 $apreq;
+    my $body = $apreq->handle($r)->body;
     my ($name, $email, $subject, $content, $site, $hosting, $plang) = @{$body}{qw/name email subject content site hosting plang/};
     s/\r//g for $name, $email, $subject, $content, $site, $hosting, $plang;
     s/\n//g for $name, $email, $subject, $hosting, $site, $plang;
