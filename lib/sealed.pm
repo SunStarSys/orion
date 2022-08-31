@@ -199,7 +199,7 @@ Stay tuned for v4.0.0 for the fix.
 
 =item CAVEATS
 
-Don't use this (for method argument processing) if you are writing a
+Don't use this (for API method argument processing) if you are writing a
 reusable OO module (on CPAN, say). This module targets end-applications:
 virtual method lookups and duck typing are core elements of any dynamic
 language's OO feature design, and Perl is no different.
