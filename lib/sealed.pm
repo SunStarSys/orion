@@ -89,7 +89,6 @@ sub tweak ($\@\@\@$$) {
         }
 
         ++$tweaked;
-
       }
     }
     continue {
@@ -98,7 +97,7 @@ sub tweak ($\@\@\@$$) {
     }
   }
 
-  eval {push @$op_stack, $op if $$op};
+  eval push @$op_stack, $op if $$op;
   return ($op, $tweaked);
 }
 

@@ -3,18 +3,16 @@ use Apache2::RequestRec;
 use Apache2::RequestUtil;
 use Apache2::RequestIO;
 use APR::Request::Apache2;
-#use sealed 'disabled';
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
-
 use strict;
 use warnings;
 
-my $DOMAIN = q/sunstarsys.com/;
-my $to          = q/sales@sunstarsys.com/;
-my $date       = gmtime;
-
 my Apache2::RequestRec $r = shift;
+
+my $DOMAIN = q/sunstarsys.com/;
+my $to     = q/sales@sunstarsys.com/;
+my $date   = gmtime;
 
 sub render :Sealed {
     my $template = shift;
