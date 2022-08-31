@@ -78,7 +78,8 @@ sub tweak ($\@\@\@$$) {
         $gv->sibling($methop->sibling);
         $$processed_op{$$_}++ for $methop, $op, $gv;
         $op->next($gv);
-        # needs a patch to Generate.xs
+        # needs this patch to Generate.xs:
+        # https://github.com/rurban/b-generate/pull/2
         $methop->refcnt_dec if $methop->can("refcnt_dec");
 
 
