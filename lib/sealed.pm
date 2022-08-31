@@ -203,7 +203,10 @@ Don't use this if you are writing a reusable OO module (on CPAN, say).
 This module targets end-applications: virtual method lookups and
 duck typing are core elements of any dynamic language's OO feature
 design, and Perl is no different.  Look into XS if you want peak
-performance in reusable OO methods you wish to provide.
+performance in reusable OO methods you wish to provide. The only rational
+targets for :sealed subs with typed lexicals are methods implemented
+in XS, where the overhead of traditional OO-virtual-method lookup is on
+the same order as the actual duration of the invoked method call.
 
 =item See Also
 
