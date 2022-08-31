@@ -103,6 +103,7 @@ sub tweak ($\@\@\@$$) {
 
 sub MODIFY_CODE_ATTRIBUTES {
   my ($class, $rv, @attrs)      = @_;
+  local $@;
 
   if ((not defined $DEBUG or $DEBUG ne "disabled") and grep $valid_attrs{+lc}, @attrs) {
 
@@ -122,6 +123,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 
       if ($op->name eq "pushmark") {
 	$tweaked               += eval {tweak $op, @lexical_varnames, @pads, @op_stack, $cv_obj, \%processed_op};
+        warn __PACKAGE__ . ": tweak() aborted: $@" if $@;
       }
       elsif ($op->can("pmreplroot")) {
         push @op_stack, $op->pmreplroot, $op->next;
@@ -140,6 +142,7 @@ sub MODIFY_CODE_ATTRIBUTES {
 
     if (defined $DEBUG and $DEBUG eq "deparse" and $tweaked) {
       eval {warn B::Deparse->new->coderef2text($rv), "\n"};
+      warn "B::Deparse: coderef2text() aborted: $@" if $@;
     }
 
   }
