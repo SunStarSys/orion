@@ -7,6 +7,8 @@ use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use strict;
 use warnings;
+use sealed 'debug';
+use base 'sealed';
 
 my Apache2::RequestRec $r = shift;
 
@@ -19,7 +21,7 @@ sub render :Sealed {
     my Apache2::RequestRec $r = shift;
     my APR::Request::Apache2 $apreq_class = "APR::Request::Apache2";
     my APR::Request $apreq = $apreq_class->handle($r);
-    my APR::Request::Param::Table $params = $apreq->param // {};
+    my $params = $apreq->param // {};
     my %args      = (%$params, @_);
     local our @TEMPLATE_DIRS = qw(/home/joesuf4/src/trunk/templates);
     $r->content_type("text/html; charset='utf-8'");
@@ -30,7 +32,7 @@ sub render :Sealed {
 if ($r->method eq "POST") {
     my APR::Request::Apache2 $apreq_class = "APR::Request::Apache2";
     my APR::Request $apreq = $apreq_class->handle($r);
-    my APR::Request::Param::Table $body = $apreq->body;
+    my $body = $apreq->body;
     my ($name, $email, $subject, $content, $site, $hosting, $plang) = @{$body}{qw/name email subject content site hosting plang/};
     s/\r//g for $name, $email, $subject, $content, $site, $hosting, $plang;
     s/\n//g for $name, $email, $subject, $hosting, $site, $plang;

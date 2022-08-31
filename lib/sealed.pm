@@ -13,7 +13,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION                    = v4.0.0;
+our $VERSION                    = v4.0.1;
 our $DEBUG;
 my $end;
 my %valid_attrs                 = (sealed => 1);
@@ -96,8 +96,8 @@ sub tweak ($\@\@\@$$) {
       $op                       = $op->next;
     }
   }
-
-  eval push @$op_stack, $op if $$op;
+  $op = $op->next if $$op and $$processed_op{$$op};
+  push @$op_stack, $op if $$op;
   return ($op, $tweaked);
 }
 
