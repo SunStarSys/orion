@@ -82,7 +82,6 @@ sub tweak ($\@\@\@$$) {
         # https://github.com/rurban/b-generate/pull/2
         $methop->refcnt_dec if $methop->can("refcnt_dec");
 
-
         if (ref($gv) eq "B::PADOP") {
           # answer the prayer, by reusing the $targ from the (passed) target pads
           $gv->padix($targ);
