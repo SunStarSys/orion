@@ -208,7 +208,9 @@ Look into XS if you want peak performance in reusable OO methods you wish
 to provide. The only rational targets for :sealed subs with typed lexicals
 are methods implemented in XS, where the overhead of traditional OO
 virtual-method lookup is on the same order as the actual duration of the
-invoked method call.
+invoked method call. For methods implemented in Pure Perl, the op-tree
+processing overhead involved will drown out any performance gains this module
+would otherwise provide.
 
 =item See Also
 
