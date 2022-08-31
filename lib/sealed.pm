@@ -199,18 +199,19 @@ Stay tuned for v4.0.0 for the fix.
 
 =item CAVEATS
 
-Don't use this (for API method argument processing) if you are writing a
-reusable OO module (on CPAN, say). This module targets end-applications:
-virtual method lookups and duck typing are core elements of any dynamic
-language's OO feature design, and Perl is no different.
+Don't use typed lexicals under a :sealed sub for API method argument
+processing, if you are writing a reusable OO module (on CPAN, say). This
+module primarily targets end-applications: virtual method lookups and duck
+typing are core elements of any dynamic language's OO feature design, and Perl
+is no different.
 
 Look into XS if you want peak performance in reusable OO methods you wish
 to provide. The only rational targets for :sealed subs with typed lexicals
 are methods implemented in XS, where the overhead of traditional OO
 virtual-method lookup is on the same order as the actual duration of the
-invoked method call. For methods implemented in Pure Perl, the op-tree
-processing overhead involved will drown out any performance gains this module
-would otherwise provide.
+invoked method call. For nontrivial methods implemented entirely in Perl itself,
+the op-tree processing overhead involved during execution of those methods will
+drown out any performance gains this module would otherwise provide.
 
 =item See Also
 
