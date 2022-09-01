@@ -66,7 +66,7 @@ sub tweak ($\@\@\@$) {
         my $method              = $class->can($method_name)
           or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
-        # replace $methop, without altering $op->sibling (which points at it).
+        # replace $methop, without altering $op->sibparent (which points at it).
         # this is some clever chicanery with $methop playing a zombie role
         # alongside $gv, which replaces it. everything else I've tried is worse.
 
@@ -75,8 +75,9 @@ sub tweak ($\@\@\@$) {
         B::cv_pad($old_pad);
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
-        $gv->sibling($methop->sibling);
         $op->next($gv);
+        $op->sibparent($gv);
+        $methop->refcnt_dec if $methop->can("refcnt_dec");
 
         if (ref($gv) eq "B::PADOP") {
           # answer the prayer, by reusing the $targ from the (passed) target pads
