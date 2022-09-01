@@ -5,6 +5,7 @@ use Apache2::RequestIO;
 use APR::Request::Apache2;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
+use File::Basename;
 use strict;
 use warnings;
 use sealed 'deparse';
@@ -23,7 +24,7 @@ sub render :Sealed {
     my APR::Request::Param::Table $params = $apreq->param // {};
     my %args = (%$params, @_);
     $r->content_type("text/html; charset='utf-8'");
-    local our @TEMPLATE_DIRS = q(/home/joesuf4/src/cms/templates);
+    local our @TEMPLATE_DIRS = dirname($0) . "/templates";
     $template = Template($template);
     $r->print($template->render(\%args));
     exit 0;
