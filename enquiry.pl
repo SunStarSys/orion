@@ -7,7 +7,7 @@ use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use strict;
 use warnings;
-use sealed 'debug';
+use sealed 'disabled';
 
 my Apache2::RequestRec $r = shift;
 
