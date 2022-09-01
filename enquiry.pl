@@ -16,14 +16,15 @@ my $to     = q/sales@sunstarsys.com/;
 my $date   = gmtime;
 
 sub render :Sealed {
-    local our @TEMPLATE_DIRS = q(/home/joesuf4/src/cms/templates);
-    my Dotiac::DTL::Template $template = Template(shift);
+    my Dotiac::DTL::Template $template = shift;
     my Apache2::RequestRec $r = shift;
     my APR::Request::Apache2 $apreq_class = "APR::Request::Apache2";
     my APR::Request $apreq = $apreq_class->handle($r);
     my APR::Request::Param::Table $params = $apreq->param // {};
     my %args = (%$params, @_);
     $r->content_type("text/html; charset='utf-8'");
+    local our @TEMPLATE_DIRS = q(/home/joesuf4/src/cms/templates);
+    $template = Template($template);
     $r->print($template->render(\%args));
     exit 0;
 }
