@@ -193,7 +193,12 @@ Stay tuned for v4.0.0 for the fix.
 =item Compiling perl v5.30+ for functional mod_perl2 w/ithreads and httpd 2.4.x w/event mpm
 
     % ./Configure -Uusemymalloc -Duseshrplib -Dusedtrace -Duseithreads -des && make -j$(nproc) && sudo make -j$(nproc) install
-    (may require glibc tuning for full ithread support in an embedded server context: see % man mallopt)
+
+In an ithread setting, running w/ :sealed subs v4.1+ involves a tuning commitment to
+each ithread it is active on, to avoid garbage collecting the ithread until the
+process is at its global exit point. For mod_perl, ensure you never reap new ithreads
+from the mod_perl portion of the tune, only from the mpm_event worker process tune or
+during httpd server (graceful) restart.
 
 =item CAVEATS
 
