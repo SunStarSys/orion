@@ -66,9 +66,7 @@ sub tweak ($\@\@\@$) {
         my $method              = $class->can($method_name)
           or die __PACKAGE__ . ": invalid lookup: $class->$method_name - did you forget to 'use $class' first?";
 
-        # replace $methop, without altering $op->sibparent (which points at it).
-        # this is some clever chicanery with $methop playing a zombie role
-        # alongside $gv, which replaces it. everything else I've tried is worse.
+        # replace $methop, without altering $op->sibparent
 
         my $old_pad = B::cv_pad($cv_obj);
         my $gv                  = B::GVOP->new($gv_op->name, $gv_op->flags, $method);
