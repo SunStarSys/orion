@@ -24,7 +24,7 @@ sub render :Sealed {
     my APR::Request::Param::Table $params = $apreq->param // {};
     my %args = (%$params, @_);
     $r->content_type("text/html; charset='utf-8'");
-    $r->print($template>render(\%args));
+    $r->print($template->render(\%args));
     exit 0;
 }
 

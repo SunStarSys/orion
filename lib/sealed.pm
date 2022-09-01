@@ -74,8 +74,8 @@ sub tweak ($\@\@\@$) {
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
         $op->next($gv);
-        $op->sibparent($gv);
-        $methop->refcnt_dec if $methop->can("refcnt_dec");
+	# $op->sibparent($gv);
+	# $methop->refcnt_dec if $methop->can("refcnt_dec");
 
         if (ref($gv) eq "B::PADOP") {
           # answer the prayer, by reusing the $targ from the (passed) target pads
