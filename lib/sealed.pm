@@ -13,7 +13,7 @@ use warnings;
 use B::Generate ();
 use B::Deparse  ();
 
-our $VERSION                    = v4.0.1;
+our $VERSION                    = v4.1.0;
 our $DEBUG;
 my $end;
 my %valid_attrs                 = (sealed => 1);
@@ -22,8 +22,8 @@ my $p_obj                       = B::svref_2object(sub {&tweak});
 # B::PADOP (w/ ithreads) or B::SVOP
 my $gv_op                       = $p_obj->START->next->next;
 
-sub tweak ($\@\@\@$$) {
-  my ($op, $lexical_varnames, $pads, $op_stack, $cv_obj, $processed_op) = @_;
+sub tweak ($\@\@\@$) {
+  my ($op, $lexical_varnames, $pads, $op_stack, $cv_obj) = @_;
   my $tweaked                   = 0;
 
   if (${$op->next} and $op->next->name eq "padsv") {
@@ -76,11 +76,7 @@ sub tweak ($\@\@\@$$) {
         $gv->next($methop->next);
         $gv->sibparent($methop->sibparent);
         $gv->sibling($methop->sibling);
-        $$processed_op{$$_}++ for $methop, $op, $gv;
         $op->next($gv);
-        # needs this patch to Generate.xs:
-        # https://github.com/rurban/b-generate/pull/2
-	# $methop->refcnt_dec if $methop->can("refcnt_dec");
 
         if (ref($gv) eq "B::PADOP") {
           # answer the prayer, by reusing the $targ from the (passed) target pads
@@ -96,7 +92,7 @@ sub tweak ($\@\@\@$$) {
       $op                       = $op->next;
     }
   }
-  $op = $op->next if $$op and $$processed_op{$$op};
+
   push @$op_stack, $op if $$op;
   return ($op, $tweaked);
 }
@@ -122,7 +118,7 @@ sub MODIFY_CODE_ATTRIBUTES {
       $op->dump if defined $DEBUG and $DEBUG eq 'dump';
 
       if ($op->name eq "pushmark") {
-	$tweaked               += eval {tweak $op, @lexical_varnames, @pads, @op_stack, $cv_obj, \%processed_op};
+	$tweaked               += eval {tweak $op, @lexical_varnames, @pads, @op_stack, $cv_obj};
         warn __PACKAGE__ . ": tweak() aborted: $@" if $@;
       }
       elsif ($op->can("pmreplroot")) {

@@ -25,8 +25,7 @@ sub render :Sealed {
     local our @TEMPLATE_DIRS = qw(/home/joesuf4/src/cms/templates);
     $r->content_type("text/html; charset='utf-8'");
     my Dotiac::DTL::Template $dtl = Template($template);
-    my $content = $dtl->render(\%args);
-    $r->print($content);
+    $r->print($dtl->render(\%args));
     exit 0;
 }
 
