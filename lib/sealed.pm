@@ -173,7 +173,7 @@ Subroutine attribute for compile-time method lookups on its typed lexicals.
 
     use sealed 'debug';   # warns about 'method_named' op tweaks
     use sealed 'deparse'; # additionally warns with the B::Deparse output
-    use sealed 'dump';    # warns with the $op->dump during the tree walk; in all likelihood will dump core!
+    use sealed 'dump';    # warns with the $op->dump during the tree walk
     use sealed 'disabled';# disables all CV tweaks
     use sealed;           # disables all warnings
 
