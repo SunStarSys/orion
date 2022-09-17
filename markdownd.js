@@ -105,7 +105,7 @@ if (cluster.isMaster) {
 		    tex :            true,
 		    searchReplace : false,
 		    toolbar:        false,
-		    // flowChart : true,
+		    flowChart :     false,
 		    saveHTMLToTextarea: true,
 		    htmlDecode :     true,
 		    taskList:        true,
@@ -113,12 +113,11 @@ if (cluster.isMaster) {
 		};
 		if (mode != "gfm" || markdown.indexOf("\`\`\`") >= 0 || markdown.indexOf("\$\$") >= 0) {
 		    const editor = editormd("editor", options, editormd);
-		    setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? 5 : 100);
+		    setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? 5 : 50);
 		}
 		else {
 		    options.saveHTMLToTextarea = false;
 		    options.tex       = false;
-		    options.flowChart = false;
 		    const div = editormd.markdownToHTML("editor", options);
 		    c.end(div.html());
 		}
