@@ -32,6 +32,7 @@ use SunStarSys::Util qw/copy_if_newer parse_filename/;
 use Data::Dumper ();
 use SunStarSys::ASF;
 sub syswrite_all;
+use version;
 use sealed qv(4.1.8);
 use base 'sealed';
 
