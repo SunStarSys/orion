@@ -22,6 +22,9 @@ const net                   = require('net');
 const cluster               = require('cluster');
 const nproc                 = require('os').cpus().length;
 
+const wait_short            = 5;
+const wait_long             = 10;
+
 require.extensions['.css']  = function (module, filename) {
     module.exports = fs.readFileSync(filename, 'utf8');
 };
@@ -113,7 +116,7 @@ if (cluster.isMaster) {
 		};
 		if (mode != "gfm" || markdown.indexOf("\`\`\`") >= 0 || markdown.indexOf("\$\$") >= 0) {
 		    const editor = editormd("editor", options, editormd);
-		    setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? 5 : 50);
+		    setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? wait_short : wait_long);
 		}
 		else {
 		    options.saveHTMLToTextarea = false;
