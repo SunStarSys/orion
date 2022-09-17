@@ -32,6 +32,7 @@ use SunStarSys::Util qw/copy_if_newer parse_filename/;
 use Data::Dumper ();
 use SunStarSys::ASF;
 sub syswrite_all;
+use sealed qv(4.1.8);
 use base 'sealed';
 
 my ($target_base, $source_base, $runners, $offline, @errors);
@@ -70,9 +71,10 @@ sub main :Sealed {
   my @fd2rid;
   $fd2rid[fileno $runners[$_]->{socket}] = $_ for 0..$#runners;
 
- my @dirqueue = ("cgi-bin", "content");
- my IO::Select $sockets = IO::Select->new;
- $sockets->add(map $_->{socket}, @runners);
+  my @dirqueue = ("cgi-bin", "content");
+  my IO::Select $sockets = "IO::Select";
+  $sockets = $sockets->new;
+  $sockets->add(map $_->{socket}, @runners);
 
  LOOP: while (@dirqueue) {
     my $would_block = 1;
@@ -179,10 +181,11 @@ sub process_file :Sealed {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
         if ($args->{headers}) {
-            my Data::Dumper $d = Data::Dumper->new([$args->{headers}], ['$args->{headers}']);
-            $d->Deepcopy(1);
-	    $d->Purity(1);
-            eval $d->Dump;
+          my Data::Dumper $d = "Data::Dumper";
+          $d = $d->new([$args->{headers}], ['$args->{headers}']);
+          $d->Deepcopy(1);
+          $d->Purity(1);
+          eval $d->Dump;
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
         my ($content, $ext) = $s->(path => $path, lang => $lang, %$args);
@@ -211,7 +214,8 @@ sub fork_runner :Sealed {
     }
     # in child
     close $child;
-    my IO::Select $r = IO::Select->new;
+    my IO::Select $r = "IO::Select";
+    $r = $r->new;
     $r->add($parent);
 
     while (1) {
