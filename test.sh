@@ -2,7 +2,11 @@
 set -e
 set -x
 node markdownd.js &
-rm -rf ./trunk /tmp/www
-svn co https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.sunstarsys.com/trunk
-time perl build_site.pl --source-base=trunk --target-base=/tmp/www
+if [[ -d trunk ]]; then
+  svn cleanup trunk
+  svn up trunk
+else
+  svn co https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.sunstarsys.co
+fi
+time perl -Ilib build_site.pl --source-base=trunk --target-base=/tmp/www
 kill %1
