@@ -1,6 +1,6 @@
 # SunStar Systems CMS (Build Toolchain)
 
-- TO BUILD THE OpenOffice.Org SITE to ./www (at ~1 GB/s on modern hardware):
+- TO BUILD THE OpenOffice.Org SITE to ./www (at ~1 GB/s, or 50 μs/file, on modern hardware):
 
 ```
    % SVN_URL=https://svn.apache.org/repos/asf/openoffice/ooo-site ./test.sh
