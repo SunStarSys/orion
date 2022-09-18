@@ -1,10 +1,10 @@
 # SunStar Systems CMS (Build Toolchain)
 
-- TO BUILD A SITE:
+- TO BUILD THE OpenOffice.Org SITE to ./www (at ~1 GB/s on modern hardware):
 
 ```
-   % ./markdownd.js &
-   % time ./build_site.pl --source-base ../$(src_dir) --target-base ../$(target_dir)
+   % SVN_URL=https://svn.apache.org/repos/asf/openoffice/ooo-site ./test.sh
+
 ```
 
 ## Obsoleted Python-Markdown-based build system
