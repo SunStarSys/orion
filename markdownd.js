@@ -22,8 +22,8 @@ const net                   = require('net');
 const cluster               = require('cluster');
 const nproc                 = require('os').cpus().length;
 
-const wait_short_ms         = 5;
-const wait_long_ms          = 10;
+const wait_short_ms         = 5;  /* moderate case scenario (less rare) */
+const wait_long_ms          = 10; /* worst case scenario (very rare) */
 
 require.extensions['.css']  = function (module, filename) {
     module.exports = fs.readFileSync(filename, 'utf8');
@@ -116,9 +116,11 @@ if (cluster.isMaster) {
 		};
 		if (mode != "gfm" || markdown.indexOf("\`\`\`") >= 0 || markdown.indexOf("\$\$") >= 0) {
 		    const editor = editormd("editor", options, editormd);
-		    setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? wait_short_ms : wait_long_ms);
+                    /* data-spec'd mode is easier to handle than general case */
+                    setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? wait_short_ms : wait_long_ms);
 		}
 		else {
+                    /* best performing case: gfm w/ no quote blocks nor latex */
 		    options.saveHTMLToTextarea = false;
 		    options.tex       = false;
 		    const div = editormd.markdownToHTML("editor", options);
