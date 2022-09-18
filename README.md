@@ -10,6 +10,8 @@
 Compare with (content-trimmed-down) 60x slower JBake build port at <https://builds.apache.org/job/OpenOffice>.
 
 
+## Buildable text content should be UTF-8.
+
 ## Perl prerequisites: APR::Request (which has a build dependency on mod_perl).
 
 ## New build system is based on node.js and Editor.md: markdownd.js!
