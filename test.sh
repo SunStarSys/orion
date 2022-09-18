@@ -1,9 +1,9 @@
-#!/usr/bin/bash
+#!/usr/bin/zsh
 # USAGE: $0 [clean]
 : "${SVN_URL:=https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.sunstarsys.com}"
 set -e
 set -x
-node markdownd.js &
+(trap time EXIT; node markdownd.js) &
 if [[ "${1:-}" == clean ]]; then
   rm -rf trunk www
 fi
@@ -15,4 +15,5 @@ else
   svn co "$SVN_URL"/trunk
 fi
 time perl build_site.pl --source-base=trunk --target-base=www
-kill %1
+pkill -U $USER -f markdownd.js
+wait
