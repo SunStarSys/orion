@@ -12,7 +12,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 
 ## Buildable text content should be UTF-8.
 
-## Perl prerequisites: APR::Request (which has a build dependency on mod_perl).
+## Perl prerequisites: sealed v4.1.8, APR::Request (which has a build dependency on mod_perl).
 
 ## New build system is based on node.js and Editor.md: markdownd.js!
 
