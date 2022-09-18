@@ -118,7 +118,7 @@ if (cluster.isMaster) {
 		};
 		if (mode != "gfm" || (markdown.indexOf("\`\`\`") >= 0 || markdown.indexOf("\$\$") >= 0)) {
 		    const editor = editormd("editor", options, editormd);
-                    /* data-spec'd mode is easier to handle than general case */
+                    /* data-spec'd mode is less hassle than the full gfm case */
                     setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? wait_short_ms : wait_long_ms);
 		}
 		else {
