@@ -94,6 +94,7 @@ if (cluster.isMaster) {
 		const editormd = EMD(new JSDOM(HTML, { virtualConsole }).window);
 		if (! markdown) { return c.end("\n"); }
 		markdown = markdown.toString();
+                /* look for nul character in first 3-11 chars */
 		const m  = markdown.match(/^(.{2,10})\x00(.+)$/s);
 		if (m) {
                     /* data-spec'd mode */
