@@ -7,6 +7,9 @@
 
 ```
 
+Compare with (content-trimmed-down) 60x slower JBake build port at <https://builds.apache.org/job/OpenOffice>.
+
+
 ## Obsoleted Python-Markdown-based build system
 
 ### This includes mdx_elementid.py support.
