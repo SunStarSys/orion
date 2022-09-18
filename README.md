@@ -2,7 +2,7 @@
 
 - TO BUILD THE OpenOffice.Org SITE to ./www (at ~1 GB/s, or 50 μs/file, on modern hardware):
 
-```
+```shell
    % SVN_URL=https://svn.apache.org/repos/asf/openoffice/ooo-site ./test.sh
 
 ```
