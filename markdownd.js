@@ -117,12 +117,24 @@ if (cluster.isMaster) {
                     delay:              1,
 		};
 		if (mode != "gfm" || (markdown.indexOf("\`\`\`") >= 0 || markdown.indexOf("\$\$") >= 0)) {
+                    /* relatively rare (nontrivial) case:
+                     * instantiate an editor object and pray we wait
+                     * long enough for it to (async) render the complex
+                     * content into fully-processed html. would be nice
+                     * to rewrite this around a callback installed into
+                     * the object's rendering logic, but alas, it may also
+                     * be overkill.
+                     */
 		    const editor = editormd("editor", options, editormd);
-                    /* data-spec'd mode is less hassle than the full gfm case */
+                    /* data-spec'd mode (likely a codemirror programming
+                     * language target) is less hassle than the full gfm case
+                     */
                     setTimeout(function () {c.end(m ? editor.getHTML() : editor.getPreviewedHTML())}, m ? wait_short_ms : wait_long_ms);
 		}
 		else {
-                    /* best performing case: gfm w/ no quote blocks nor latex */
+                    /* best performance case (static method call): gfm w/o
+                     * quote blocks nor latex.
+                     */
 		    options.saveHTMLToTextarea = false;
 		    options.tex       = false;
 		    const div = editormd.markdownToHTML("editor", options);
