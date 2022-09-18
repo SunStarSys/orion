@@ -96,6 +96,7 @@ if (cluster.isMaster) {
 		markdown = markdown.toString();
 		const m  = markdown.match(/^(.{2,10})\x00(.+)$/s);
 		if (m) {
+                    /* data-spec'd mode */
 		    mode     = m[1];
 		    markdown = m[2];
 		}
