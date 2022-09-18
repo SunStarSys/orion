@@ -26,6 +26,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 
 1. Create a source tree with the following layout:
 
+```yaml
    - trunk/
        - content/
        - cgi-bin/ (optional)
@@ -33,6 +34,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
            - path.pm
            - view.pm
        - templates/
+```
 
     See <https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.sunstarsys.com/> for a live example.
 
