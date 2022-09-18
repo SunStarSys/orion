@@ -1,4 +1,4 @@
-# SunStar Systems CMS (Build Toolchain)
+# SunStar Systems CMS (SSG Build Toolchain)
 
 - TO BUILD THE OpenOffice.Org SITE to ./www (at ~1 GB/s, or 50 μs/file, on modern hardware):
 
@@ -10,9 +10,7 @@
 Compare with (content-trimmed-down) 60x slower JBake build port at <https://builds.apache.org/job/OpenOffice>.
 
 
-## Obsoleted Python-Markdown-based build system
-
-### This includes mdx_elementid.py support.
+## Perl prerequisites: APR::Request (which has a build dependency on mod_perl).
 
 ## New build system is based on node.js and Editor.md: markdownd.js!
 
