@@ -14,5 +14,5 @@ if [[ -d trunk ]]; then
 else
   svn co "$SVN_URL"/trunk
 fi
-time perl -Ilib build_site.pl --source-base=trunk --target-base=www
+time perl build_site.pl --source-base=trunk --target-base=www
 kill %1
