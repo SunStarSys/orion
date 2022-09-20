@@ -18,7 +18,7 @@ case "$LINTER" in
   perl)
     XARGS_MAX_FILES=1
     PCRE_PAT='\.p[ml]$'
-    LINTER+=' -MO=Lint'
+    LINTER+='-Ilib -MO=Lint'
     ;;
   flake8)
     PCRE_PAT='\.py$'
