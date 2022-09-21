@@ -25,4 +25,5 @@ jobs:
 
         run: |
           git clone -b $GITHUB_REF_NAME https://github.com/$GITHUB_REPOSITORY .
+          [ -f package.json ] && npm install
           LANG=en_US.UTF-8 docker run -t --rm -v $(pwd):/src:ro schaefj/linter
