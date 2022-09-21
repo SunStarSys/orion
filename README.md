@@ -22,7 +22,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 
 ### Enjoy: no more deltas between online editor previews and build system markdown rendering
 
-# HOWTO
+## HOWTO
 
 1. Create a source tree with the following layout:
 
