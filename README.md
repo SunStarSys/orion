@@ -1,6 +1,6 @@
 # SunStar Systems CMS (SSG Build Toolchain)
 
-- TO BUILD THE OpenOffice.Org SITE to ./www (at ~1 GB/s, or 50 μs/file, on modern hardware):
+## TO BUILD THE OpenOffice.Org SITE to ./www (at ~1 GB/s, or 50 μs/file, on modern hardware):
 
 ```shell
    % SVN_URL=https://svn.apache.org/repos/asf/openoffice/ooo-site ./test.sh
@@ -12,7 +12,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 
 ## Buildable text content should be UTF-8.
 
-## Perl prerequisites: sealed v4.1.8, APR::Request (which has a build dependency on mod_perl).
+## Perl prerequisites: sealed v4.1.8, YAML::XS, and APR::Request (which has a build dependency on mod_perl).
 
 ## New build system is based on node.js and Editor.md: markdownd.js!
 
