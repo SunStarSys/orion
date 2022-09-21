@@ -6,8 +6,10 @@ set -x
 if command -v docker >/dev/null 2>&1; then
   exec docker run -t -v $(pwd):/src -e SVN_URL="$SVN_URL" --entrypoint= schaefj/linter zsh -c ". ~/.asdf/asdf.sh && zsh test.sh $@"
 fi
-
-(trap time EXIT; node markdownd.js) &
+(
+  trap time EXIT
+  node markdownd.js
+)&
 if [[ "${1:-}" == clean ]]; then
   rm -rf trunk www
 fi
