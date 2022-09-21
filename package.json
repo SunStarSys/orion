@@ -19,7 +19,7 @@
     "url": "https://github.com/SunStarSys/cms/issues"
   },
   "homepage": "https://github.com/SunStarSys/cms#readme",
-  "dependencies": {
+  "devDependencies": {
     "remark-cli": "^11.0.0",
     "remark-lint-list-item-indent": "^3.1.1",
     "remark-preset-lint-consistent": "^5.1.1",
