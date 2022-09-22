@@ -4,7 +4,7 @@
 set -e
 set -x
 if [[ "${1:-}" == clean ]]; then
-  rm -rf trunk www
+  sudo rm -rf trunk www
 fi
 for d in trunk www; do
   if [[ ! -d "$d" ]]; then
