@@ -133,7 +133,7 @@ EOF
       cat <<EOT
 {
   "plugins": [
-    "preset-lint-consistent",
+    "remark-preset-lint-consistent",
     "remark-preset-lint-markdown-style-guide",
     "remark-preset-lint-recommended",
     ["remark-validate-links", true],
