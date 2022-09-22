@@ -6,19 +6,27 @@ set -x
 if command -v docker >/dev/null 2>&1; then
   exec docker run -t -v $(pwd):/src -e SVN_URL="$SVN_URL" --entrypoint= schaefj/linter zsh -c ". ~/.asdf/asdf.sh && zsh test.sh $@"
 fi
+if [[ "${1:-}" == clean ]]; then
+  rm -rf trunk www
+fi
+for d in trunk www; do
+  if [[ ! -d "$d" ]]; then
+    mkdir "$d"
+    chmod 0777 "$d"
+    chmod +t "$d"
+  fi
+done
 (
   trap time EXIT
   node markdownd.js
 ) &
-if [[ "${1:-}" == clean ]]; then
-  rm -rf trunk www
-fi
-if [[ -d trunk ]]; then
+if [[ -d trunk/content ]]; then
   svn cleanup trunk
   svn up trunk
   sleep 3
 else
   svn co "$SVN_URL"/trunk
+  sleep 3
 fi
 time perl build_site.pl --source-base=trunk --target-base=www
 pkill -U $USER -f markdownd.js
