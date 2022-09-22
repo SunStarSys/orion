@@ -9,7 +9,7 @@ fi
 (
   trap time EXIT
   node markdownd.js
-)&
+) &
 if [[ "${1:-}" == clean ]]; then
   rm -rf trunk www
 fi

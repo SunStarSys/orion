@@ -46,6 +46,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 
 ## Reuse /lib:
 
+```yaml
     - lib/
       - SunStarSys/
       - View.py (volunteers needed!)
@@ -53,10 +54,11 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 
     - build_file.py (volunteers?)
     - build_site.py (volunteers?)
-
+```
 
 ## Site Build Developer API
 
+```yaml
     - lib/path.py:
       - NOT OO, only data structure population
       - path.patterns:
@@ -79,3 +81,4 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
         s = view.getattr(method, None)
         args[path] = path
         content, ext, args = s(**args)
+```
