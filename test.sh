@@ -13,7 +13,7 @@ for d in trunk www; do
     chmod +t "$d"
   fi
 done
-if command -v docker >/dev/null 2>&1; then
+if [[ "${NO_DOCKER:-}" != 1 ]] && command -v docker >/dev/null 2>&1; then
   exec docker run -t -v $(pwd):/src -e SVN_URL="$SVN_URL" --entrypoint= schaefj/linter zsh -c ". ~/.asdf/asdf.sh && zsh test.sh"
 fi
 (
