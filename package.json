@@ -19,6 +19,11 @@
     "url": "https://github.com/SunStarSys/cms/issues"
   },
   "homepage": "https://github.com/SunStarSys/cms#readme",
+  "dependencies": {
+    "jquery": "^3.6.1",
+    "jsdom": "^20.0.0",
+    "navigator": "^1.0.1"
+  },
   "devDependencies": {
     "remark-cli": "^11.0.0",
     "remark-lint-list-item-indent": "^3.1.1",
