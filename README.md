@@ -14,6 +14,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 ## Perl prerequisites
 
 - sealed v4.1.8
+- IO::Select
 - YAML::XS
 - APR::Request (which has a build dependency on mod_perl)
 
