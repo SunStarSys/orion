@@ -306,8 +306,9 @@ sub snippet {
                            my %a = (%args, map {split /=/, $_, 2} split /:/, $argspec);
                            require SunStarSys::Value::Snippet; # see source for list of valid args
                            $args{$key} = SunStarSys::Value::Snippet->new(%a);
+                           my $linenums = $a{numbers} ? "linenums" : "";
                            my $filter = exists $a{lang} ?  "markdown" : "safe";
-                           my $rv = "{{ $key.fetch|$filter }}";
+                           my $rv = "<pre class='prettyprint $linenums prettyprinted'>{{ $key.fetch|$filter }}</pre>";
                            if (defined(my $header = $args{snippet_header})) {
                                $header =~ s/\$snippet\b/$key/g;
                                $rv = "$header\n$rv";

@@ -15,7 +15,7 @@ sub new {
     $args{type} //= $args{repo} ? "github" : "svn";
     my $uri = $args{type} eq "svn" ? "https://vcs.sunstarsys.com/repos/svn/public/cms-sites/$args{path}"
         : $args{type} eq "github"
-        ? "https://github.com/SunStarSys/$args{repo}/raw/$args{branch}/$args{path}"
+        ? "https://github.com/$args{repo}/raw/$args{branch}/$args{path}"
         : undef;
 
     if (exists $args{revision} and $args{type} eq "svn") {
@@ -67,7 +67,7 @@ sub pretty_uri {
     my $self = shift;
     my $uri = $self->{uri};
     $uri =~ s!repos/svn!viewvc! if $self->{type} eq "svn";
-    $uri =~ s!/raw/!/blob/!  if $self->{type} eq "github";
+    $uri =~ s!/raw/!/blob/! and $uri .= "#L" . join "-L", @{$self->{lines}} if $self->{type} eq "github";
     return $uri;
 }
 

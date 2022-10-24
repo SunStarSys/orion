@@ -235,7 +235,7 @@ sub fixup_code {
 
     for (@_) {
         s/^\Q$prefix//mg if defined $prefix;
-        s/^/    :::$type\n/,  s/\n/\n    /g, s/    $//
+        $_ = "$type\x00$_"
             if defined $type;
     }
 }
