@@ -8,15 +8,14 @@ use warnings;
 sub new {
     my $class = shift;
     my %args = @_;
-    # args: type=>git or svn, path=>..., token=>..., lang=>..., prefix=>...,
+    # args: type=>github or svn, path=>..., token=>..., lang=>..., prefix=>...,
     #       branch=>branch, repo=>repo, revision=>revision, lines=>lines, numbers=>1
 
-    $args{branch} //= "HEAD";
-    $args{type} //= $args{repo} ? "git" : "svn";
-    $args{repo} =~ s!^gitbox/!!;
-    my $uri = $args{type} eq "svn" ? "https://svn.apache.org/repos/asf/$args{path}"
-        : $args{type} eq "git"
-        ? "https://gitbox.apache.org/repos/asf?p=$args{repo};a=blob_plain;f=$args{path};hb=$args{branch}"
+    $args{branch} //= "master";
+    $args{type} //= $args{repo} ? "github" : "svn";
+    my $uri = $args{type} eq "svn" ? "https://vcs.sunstarsys.com/repos/svn/public/cms-sites/$args{path}"
+        : $args{type} eq "github"
+        ? "https://github.com/SunStarSys/$args{repo}/raw/$args{branch}/$args{path}"
         : undef;
 
     if (exists $args{revision} and $args{type} eq "svn") {
@@ -43,7 +42,7 @@ sub fetch {
 
     my $content = $cache{$self->{uri}} //= do {
         die "Unsupported repo type: $self->{type}" unless defined $self->{uri};
-        my $response = LWP::UserAgent->new->get(URI->new($self->{uri}));
+        my $response = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0})->get(URI->new($self->{uri}));
         die "Can't fetch $self->{uri}: " . $response->status_line unless $response->is_success;
         $response->decoded_content;
     };
@@ -67,8 +66,8 @@ sub fetch {
 sub pretty_uri {
     my $self = shift;
     my $uri = $self->{uri};
-    $uri =~ s!repos/asf!viewvc!    if $self->{type} eq "svn";
-    $uri =~ s!a=blob_plain!a=blob! if $self->{type} eq "git";
+    $uri =~ s!repos/svn!viewvc! if $self->{type} eq "svn";
+    $uri =~ s!/raw/!/blob/!  if $self->{type} eq "github";
     return $uri;
 }
 
