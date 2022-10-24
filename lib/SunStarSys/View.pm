@@ -17,7 +17,7 @@ package SunStarSys::View;
 # * new wrapper views like 'reconstruct' and 'trim_local_links' that when combined with
 #   'snippet', allow markdown files in source code repos to be imported to the website;
 # * a more flexible 'sitemap' that takes a 'nest' argument to nest directory links into a tree
-
+use utf8;
 use strict;
 use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
