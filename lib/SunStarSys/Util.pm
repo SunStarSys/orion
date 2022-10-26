@@ -76,8 +76,10 @@ sub copy_if_newer {
     my ($src, $dest) = @_;
     die "Undefined arguments to copy($src, $dest)\n"
         unless defined $src and defined $dest;
-    copy $src, $dest unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
+    my $copied = 0;
+    copy $src, $dest and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
     chmod 0755, $dest if -x $src;
+    return $copied;
 }
 
 # NOTE: This will break your runtime if you call this on a package

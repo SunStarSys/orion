@@ -198,8 +198,8 @@ sub process_file :Sealed {
     }
 
     unless ($matched) {
-        copy_if_newer $file, "$target_base/$file";
-        syswrite_all "Copied $target_base/$file.\n";
+        copy_if_newer $file, "$target_base/$file" and
+          syswrite_all "Copied $target_base/$file.\n";
     }
 }
 
