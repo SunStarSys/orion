@@ -21,8 +21,8 @@ fi
   node markdownd.js
 ) &
 if [[ -d trunk/content ]]; then
-  svn cleanup trunk
-  svn up trunk
+  svn cleanup trunk || :
+  svn up trunk || :
   sleep 3
 else
   svn co "$SVN_URL"/trunk
