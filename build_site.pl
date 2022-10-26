@@ -193,13 +193,13 @@ sub process_file :Sealed {
             or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
         print $fh $content;
         $matched = 1;
-        syswrite_all "Built $target_base/$target_file.$ext$lang.\n";
+        syswrite_all "Built to $target_base/$target_file.$ext$lang.\n";
         last;
     }
 
     unless ($matched) {
         copy_if_newer $file, "$target_base/$file" and
-          syswrite_all "Copied $target_base/$file.\n";
+          syswrite_all "Copied to $target_base/$file.\n";
     }
 }
 
