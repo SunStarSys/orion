@@ -138,7 +138,7 @@ sub fetch_deps {
             }
             if ($quick == 1 or $quick == 2) {
                 $file = "$dirname$filename.html$lang";
-                $data->{$file} = { path => $file, %$args };
+                $data->{$file} = { path => $file, lang => $lang, %$args };
                 # just read the headers for $quick == 1
                 read_text_file "content/$_", $data->{$file}, $quick == 1 ? 0 : undef;
             }
