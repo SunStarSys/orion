@@ -139,12 +139,13 @@ sub fetch_deps {
             if ($quick == 1 or $quick == 2) {
                 $file = "$dirname$filename.html$lang";
                 $data->{$file} = { path => $file, %$args };
+                # just read the headers for $quick == 1
                 read_text_file "content/$_", $data->{$file}, $quick == 1 ? 0 : undef;
             }
             else {
                 local $SunStarSys::Value::Offline = 1 if $quick == 3;
                 my $s = view->can($method) or die "Can't locate method: $method\n";
-                my (undef, $ext, $vars) = $s->(path => $file, %$args);
+                my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, %$args);
                 $file = "$dirname$filename.$ext$lang";
                 $data->{$file} = $vars;
             }
@@ -237,7 +238,7 @@ sub sitemap {
 sub next_view {
     my $args = pop;
     $args->{view} = [@{$args->{view}}] if ref $args->{view}; # copy it since we're changing it
-    return ref $args->{view} ? shift @{$args->{view}} : delete $args->{view};
+    return ref $args->{view} && @{$args->{view}} ? shift @{$args->{view}} : delete $args->{view};
 }
 
 # wrapper view for creating final content (eg sitemaps) that doesn't require being online
