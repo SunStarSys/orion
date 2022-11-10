@@ -30,7 +30,8 @@ sub read_text_file {
       my $cache = $rtf_ring_hdr->{cache}{$file};
       %{$out->{headers}} = (%{$out->{headers} || {}}, %{$cache->{headers}});
       if (defined $content_lines) {
-        $out->{content} = join "\n", (split "\n", $cache->{content})[0..($content_lines-1)],"";
+        $out->{content} = join "\n", (split "\n", $cache->{content})[0..($content_lines-1)],"" if $content_lines > 0;
+        $out->{content} = "" if $content_lines == 0;
       }
       else {
         $out->{content} = $cache->{content};
