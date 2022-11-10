@@ -60,6 +60,7 @@ sub read_text_file {
     local $_;
     my $content = "";
     my $BOM = "\xEF\xBB\xBF";
+    my $hdr = {};
 
  LOOP:
     while (<$fh>) {
@@ -72,7 +73,7 @@ sub read_text_file {
                         last if /^---\s+$/;
                         $yaml .= $_;
                     }
-                    $out->{headers} = Load($yaml);
+                    $hdr = Load($yaml);
                     $headers = 0, next LOOP;
                 }
             }
@@ -83,12 +84,12 @@ sub read_text_file {
             $name =~ tr/A-Z-/a-z_/;
             chomp $val;
             while (<$fh>) {
-                $out->{headers}->{$name} = $val, redo LOOP
+                $$hdr{$name} = $val, redo LOOP
                     unless s/^\s+(?=\S)/ /;
                 chomp;
                 $val .= $_;
             }
-            $out->{headers}->{$name} = $val;
+            $$hdr{$name} = $val;
         }
         last LOOP if defined $content_lines and $content_lines-- == 0;
         no warnings 'uninitialized';
@@ -102,6 +103,7 @@ sub read_text_file {
         }
     }
 
+    @{$out->{headers}}{keys %$hdr} = values %$hdr;
     $out->{content} = $content;
     return $. if defined $content_lines;
 
@@ -138,7 +140,7 @@ sub read_text_file {
 
     $rtf_ring_hdr->{cache}{$file} = {
       content => $content,
-      headers => $out->{headers} // {},
+      headers => $hdr,
       lines   => $.,
       link    => $link,
       mtime   => stat($file)->mtime,
