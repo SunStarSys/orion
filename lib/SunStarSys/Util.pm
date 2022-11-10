@@ -29,6 +29,7 @@ sub read_text_file {
         $rtf_ring_hdr->{cache}{$file}{mtime} == stat($file)->mtime) {
       my $cache = $rtf_ring_hdr->{cache}{$file};
       %{$out->{headers}} = (%{$out->{headers} || {}}, %{$cache->{headers}});
+
       if (defined $content_lines) {
         $out->{content} = join "\n", (split "\n", $cache->{content})[0..($content_lines-1)],"" if $content_lines > 0;
         $out->{content} = "" if $content_lines == 0;
@@ -36,6 +37,7 @@ sub read_text_file {
       else {
         $out->{content} = $cache->{content};
       }
+
       if ($rtf_ring_hdr->{count} > 1 and $rtf_ring_hdr->{next} != $cache->{link}) {
         my $link = $cache->{link};
         $link->{prev}{next} = $link->{next};
@@ -100,6 +102,18 @@ sub read_text_file {
     $out->{content} = $content;
     return $. if defined $content_lines;
 
+    if (exists $rtf_ring_hdr->{cache}{$file}) {
+      # file modified on disk; clear link from ring
+      my $rm_me = $rtf_ring_hdr->{cache}{$file}{link};
+      for (qw/prev next/) {
+        $rtf_ring_hdr->{$_} = $rm_me->{$_} if $rtf_ring_hdr->{$_} == $rm_me;
+      }
+      $rm_me->{prev}{next} = $rm_me->{next} if $rm_me->{prev};
+      $rm_me->{next}{prev} = $rm_me->{prev} if $rm_me->{next};
+      undef %$rm_me;
+      $rtf_ring_hdr->{count}--;
+    }
+
     my $link = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
     $rtf_ring_hdr->{next} = $link;
     $rtf_ring_hdr->{prev} //= $link;
@@ -112,18 +126,6 @@ sub read_text_file {
       $rtf_ring_hdr->{next} = undef unless $rm_me->{prev};
       $rm_me->{prev}{next} = undef if $rm_me->{prev};
       delete $rtf_ring_hdr->{cache}{$rm_me->{file}};
-      undef %$rm_me;
-      $rtf_ring_hdr->{count}--;
-    }
-
-    if (exists $rtf_ring_hdr->{cache}{$file}) {
-      # file modified on disk; clear link from ring
-      my $rm_me = $rtf_ring_hdr->{cache}{$file}{link};
-      for (qw/prev next/) {
-        $rtf_ring_hdr->{$_} = $rm_me->{$_} if $rtf_ring_hdr->{$_} == $rm_me;
-      }
-      $rm_me->{prev}{next} = $rm_me->{next} if $rm_me->{prev};
-      $rm_me->{next}{prev} = $rm_me->{prev} if $rm_me->{next};
       undef %$rm_me;
       $rtf_ring_hdr->{count}--;
     }
