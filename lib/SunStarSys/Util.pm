@@ -102,6 +102,7 @@ sub read_text_file {
       $rm_me->{prev}{next} = undef;
       delete $rtf_ring_hdr->{cache}{$rm_me->{file}};
       undef %$rm_me;
+      $rtf_ring_hdr->{count}--;
     }
 
     $rtf_ring_hdr->{cache}{$file} = { content => $content, headers => $out->{headers}, rv => $., link => $ll };
