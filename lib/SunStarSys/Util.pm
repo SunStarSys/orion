@@ -105,7 +105,7 @@ sub read_text_file {
 
     @{$out->{headers}}{keys %$hdr} = values %$hdr;
     $out->{content} = $content;
-    return $. if defined $content_lines;
+    return $. if defined $content_lines and not eof($fh);
 
     if (exists $rtf_ring_hdr->{cache}{$file}) {
       # file modified on disk; clear link from ring
