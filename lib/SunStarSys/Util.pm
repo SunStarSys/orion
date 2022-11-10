@@ -18,7 +18,7 @@ our $VERSION = "2.0";
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
 
-# MRU memoization (a'la <ring.h>) to control RAM usage during large-scale builds
+# memoization (a'la <ring.h>) to control RAM usage during large-scale builds
 my $rtf_ring_hdr = { next => undef, prev => undef, cache => {}, count => 0 };
 our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
