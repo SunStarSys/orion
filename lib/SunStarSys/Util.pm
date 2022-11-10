@@ -28,7 +28,7 @@ sub read_text_file {
     if (exists $rtf_ring_hdr->{cache}{$file}) {
       my $cache = $rtf_ring_hdr->{cache}{$file};
       %{$out->{headers}} = (%{$out->{headers} || {}}, %{$cache->{headers}});
-      $out->{content} = $cache->{$file}{content};
+      $out->{content} = $cache->{content};
 
       my $ll = $cache->{link};
       $ll->{prev}{next} = $ll->{next};
