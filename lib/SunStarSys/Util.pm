@@ -18,7 +18,7 @@ our $VERSION = "2.0";
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
 
-# MRU memoization (a'la <ring.h>) to control RAM usage during builds
+# MRU memoization (a'la <ring.h>) to control RAM usage during large-scale builds
 my $rtf_ring_hdr = { next => undef, prev => undef, cache => {}, count => 0 };
 our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
@@ -28,10 +28,10 @@ sub read_text_file {
     if (exists $rtf_ring_hdr->{cache}{$file} and
         $rtf_ring_hdr->{cache}{$file}{mtime} == stat($file)->mtime) {
       my $cache = $rtf_ring_hdr->{cache}{$file};
-      %{$out->{headers}} = (%{$out->{headers} || {}}, %{$cache->{headers} || {}});
-
-      if (defined $content_lines and $content_lines < $cache->{rv}) {
-        $out->{content} = join "\n", (split "\n", $cache->{content})[0..($content_lines-1)],"" if $content_lines > 0;
+      @{$out->{headers}}{keys %{$cache->{headers}}} = values %{$cache->{headers}};
+      if (defined $content_lines and $content_lines < $cache->{lines}) {
+        $out->{content} = join "\n", (split "\n", $cache->{content})
+          [0..($content_lines-1)], "" if $content_lines > 0;
         $out->{content} = "" if $content_lines == 0;
       }
       else {
@@ -40,6 +40,7 @@ sub read_text_file {
 
       if ($rtf_ring_hdr->{next} != $cache->{link}) {
         # MRU to front
+
         my $link = $cache->{link};
         $link->{prev}{next} = $link->{next};
         $link->{next}{prev} = $link->{prev} if $link->{next};
@@ -49,7 +50,7 @@ sub read_text_file {
         $link->{next}{prev} = $link;
       }
 
-      return $cache->{rv};
+      return $cache->{lines};
     }
 
     $file =~ /(.*)/;
@@ -106,6 +107,7 @@ sub read_text_file {
 
     if (exists $rtf_ring_hdr->{cache}{$file}) {
       # file modified on disk; clear link from ring
+
       my $rm_me = $rtf_ring_hdr->{cache}{$file}{link};
       for (qw/prev next/) {
         $rtf_ring_hdr->{$_} = $rm_me->{$_} if $rtf_ring_hdr->{$_} == $rm_me;
@@ -124,6 +126,7 @@ sub read_text_file {
 
     if ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
       # drop LRU
+
       my $rm_me = $rtf_ring_hdr->{prev};
       $rtf_ring_hdr->{prev} = $rm_me->{prev};
       $rtf_ring_hdr->{next} = undef unless $rm_me->{prev};
@@ -133,7 +136,14 @@ sub read_text_file {
       $rtf_ring_hdr->{count}--;
     }
 
-    $rtf_ring_hdr->{cache}{$file} = { content => $content, headers => $out->{headers}, rv => $., link => $link, mtime => stat($file)->mtime };
+    $rtf_ring_hdr->{cache}{$file} = {
+      content => $content,
+      headers => $out->{headers} // {},
+      lines   => $.,
+      link    => $link,
+      mtime   => stat($file)->mtime,
+    };
+
     return $.;
 }
 
