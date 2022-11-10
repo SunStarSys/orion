@@ -25,10 +25,14 @@ our $RTF_RING_SIZE_MAX = 10_000; #tunable
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
     my $mtime = stat($file)->mtime;
+
     if (exists $rtf_ring_hdr->{cache}{$file} and
         $rtf_ring_hdr->{cache}{$file}{mtime} == $mtime) {
+
       my $cache = $rtf_ring_hdr->{cache}{$file};
+
       @{$out->{headers}}{keys %{$cache->{headers}}} = values %{$cache->{headers}};
+
       if (defined $content_lines and $content_lines < $cache->{lines}) {
         $out->{content} = join "\n", (split "\n", $cache->{content})
           [0..($content_lines-1)], "" if $content_lines > 0;
