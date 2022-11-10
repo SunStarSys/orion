@@ -112,7 +112,7 @@ sub read_text_file {
     $content .= $_;
 
     if (defined $cache) {
-      # file modified on disk; clear link from ring
+      # file modified on disk; clear cache and link
 
       my $rm_me = $cache->{link};
       for (qw/prev next/) {
