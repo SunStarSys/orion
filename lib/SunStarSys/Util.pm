@@ -25,11 +25,9 @@ our $RTF_RING_SIZE_MAX = 10_000; #tunable
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
     my $mtime = stat($file)->mtime;
+    my $cache = $rtf_ring_hdr->{cache}{$file};
 
-    if (exists $rtf_ring_hdr->{cache}{$file} and
-        $rtf_ring_hdr->{cache}{$file}{mtime} == $mtime) {
-
-      my $cache = $rtf_ring_hdr->{cache}{$file};
+    if (defined $cache and $cache->{mtime} == $mtime) {
 
       @{$out->{headers}}{keys %{$cache->{headers}}} = values %{$cache->{headers}};
 
@@ -113,15 +111,16 @@ sub read_text_file {
     no warnings 'uninitialized';
     $content .= $_;
 
-    if (exists $rtf_ring_hdr->{cache}{$file}) {
+    if (defined $cache) {
       # file modified on disk; clear link from ring
 
-      my $rm_me = $rtf_ring_hdr->{cache}{$file}{link};
+      my $rm_me = $cache->{link};
       for (qw/prev next/) {
         $rtf_ring_hdr->{$_} = $rm_me->{$_} if $rtf_ring_hdr->{$_} == $rm_me;
       }
       $rm_me->{prev}{next} = $rm_me->{next} if $rm_me->{prev};
       $rm_me->{next}{prev} = $rm_me->{prev} if $rm_me->{next};
+      undef %$cache;
       undef %$rm_me;
       $rtf_ring_hdr->{count}--;
     }
