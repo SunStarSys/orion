@@ -326,16 +326,36 @@ sub fixup_code {
     }
 }
 
+my $write_deps = 0;
+
 sub walk_content_tree (&) {
-    my $wanted = shift;
-    my $cwd = cwd;
-    local $_; # filepath that $wanted sub should inspect, rooted in content/ dir
-    find({ wanted => sub {
-               $File::Find::prune = 1, return if -d and m!\.page$!;
-               return unless -f;
-               s!^\Q$cwd/content!!;
-               $wanted->();
-           }, no_chdir => 1 }, "$cwd/content");
+  my $wanted = shift;
+  my $cwd = cwd;
+  if ($path::use_dependency_cache and -f "$ENV{TARGET_BASE}/.deps") {
+    # use the cached .deps file if the incremental build system deems it appropriate
+    open my $deps, "<", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
+    *path::dependencies = Load join "", <$deps>;
+    return;
+  }
+
+  local $_; # filepath that $wanted sub should inspect, rooted in content/ dir
+  find({ wanted => sub {
+           $File::Find::prune = 1, return if -d and m!\.page$!;
+           return unless -f;
+           s!^\Q$cwd/content!!;
+           $wanted->();
+         }, no_chdir => 1 }, "$cwd/content");
+
+  $write_deps = 1;
+  return 1;
+}
+
+END {
+  if ($write_deps) {
+    mkpath $ENV{TARGET_BASE};
+    open my $deps, ">", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
+    print $deps Dump \%path::dependencies;
+  }
 }
 
 # invoke this inside a walk_content_tree {} block:
