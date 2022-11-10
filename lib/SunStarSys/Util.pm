@@ -20,7 +20,7 @@ our $VERSION = "2.0";
 
 # MRU memoization (a'la <ring.h>) to control RAM usage during builds
 my $rtf_ring_hdr = { next => undef, prev => undef, cache => {}, count => 0 };
-our $RTF_RING_SIZE = 10_000; #tunable
+our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
@@ -96,7 +96,7 @@ sub read_text_file {
     $rtf_ring_hdr->{next} = $ll;
     $rtf_ring_hdr->{count}++;
 
-    if ($rtf_ring_hdr->{count} > $RTF_RING_SIZE) {
+    if ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
       my $rm_me = $rtf_ring_hdr->{prev};
       $rtf_ring_hdr->{prev} = $rm_me->{prev};
       $rm_me->{prev}{next} = undef;
