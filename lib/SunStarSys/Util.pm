@@ -13,7 +13,7 @@ use warnings;
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename
                     walk_content_tree Load Dump/;
-our $VERSION = "1.9";
+our $VERSION = "2.0";
 
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
