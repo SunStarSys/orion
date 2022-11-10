@@ -147,7 +147,7 @@ sub read_text_file {
       headers => $hdr,
       lines   => $.,
       link    => $link,
-      mtime   => stat($file)->mtime,
+      mtime   => stat(_)->mtime,
     };
 
     return $.;
