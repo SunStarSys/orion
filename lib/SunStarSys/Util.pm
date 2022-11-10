@@ -12,7 +12,7 @@ use warnings;
 
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename
-                    walk_content_tree Load Dump/;
+                    walk_content_tree seed_deps Load Dump/;
 our $VERSION = "2.0";
 
 # utility for parsing txt files with headers in them
@@ -336,6 +336,29 @@ sub walk_content_tree (&) {
                s!^\Q$cwd/content!!;
                $wanted->();
            }, no_chdir => 1 }, "$cwd/content");
+}
+
+# invoke this inside a walk_content_tree {} block:
+# parses deps from file $_'s content and headers
+
+sub seed_deps {
+  my $path = $_;
+  my $dir = dirname($path);
+  read_text_file "content$path", \my %d;
+
+  push @{$path::dependencies{$path}}, grep $_ ne $path, grep s/^content//,
+    map glob("content$_"), map index($_, "/") == 0  ? $_ : "$dir/$_",
+    ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies}
+        if exists $d{headers}{dependencies};
+
+  while ($d{content} =~ /\{%\s*include\s+"([^"]+)"\s*-?%\}/g) {
+    my $src = $1;
+    if (index($src, "./") == 0 or index($src, "../") == 0) {
+      $src = "$dir/$src", $src = s(/[.]/)(/)g;
+      1 while $src =~ s(/[^./][^/]+/[.]{2}/)(/);
+      push @{$path::dependencies{$path}}, $src;
+    }
+  }
 }
 
 1;
