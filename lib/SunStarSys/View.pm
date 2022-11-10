@@ -43,7 +43,14 @@ sub single_narrative {
 
     read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
 
-    unless (exists $args{deps}) {
+    if (exists $args{deps}) {
+        my @d;
+        while (my ($k, $v) = each %{$args{deps}}) {
+            push @d, [$k, $v];
+        }
+        $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
+    }
+    else {
         view->can("fetch_deps")->($args{path} => \ my %deps, $args{quick_deps});
         my @d;
         while (my ($k, $v) = each %deps) {
@@ -90,13 +97,20 @@ sub news_page {
     my $template = $args{content} // $page_path;
     $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
 
-    unless (exists $args{deps}) {
+    if (exists $args{deps}) {
+        my @d;
+        while (my ($k, $v) = each %{$args{deps}}) {
+            push @d, [$k, $v];
+        }
+        $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
+    }
+    else {
         view->can("fetch_deps")->($args{path} => \ my %deps, $args{quick_deps});
         my @d;
         while (my ($k, $v) = each %deps) {
             push @d, [$k, $v];
         }
-        $args{deps} = [sort {$a->[0] cmp $b->[0] } @d] if @d;
+        $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
     }
 
     $page_path =~ s!\.[^./]+$!.page!;
@@ -122,37 +136,38 @@ sub news_page {
 # is guaranteed to work in 99.9% of all project builds.
 
 sub fetch_deps {
-    my ($path, $data, $quick) = @_;
-    $quick //= 0;
-    for (@{$path::dependencies{$path}}) {
-        my $file = $_;
-        my ($filename, $dirname, $extension) = parse_filename;
-        s/^[^.]+// for my $lang = $extension;
-        for my $p (@path::patterns) {
-            my ($re, $method, $args) = @$p;
-            next unless $file =~ $re;
-            if ($args->{headers}) {
-                my $d = Data::Dumper->new([$args->{headers}], ['$args->{headers}']);
-                $d->Deepcopy(1)->Purity(1);
-                eval $d->Dump;
-            }
-            if ($quick == 1 or $quick == 2) {
-                $file = "$dirname$filename.html$lang";
-                $data->{$file} = { path => $file, lang => $lang, %$args };
-                # just read the headers for $quick == 1
-                read_text_file "content/$_", $data->{$file}, $quick == 1 ? 0 : undef;
-            }
-            else {
-                local $SunStarSys::Value::Offline = 1 if $quick == 3;
-                my $s = view->can($method) or die "Can't locate method: $method\n";
-                my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, %$args);
-                $file = "$dirname$filename.$ext$lang";
-                $data->{$file} = $vars;
-            }
-            last;
-        }
-        $data->{$file}{headers}{title} //= ucfirst $filename;
+  my ($path, $data, $quick) = @_;
+  $quick //= 0;
+  for (@{$path::dependencies{$path}}) {
+    my $file = $_;
+    next if exists $data->{$file};
+    my ($filename, $dirname, $extension) = parse_filename;
+    s/^[^.]+// for my $lang = $extension;
+    for my $p (@path::patterns) {
+      my ($re, $method, $args) = @$p;
+      next unless $file =~ $re;
+      if ($args->{headers}) {
+        my $d = Data::Dumper->new([$args->{headers}], ['$args->{headers}']);
+        $d->Deepcopy(1)->Purity(1);
+        eval $d->Dump;
+      }
+      if ($quick == 1 or $quick == 2) {
+        $file = "$dirname$filename.html$lang";
+        $data->{$file} = { path => $file, lang => $lang, %$args };
+        # just read the headers for $quick == 1
+        read_text_file "content/$_", $data->{$file}, $quick == 1 ? 0 : undef;
+      }
+      else {
+        local $SunStarSys::Value::Offline = 1 if $quick == 3;
+        my $s = view->can($method) or die "Can't locate method: $method\n";
+        my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, deps => $data, %$args);
+        $file = "$dirname$filename.$ext$lang";
+        $data->{$file} = $vars;
+      }
+      last;
     }
+    $data->{$file}{headers}{title} //= ucfirst $filename;
+  }
 }
 
 # presumes the dependencies are all markdown files with subheadings of the form
