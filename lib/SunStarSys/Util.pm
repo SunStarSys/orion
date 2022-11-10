@@ -29,8 +29,12 @@ sub read_text_file {
         $rtf_ring_hdr->{cache}{$file}{mtime} == stat($file)->mtime) {
       my $cache = $rtf_ring_hdr->{cache}{$file};
       %{$out->{headers}} = (%{$out->{headers} || {}}, %{$cache->{headers}});
-      $out->{content} = $cache->{content};
-
+      if (defined $content_lines) {
+        $out->{content} = join "\n", (split "\n", $cache->{content})[0..($content_lines-1)],"";
+      }
+      else {
+        $out->{content} = $cache->{content};
+      }
       my $ll = $cache->{link};
       $ll->{prev}{next} = $ll->{next};
       $ll->{next}{prev} = $ll->{prev};
