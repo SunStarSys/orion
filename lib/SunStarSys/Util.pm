@@ -105,7 +105,7 @@ sub read_text_file {
 
     @{$out->{headers}}{keys %$hdr} = values %$hdr;
     $out->{content} = $content;
-    return $. if defined $content_lines and not eof($fh);
+    return $. unless eof($fh);
     no warnings 'uninitialized';
     $content .= $_;
 
