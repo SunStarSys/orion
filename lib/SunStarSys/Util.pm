@@ -4,6 +4,7 @@ use YAML::XS;
 use File::Basename;
 use File::Copy;
 use File::Find;
+use File::Path 'mkpath';
 use Cwd;
 use File::stat;
 use Fcntl ":flock";
