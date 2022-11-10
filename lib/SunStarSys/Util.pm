@@ -100,10 +100,10 @@ sub read_text_file {
     $out->{content} = $content;
     return $. if defined $content_lines;
 
-    my $ll = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
-    $rtf_ring_hdr->{next} = $ll;
-    $rtf_ring_hdr->{prev} //= $ll;
-    $ll->{next}{prev} = $ll if $ll->{next};
+    my $link = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
+    $rtf_ring_hdr->{next} = $link;
+    $rtf_ring_hdr->{prev} //= $link;
+    $link->{next}{prev} = $link if $link->{next};
     $rtf_ring_hdr->{count}++;
 
     if ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
@@ -128,7 +128,7 @@ sub read_text_file {
       $rtf_ring_hdr->{count}--;
     }
 
-    $rtf_ring_hdr->{cache}{$file} = { content => $content, headers => $out->{headers}, rv => $., link => $ll, mtime => stat($file)->mtime };
+    $rtf_ring_hdr->{cache}{$file} = { content => $content, headers => $out->{headers}, rv => $., link => $link, mtime => stat($file)->mtime };
     return $.;
 }
 
