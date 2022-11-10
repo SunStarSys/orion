@@ -100,12 +100,15 @@ sub read_text_file {
 
     my $ll = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
     $rtf_ring_hdr->{next} = $ll;
+    $rtf_ring_hdr->{prev} //= $ll;
+    $ll->{next}{prev} = $ll if $ll->{next};
     $rtf_ring_hdr->{count}++;
 
     if ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
       my $rm_me = $rtf_ring_hdr->{prev};
       $rtf_ring_hdr->{prev} = $rm_me->{prev};
-      $rm_me->{prev}{next} = undef;
+      $rtf_ring_hdr->{next} = undef unless $rm_me->{prev};
+      $rm_me->{prev}{next} = undef if $rm_me->{prev};
       delete $rtf_ring_hdr->{cache}{$rm_me->{file}};
       undef %$rm_me;
       $rtf_ring_hdr->{count}--;
