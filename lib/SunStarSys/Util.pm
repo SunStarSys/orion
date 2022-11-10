@@ -39,7 +39,7 @@ sub read_text_file {
       }
 
       if ($rtf_ring_hdr->{next} != $cache->{link}) {
-        # MRU
+        # MRU to front
         my $link = $cache->{link};
         $link->{prev}{next} = $link->{next};
         $link->{next}{prev} = $link->{prev} if $link->{next};
