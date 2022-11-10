@@ -28,7 +28,7 @@ sub read_text_file {
     if (exists $rtf_ring_hdr->{cache}{$file} and
         $rtf_ring_hdr->{cache}{$file}{mtime} == stat($file)->mtime) {
       my $cache = $rtf_ring_hdr->{cache}{$file};
-      %{$out->{headers}} = (%{$out->{headers} || {}}, %{$cache->{headers}});
+      %{$out->{headers}} = (%{$out->{headers} || {}}, %{$cache->{headers} || {}});
 
       if (defined $content_lines) {
         $out->{content} = join "\n", (split "\n", $cache->{content})[0..($content_lines-1)],"" if $content_lines > 0;
