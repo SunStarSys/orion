@@ -18,8 +18,16 @@ our $VERSION = "1.9";
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
 
+my %rtf_cache;
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
+
+    if (exists $rtf_cache{$file}) {
+      %{$out->{headers}} = (%{$out->{headers} || {}}, %{$rtf_cache{$file}{headers}});
+      $out->{content} = $rtf_cache{$file}{content};
+      return $rtf_cache{$file}{rv};
+    }
+
     $file =~ /(.*)/;
     open my $fh, "<:encoding(UTF-8)", $1 or die "Can't open file $file: $!\n";
 
@@ -70,6 +78,8 @@ sub read_text_file {
     }
 
     $out->{content} = $content;
+    $rtf_cache{$file} = { content => $content, headers => $out->{headers}, rv => $. } unless defined $content_lines;
+    return $.;
 }
 
 sub copy_if_newer {
