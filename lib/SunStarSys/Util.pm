@@ -18,14 +18,26 @@ our $VERSION = "1.9";
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
 
-my %rtf_cache;
+# MRU memoization (a'la <ring.h>) to control RAM usage during builds
+my $rtf_ring_hdr = { next => undef, prev => undef, cache => {}, count => 0 };
+our $RTF_RING_SIZE = 10_000; #tunable
+
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
 
-    if (exists $rtf_cache{$file}) {
-      %{$out->{headers}} = (%{$out->{headers} || {}}, %{$rtf_cache{$file}{headers}});
-      $out->{content} = $rtf_cache{$file}{content};
-      return $rtf_cache{$file}{rv};
+    if (exists $rtf_ring_hdr->{cache}{$file}) {
+      my $cache = $rtf_ring_hdr->{cache}{$file};
+      %{$out->{headers}} = (%{$out->{headers} || {}}, %{$cache->{headers}});
+      $out->{content} = $cache->{$file}{content};
+
+      my $ll = $cache->{link};
+      $ll->{prev}{next} = $ll->{next};
+      $ll->{next}{prev} = $ll->{prev};
+      $ll->{next} = $rtf_ring_hdr->{next};
+      $rtf_ring_hdr->{next} = $ll;
+      $ll->{prev} = undef;
+
+      return $cache->{rv};
     }
 
     $file =~ /(.*)/;
@@ -78,7 +90,21 @@ sub read_text_file {
     }
 
     $out->{content} = $content;
-    $rtf_cache{$file} = { content => $content, headers => $out->{headers}, rv => $. } unless defined $content_lines;
+    return $. if defined $content_lines;
+
+    my $ll = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
+    $rtf_ring_hdr->{next} = $ll;
+    $rtf_ring_hdr->{count}++;
+
+    if ($rtf_ring_hdr->{count} > $RTF_RING_SIZE) {
+      my $rm_me = $rtf_ring_hdr->{prev};
+      $rtf_ring_hdr->{prev} = $rm_me->{prev};
+      $rm_me->{prev}{next} = undef;
+      delete $rtf_ring_hdr->{cache}{$rm_me->{file}};
+      undef %$rm_me;
+    }
+
+    $rtf_ring_hdr->{cache}{$file} = { content => $content, headers => $out->{headers}, rv => $., link => $ll };
     return $.;
 }
 
