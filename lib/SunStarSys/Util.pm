@@ -38,15 +38,17 @@ sub read_text_file {
         $out->{content} = $cache->{content};
       }
 
-      if ($rtf_ring_hdr->{count} > 1 and $rtf_ring_hdr->{next} != $cache->{link}) {
+      if ($rtf_ring_hdr->{next} != $cache->{link}) {
+        # MRU
         my $link = $cache->{link};
         $link->{prev}{next} = $link->{next};
-        $link->{next}{prev} = $link->{prev};
+        $link->{next}{prev} = $link->{prev} if $link->{next};
         $link->{next} = $rtf_ring_hdr->{next};
         $rtf_ring_hdr->{next} = $link;
         $link->{prev} = undef;
         $link->{next}{prev} = $link;
       }
+
       return $cache->{rv};
     }
 
@@ -121,6 +123,7 @@ sub read_text_file {
     $rtf_ring_hdr->{count}++;
 
     if ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
+      # drop LRU
       my $rm_me = $rtf_ring_hdr->{prev};
       $rtf_ring_hdr->{prev} = $rm_me->{prev};
       $rtf_ring_hdr->{next} = undef unless $rm_me->{prev};
