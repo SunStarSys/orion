@@ -120,6 +120,8 @@ sub read_text_file {
       $rtf_ring_hdr->{count}--;
     }
 
+    # add link to front
+
     my $link = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
     $rtf_ring_hdr->{next} = $link;
     $rtf_ring_hdr->{prev} //= $link;
