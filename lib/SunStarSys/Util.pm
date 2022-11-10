@@ -37,13 +37,13 @@ sub read_text_file {
         $out->{content} = $cache->{content};
       }
       if ($rtf_ring_hdr->{count} > 1 and $rtf_ring_hdr->{next} != $cache->{link}) {
-        my $ll = $cache->{link};
-        $ll->{prev}{next} = $ll->{next};
-        $ll->{next}{prev} = $ll->{prev};
-        $ll->{next} = $rtf_ring_hdr->{next};
-        $rtf_ring_hdr->{next} = $ll;
-        $ll->{prev} = undef;
-        $ll->{next}{prev} = $ll;
+        my $link = $cache->{link};
+        $link->{prev}{next} = $link->{next};
+        $link->{next}{prev} = $link->{prev};
+        $link->{next} = $rtf_ring_hdr->{next};
+        $rtf_ring_hdr->{next} = $link;
+        $link->{prev} = undef;
+        $link->{next}{prev} = $link;
       }
       return $cache->{rv};
     }
