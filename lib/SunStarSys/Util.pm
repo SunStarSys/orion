@@ -98,8 +98,8 @@ sub read_text_file {
         no warnings 'uninitialized';
         $content .= $_;
     }
-    if (exists $out->{headers}->{atom}) {
-        for ($out->{headers}->{atom}) {
+    if (exists $hdr->{atom}) {
+        for ($hdr->{atom}) {
             if (/^(\S+)\s*(?:"([^"]+)")?\s*$/)  {
                 $_ = { url => $1, title => $2 || "" };
             }
