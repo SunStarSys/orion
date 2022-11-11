@@ -122,8 +122,8 @@ sub main :Sealed {
   syswrite_all "Waiting for kids...\n";
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
   syswrite_all "All done.\n";
-  _exit -1 if $saw_error;
-  _exit 0; # avoid global cleanup segfault
+  exit -1 if $saw_error;
+  exit 0; # avoid global cleanup segfault
 }
 
 sub process_dir {
