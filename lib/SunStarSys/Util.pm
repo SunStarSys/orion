@@ -4,7 +4,6 @@ use YAML::XS;
 use File::Basename;
 use File::Copy;
 use File::Find;
-use File::Path 'mkpath';
 use Cwd;
 use File::stat;
 use Fcntl ":flock";
@@ -14,7 +13,7 @@ use warnings;
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename
                     walk_content_tree seed_deps Load Dump/;
-our $VERSION = "2.0";
+our $VERSION = "2.1";
 
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
@@ -331,7 +330,7 @@ my $write_deps = 0;
 
 sub walk_content_tree (&) {
   my $wanted = shift;
-  my $cwd = cwd;
+
   if ($path::use_dependency_cache and -f "$ENV{TARGET_BASE}/.deps") {
     # use the cached .deps file if the incremental build system deems it appropriate
     open my $deps, "<", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
@@ -339,7 +338,9 @@ sub walk_content_tree (&) {
     return;
   }
 
+  my $cwd = cwd;
   local $_; # filepath that $wanted sub should inspect, rooted in content/ dir
+
   find({ wanted => sub {
            $File::Find::prune = 1, return if -d and m!\.page$!;
            return unless -f;
@@ -353,7 +354,6 @@ sub walk_content_tree (&) {
 
 END {
   if ($write_deps) {
-    mkpath $ENV{TARGET_BASE};
     open my $deps, ">", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
     print $deps Dump \%path::dependencies;
   }
@@ -365,7 +365,7 @@ END {
 sub seed_deps {
   my $path = $_;
   my $dir = dirname($path);
-  read_text_file "content$path", \my %d;
+  read_text_file "content$path", \ my %d;
 
   push @{$path::dependencies{$path}}, grep $_ ne $path, grep s/^content//,
     map glob("content$_"), map index($_, "/") == 0  ? $_ : "$dir/$_",
