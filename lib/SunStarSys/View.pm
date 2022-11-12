@@ -24,6 +24,7 @@ use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use SunStarSys::Util qw/read_text_file sort_tables parse_filename/;
 use Data::Dumper ();
+use File::Basename ();
 
 push our @TEMPLATE_DIRS, "templates";
 our $VERSION = "1.90";
