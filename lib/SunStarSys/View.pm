@@ -123,7 +123,7 @@ sub news_page {
 
 sub fetch_deps {
   my ($path, $data, $quick) = @_;
-  $quick //= 0;
+  $quick //= 2;
   my $deps = $path::dependencies{$path};
   local %path::dependencies;
   for (@$deps) {
