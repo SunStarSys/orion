@@ -198,13 +198,6 @@ sub sitemap {
           . ucfirst File::Basename::basename($dirname);
     }
     $content .= "- [$title]($$_[0])\n";
-    for my $hdr (grep /^#/, split "\n", $$_[1]{content} // "") {
-      $hdr =~ /^(#+)\s+([^#]+)?\s+\1\s+[{\[]#([^}]+)[}\]]$/ or next;
-      my $level = length $1;
-      $level *= 4;
-      $content .= " " x $level;
-      $content .= "- [$2]($_#$3)\n";
-    }
   }
 
   if ($args{nest}) {
