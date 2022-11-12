@@ -361,7 +361,7 @@ sub trim_local_links {
                          \]
                          \(
                          ( (?!:http)[^\)#?]*? ) (?:\.\w+|\/) ([#?][^\)#?]+)?
-                           \)
+                         \)
                    /[$1]($2$3)/gx;
 
   $args{content} =~ s/                 # trim html links
