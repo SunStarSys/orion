@@ -192,8 +192,8 @@ sub sitemap {
 
   for (grep shift @$_, sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_->[0]; [$path, @$_]} @{$args{deps}}) {
     my $title = $$_[1]{headers}{title};
-    my ($filename, $dirname) = parse_filename;
-    if (m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
+    my ($filename, $dirname) = parse_filename $$_[0];
+    if ($$_[0] =~ m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
       $title = $title{+($1 || "index")}{$lang}
           . ucfirst File::Basename::basename($dirname);
     }
