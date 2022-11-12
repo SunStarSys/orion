@@ -50,7 +50,7 @@ sub single_narrative {
   while (my ($k, $v) = each %{$args{deps}}) {
     push @d, [$k, $v];
   }
-  $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
+  $args{deps} = [sort {$a->[0] cmp $b->[0]} @d];
 
 
   $args{path} =~ s!\.[^.]+(?=[^/]+$)!\.html!;
@@ -97,7 +97,7 @@ sub news_page {
   while (my ($k, $v) = each %{$args{deps}}) {
     push @d, [$k, $v];
   }
-  $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
+  $args{deps} = [sort {$a->[0] cmp $b->[0]} @d];
 
   $page_path =~ s!\.[^./]+$!.page!;
   if (-d $page_path) {
@@ -125,7 +125,7 @@ sub fetch_deps {
   my ($path, $data, $quick) = @_;
   $quick //= 2;
   my $deps = $path::dependencies{$path};
-  local %path::dependencies;
+  local %path::dependencies; # avert a disater w/ cycles in the dependency graph
   for (@$deps) {
     my $file = $_;
     next if exists $data->{$file};
