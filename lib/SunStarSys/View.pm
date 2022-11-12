@@ -165,18 +165,18 @@ sub fetch_deps {
 # takes a 'deps' hashref to override deps fetching
 
 my %title = (
-    index => {
-        en => "Index of ",
-        es => "Índice de ",
-        de => "Index von ",
-        fr => "Indice de ",
-    },
-    sitemap => {
-        en => "Sitemap of ",
-        es => "Mapa del sitio de ",
-        de => "Seitenverzeichnis von ",
-        fr => "Plan du site de ",
-    }
+  index => {
+    en => "Index of ",
+    es => "Índice de ",
+    de => "Index von ",
+    fr => "Indice de ",
+  },
+  sitemap => {
+    en => "Sitemap of ",
+    es => "Mapa del sitio de ",
+    de => "Seitenverzeichnis von ",
+    fr => "Plan du site de ",
+  }
 );
 
 sub sitemap {
@@ -278,30 +278,30 @@ sub breadcrumbs {
 # caching built pages in sites with complex dependencies.
 
 {
-    my %cache;
+  my %cache;
 
-    sub memoize {
-        my %args = @_;
-        my $view = next_view \%args;
-        my $file = "content$args{path}";
-        return @{$cache{$file}} if exists $cache{$file};
+  sub memoize {
+    my %args = @_;
+    my $view = next_view \%args;
+    my $file = "content$args{path}";
+    return @{$cache{$file}} if exists $cache{$file};
 
-        return view->can($view)->(%args) if $SunStarSys::Value::Offline; # don't cache offline pages
+    return view->can($view)->(%args) if $SunStarSys::Value::Offline; # don't cache offline pages
 
-        $cache{$file} = [ view->can($view)->(%args) ];
-        return @{$cache{$file}};
-    }
+    $cache{$file} = [ view->can($view)->(%args) ];
+    return @{$cache{$file}};
+  }
 }
 
 # wrapper view for pulling snippets out of code repos; see thrift site sources for sample usage
 # 'snippet_footer' and 'snippet_header' args are supported.
 
 sub snippet {
-    my %args = @_;
-    my $file = "content$args{path}";
-    read_text_file $file, \%args unless exists $args{headers} and exists $args{content};
-    my $key = "snippetA";
-    $args{content} =~ s{\[snippet:([^\]]+)\]} # format is [snippet:arg1=val1:arg2=val2:...]
+  my %args = @_;
+  my $file = "content$args{path}";
+  read_text_file $file, \%args unless exists $args{headers} and exists $args{content};
+  my $key = "snippetA";
+  $args{content} =~ s{\[snippet:([^\]]+)\]} # format is [snippet:arg1=val1:arg2=val2:...]
                        {
                            my $argspec = $1;
                            my %a = (%args, map {split /=/, $_, 2} split /:/, $argspec);
@@ -323,8 +323,8 @@ sub snippet {
                        }ge;
 
 
-    my $view = next_view \%args;
-    return view->can($view)->(%args, preprocess => 1);
+  my $view = next_view \%args;
+  return view->can($view)->(%args, preprocess => 1);
 }
 
 # wrapper view for rebuilding content and headers from content created in a prior wrapper
@@ -332,15 +332,15 @@ sub snippet {
 # arg is set to enable that)
 
 sub reconstruct {
-    my %args = @_;
-    die "Can't reconstruct from existing content" unless exists $args{content};
-    read_text_file \( $args{preprocess}
-                          ? Template($args{content})->render(\%args)
-                          : $args{content},
-                      %args );
-    my $view = next_view \%args;
-    delete $args{preprocess}; # avoid duplication of template processing
-    view->can($view)->(%args);
+  my %args = @_;
+  die "Can't reconstruct from existing content" unless exists $args{content};
+  read_text_file \( $args{preprocess}
+                        ? Template($args{content})->render(\%args)
+                        : $args{content},
+                    %args );
+  my $view = next_view \%args;
+  delete $args{preprocess}; # avoid duplication of template processing
+  view->can($view)->(%args);
 }
 
 # wrapper which drops file extensions from local links in markdown and html content.
@@ -349,27 +349,27 @@ sub reconstruct {
 # (and trailing slashes) as a policy matter for links is wise.
 
 sub trim_local_links {
-    my %args = @_;
-    my $view = next_view \%args;
-    read_text_file "content$args{path}", \%args unless exists $args{content};
+  my %args = @_;
+  my $view = next_view \%args;
+  read_text_file "content$args{path}", \%args unless exists $args{content};
 
-    no warnings 'uninitialized';
-    $args{content} =~ s/                 # trim markdown links
+  no warnings 'uninitialized';
+  $args{content} =~ s/                 # trim markdown links
                            \[
                            ( [^\]]+ )
                            \]
                            \(
                            ( (?!:http)[^\)#?]* ) (?:\.\w+|\/) ([#?][^\)#?]+)?
                            \)
-                       /[$1]($2$3)/gx;
+                     /[$1]($2$3)/gx;
 
-    $args{content} =~ s/                 # trim html links
+  $args{content} =~ s/                 # trim html links
                            href=(['"])
                            ( (?!:http)[^'"?#]* ) (?:\.\w+|\/) ([#?][^'"#?]+)?
                            \1
-                       /href=$1$2$3$1/gx;
+                     /href=$1$2$3$1/gx;
 
-    return view->can($view)->(%args);
+  return view->can($view)->(%args);
 }
 
 1;
