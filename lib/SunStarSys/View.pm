@@ -124,9 +124,7 @@ sub news_page {
 sub fetch_deps {
   my ($path, $data, $quick) = @_;
   $quick //= 2;
-  my $deps = $path::dependencies{$path};
-  local %path::dependencies; # avert a disater w/ cycles in the dependency graph
-  for (@$deps) {
+  for (@{$path::dependencies{$path}}) {
     my $file = $_;
     next if exists $data->{$file};
     my ($filename, $dirname, $extension) = parse_filename;
@@ -148,7 +146,8 @@ sub fetch_deps {
       else {
         local $SunStarSys::Value::Offline = 1 if $quick == 3;
         my $s = view->can($method) or die "Can't locate method: $method\n";
-        my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, deps => $data, %$args);
+        # quick_deps set to 2 to avoid infinite recursion on cyclic dependency graph
+        my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, deps => $data, %$args, quick_deps => 2);
         $file = "$dirname$filename.$ext$lang";
         $data->{$file} = $vars;
       }
