@@ -37,51 +37,44 @@ our $VERSION = "1.16";
 # 'deps' arrayref and 'conf' arguments have special behavior (passed to foo.page/bar.mdtext)
 
 sub single_narrative {
-    my %args = @_;
-    my $file = "content$args{path}";
-    my $template = $args{template};
+  my %args = @_;
+  my $file = "content$args{path}";
+  my $template = $args{template};
+  $args{deps} //= {};
 
-    read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
+  read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
 
-    if (exists $args{deps}) {
-        my @d;
-        while (my ($k, $v) = each %{$args{deps}}) {
-            push @d, [$k, $v];
-        }
-        $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
+  view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
+  my @d;
+  while (my ($k, $v) = each %{$args{deps}}) {
+    push @d, [$k, $v];
+  }
+  $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
+ 
+
+  $args{path} =~ s!\.[^.]+(?=[^/]+$)!\.html!;
+  $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
+
+  my $page_path = $file;
+  $page_path =~ s!\.[^./]+$!.page!;
+  if (-d $page_path) {
+    for my $f (grep -f, glob "$page_path/*.{mdtext,md}") {
+      $f =~ m!/([^/]+)\.md(?:text)?$! or die "Bad filename: $f\n";
+      $args{$1} = {};
+      read_text_file $f, $args{$1};
+      $args{$1}->{conf} = $args{conf} if exists $args{conf};
+      $args{$1}->{deps} = $args{deps} if exists $args{deps};
+      $args{$1}->{content} = sort_tables($args{preprocess}
+                                  ? Template($args{$1}->{content})->render($args{$1})
+                                  : $args{$1}->{content});
     }
-    else {
-        view->can("fetch_deps")->($args{path} => \ my %deps, $args{quick_deps});
-        my @d;
-        while (my ($k, $v) = each %deps) {
-            push @d, [$k, $v];
-        }
-        $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
-    }
+  }
+  $args{content} = sort_tables($args{preprocess}
+                                   ? Template($args{content})->render(\%args)
+                                   : $args{content});
 
-    $args{path} =~ s!\.[^.]+(?=[^/]+$)!\.html!;
-    $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
-
-    my $page_path = $file;
-    $page_path =~ s!\.[^./]+$!.page!;
-    if (-d $page_path) {
-        for my $f (grep -f, glob "$page_path/*.{mdtext,md}") {
-            $f =~ m!/([^/]+)\.md(?:text)?$! or die "Bad filename: $f\n";
-            $args{$1} = {};
-            read_text_file $f, $args{$1};
-            $args{$1}->{conf} = $args{conf} if exists $args{conf};
-            $args{$1}->{deps} = $args{deps} if exists $args{deps};
-            $args{$1}->{content} = sort_tables($args{preprocess}
-                                        ? Template($args{$1}->{content})->render($args{$1})
-                                        : $args{$1}->{content});
-        }
-    }
-    $args{content} = sort_tables($args{preprocess}
-                                     ? Template($args{content})->render(\%args)
-                                     : $args{content});
-
-    # the extra (3rd) return value is for sitemap support
-    return Template($template)->render(\%args), html => \%args;
+  # the extra (3rd) return value is for sitemap support
+  return Template($template)->render(\%args), html => \%args;
 }
 
 # Typical multi-narrative page view.  Has the same behavior as the above for foo.page/bar.mdtext
@@ -92,43 +85,37 @@ sub single_narrative {
 # 'deps' arrayref and 'conf' args are passed along to foo.page/bar.mdtext files
 
 sub news_page {
-    my %args = @_;
-    my $page_path = "content$args{path}";
-    my $template = $args{content} // $page_path;
-    $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
+  my %args = @_;
+  my $page_path = "content$args{path}";
+  my $template = $args{content} // $page_path;
+  $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
+  $args{deps} //= {};
 
-    if (exists $args{deps}) {
-        my @d;
-        while (my ($k, $v) = each %{$args{deps}}) {
-            push @d, [$k, $v];
-        }
-        $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
-    }
-    else {
-        view->can("fetch_deps")->($args{path} => \ my %deps, $args{quick_deps});
-        my @d;
-        while (my ($k, $v) = each %deps) {
-            push @d, [$k, $v];
-        }
-        $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
-    }
+  read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
 
-    $page_path =~ s!\.[^./]+$!.page!;
-    if (-d $page_path) {
-        for my $f (grep -f, glob "$page_path/*.{mdtext,md}") {
-            $f =~ m!/([^/]+)\.md(?:text)?$! or die "Bad filename: $f\n";
-            $args{$1} = {};
-            read_text_file $f, $args{$1};
-            $args{$1}->{conf} = $args{conf} if exists $args{conf};
-            $args{$1}->{deps} = $args{deps} if exists $args{deps};
-            $args{$1}->{content} = sort_tables($args{preprocess}
-                                         ? Template($args{$1}->{content})->render($args{$1})
-                                         : $args{$1}->{content});
-        }
-    }
+  view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
+  my @d;
+  while (my ($k, $v) = each %{$args{deps}}) {
+    push @d, [$k, $v];
+  }
+  $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
 
-    # the extra (3rd) return value is for sitemap support
-    return Template($template)->render(\%args), html => \%args;
+  $page_path =~ s!\.[^./]+$!.page!;
+  if (-d $page_path) {
+    for my $f (grep -f, glob "$page_path/*.{mdtext,md}") {
+      $f =~ m!/([^/]+)\.md(?:text)?$! or die "Bad filename: $f\n";
+      $args{$1} = {};
+      read_text_file $f, $args{$1};
+      $args{$1}->{conf} = $args{conf} if exists $args{conf};
+      $args{$1}->{deps} = $args{deps} if exists $args{deps};
+      $args{$1}->{content} = sort_tables($args{preprocess}
+                                   ? Template($args{$1}->{content})->render($args{$1})
+                                   : $args{$1}->{content});
+    }
+  }
+
+  # the extra (3rd) return value is for sitemap support
+  return Template($template)->render(\%args), html => \%args;
 }
 
 # overridable internal sub for computing deps
@@ -194,39 +181,38 @@ my %title = (
 );
 
 sub sitemap {
-    my %args = @_;
-    my $template = "content$args{path}";
-    $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
-    view->can("fetch_deps")->($args{path} => $args{deps} = {}, $args{quick_deps})
-        unless exists $args{deps};
+  my %args = @_;
+  my $template = "content$args{path}";
+  $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
+  view->can("fetch_deps")->($args{path} => $args{deps} //= {}, $args{quick_deps};
 
-    my $content = "";
-    my ($filename, $dirname, $extension) = parse_filename $args{path};
-    s/^[^.]+\.// for my $lang = $extension;
-    if ($args{path} =~ m!/(index|sitemap)\b[^/]*$!) {
-	$args{headers}{title} //= $title{$1}{$lang}
-	    . ucfirst File::Basename::basename($dirname);
+  my $content = "";
+  my ($filename, $dirname, $extension) = parse_filename $args{path};
+  s/^[^.]+\.// for my $lang = $extension;
+  if ($args{path} =~ m!/(index|sitemap)\b[^/]*$!) {
+    $args{headers}{title} //= $title{$1}{$lang}
+     . ucfirst File::Basename::basename($dirname);
+  }
+
+  for (map $_->[1], sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_; [$path, $_]} keys %{$args{deps}}) {
+    my $title = $args{deps}{$_}{headers}{title};
+    my ($filename, $dirname) = parse_filename;
+    if (m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
+      $title = $title{+($1 || "index")}{$lang}
+          . ucfirst File::Basename::basename($dirname);
     }
-
-    for (map $_->[1], sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_; [$path, $_]} keys %{$args{deps}}) {
-        my $title = $args{deps}{$_}{headers}{title};
-        my ($filename, $dirname) = parse_filename;
-        if (m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
-            $title = $title{+($1 || "index")}{$lang}
-                . ucfirst File::Basename::basename($dirname);
-        }
-        $content .= "- [$title]($_)\n";
-        for my $hdr (grep /^#/, split "\n", $args{deps}{$_}{content} // "") {
-            $hdr =~ /^(#+)\s+([^#]+)?\s+\1\s+[{\[]#([^}]+)[}\]]$/ or next;
-            my $level = length $1;
-            $level *= 4;
-            $content .= " " x $level;
-            $content .= "- [$2]($_#$3)\n";
-        }
+    $content .= "- [$title]($_)\n";
+    for my $hdr (grep /^#/, split "\n", $args{deps}{$_}{content} // "") {
+      $hdr =~ /^(#+)\s+([^#]+)?\s+\1\s+[{\[]#([^}]+)[}\]]$/ or next;
+      my $level = length $1;
+      $level *= 4;
+      $content .= " " x $level;
+      $content .= "- [$2]($_#$3)\n";
     }
+  }
 
-    if ($args{nest}) {
-        1 while $content =~ s{^(\s*-\s)                 # \1, prefix
+  if ($args{nest}) {
+    1 while $content =~ s{^(\s*-\s)                 # \1, prefix
                   (                                     # \2, link
                       \[ [^\]]+ \]
                       \(
@@ -236,50 +222,50 @@ sub sitemap {
                   (                                          # \4, subpaths
                       (?:\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\w.-]*)[^\#?] .*)+
                   )
-             }{
-                 my ($prefix, $link, $subpaths) = ($1, $2, $4);
-                 $subpaths =~ s/\n/\n    /g;
-                 "$prefix$link$subpaths"
-             }xme;
-    }
-    $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
+           }{
+             my ($prefix, $link, $subpaths) = ($1, $2, $4);
+             $subpaths =~ s/\n/\n    /g;
+             "$prefix$link$subpaths"
+           }xme;
+  }
+  $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
 
-    # the extra (3rd) return value is for sitemap support
-    return Template($template)->render(\%args), html => \%args;
+  # the extra (3rd) return value is for sitemap support
+  return Template($template)->render(\%args), html => \%args;
 }
 
 # internal utility sub for the wrapper views that follow (not overrideable)
 
 sub next_view {
-    my $args = pop;
-    $args->{view} = [@{$args->{view}}] if ref $args->{view}; # copy it since we're changing it
-    return ref $args->{view} && @{$args->{view}} ? shift @{$args->{view}} : delete $args->{view};
+  my $args = pop;
+  $args->{view} = [@{$args->{view}}] if ref $args->{view}; # copy it since we're changing it
+  return ref $args->{view} && @{$args->{view}} ? shift @{$args->{view}} : delete $args->{view};
 }
 
 # wrapper view for creating final content (eg sitemaps) that doesn't require being online
 # to service relevant content generation in dependencies, etc.
 
 sub offline {
-    local $SunStarSys::Value::Offline = 1;
-    my %args = @_;
-    my $view = next_view \%args;
-    return view->can($view)->(%args);
+  local $SunStarSys::Value::Offline = 1;
+  my %args = @_;
+  my $view = next_view \%args;
+  return view->can($view)->(%args);
 }
 
 # see top of www.apache.org site for how this works in practice (drops filename,
 # just provides dirs).  overridable internal sub
 
 sub breadcrumbs {
-    my @path = split m!/!, shift;
-    pop @path;
-    my @rv;
-    my $relpath = "";
-    for (@path) {
-        $relpath .= "$_/";
-        $_ ||= "Home";
-        push @rv, qq(<a href="$relpath">\u$_</a>);
-    }
-    return join "&nbsp&raquo&nbsp", @rv;
+  my @path = split m!/!, shift;
+  pop @path;
+  my @rv;
+  my $relpath = "";
+  for (@path) {
+      $relpath .= "$_/";
+      $_ ||= "Home";
+      push @rv, qq(<a href="$relpath">\u$_</a>);
+  }
+  return join "&nbsp;&raquo;&nbsp;", @rv;
 }
 
 # Extensive use of the memoize() wrapper view probably necessitates adding
