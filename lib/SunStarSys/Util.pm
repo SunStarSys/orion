@@ -133,7 +133,7 @@ sub read_text_file {
     $link->{next}{prev} = $link if $link->{next};
     $rtf_ring_hdr->{count}++;
 
-    if ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
+    while ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
       # drop LRU
 
       my $rm_me = $rtf_ring_hdr->{prev};
