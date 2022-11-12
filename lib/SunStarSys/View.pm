@@ -93,11 +93,6 @@ sub news_page {
   $args{deps} //= {};
 
   view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
-  my @d;
-  while (my ($k, $v) = each %{$args{deps}}) {
-    push @d, [$k, $v];
-  }
-  $args{deps} = [sort {$a->[0] cmp $b->[0]} @d];
 
   $page_path =~ s!\.[^./]+$!.page!;
   if (-d $page_path) {
@@ -155,6 +150,12 @@ sub fetch_deps {
     }
     $data->{$file}{headers}{title} //= ucfirst $filename;
   }
+  my @d;
+  while (my ($k, $v) = each %$data) {
+    push @d, [$k, $v];
+  }
+  # transform second argument to fetch_deps() from a hashref to an arrayref
+  $_[1] = [sort {$a->[0] cmp $b->[0]} @d];
 }
 
 # presumes the dependencies are all markdown files with subheadings of the form
