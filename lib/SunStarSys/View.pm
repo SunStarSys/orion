@@ -46,12 +46,6 @@ sub single_narrative {
   read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
 
   view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
-  my @d;
-  while (my ($k, $v) = each %{$args{deps}}) {
-    push @d, [$k, $v];
-  }
-  $args{deps} = [sort {$a->[0] cmp $b->[0]} @d];
-
 
   $args{path} =~ s!\.[^.]+(?=[^/]+$)!\.html!;
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
@@ -196,15 +190,15 @@ sub sitemap {
      . ucfirst File::Basename::basename($dirname);
   }
 
-  for (map $_->[1], sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_; [$path, $_]} keys %{$args{deps}}) {
-    my $title = $args{deps}{$_}{headers}{title};
+  for (grep shift @$_, sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_->[0]; [$path, @$_]} @{$args{deps}}) {
+    my $title = $$_[1]{headers}{title};
     my ($filename, $dirname) = parse_filename;
     if (m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
       $title = $title{+($1 || "index")}{$lang}
           . ucfirst File::Basename::basename($dirname);
     }
-    $content .= "- [$title]($_)\n";
-    for my $hdr (grep /^#/, split "\n", $args{deps}{$_}{content} // "") {
+    $content .= "- [$title]($$_[0])\n";
+    for my $hdr (grep /^#/, split "\n", $$_[1]{content} // "") {
       $hdr =~ /^(#+)\s+([^#]+)?\s+\1\s+[{\[]#([^}]+)[}\]]$/ or next;
       my $level = length $1;
       $level *= 4;
