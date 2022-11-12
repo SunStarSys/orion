@@ -367,7 +367,11 @@ sub seed_deps {
   my $dir = dirname($path);
   read_text_file "content$path", \ my %d;
 
-  push @{$path::dependencies{$path}}, grep $_ ne $path, grep {read_text_file $_, \ my %data; not exists $data{headers}{archive} and s/^content//}
+  push @{$path::dependencies{$path}}, grep $_ ne $path,
+    grep {
+      read_text_file $_, \ my %data;
+      not exists $data{headers}{archive} and s/^content//
+    }
     map glob("content$_"), map index($_, "/") == 0  ? $_ : "$dir/$_",
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies}
         if exists $d{headers}{dependencies} and not exists $d{headers}{archive};
