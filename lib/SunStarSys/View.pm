@@ -212,14 +212,14 @@ sub sitemap {
   }
 
   if ($args{nest}) {
-    1 while $content =~ s{^(\s*-\s)                 # \1, prefix
-              (                                     # \2, link
+    1 while $content =~ s{^(\s*-\s)                  # \1, prefix
+              (                                      # \2, link
                   \[ [^\]]+ \]
                   \(
                   (  [^\)]* / ) index\.html\b[\w.-]* # \3, (dir with trailing slash)
                   \)
               )
-              (                                          # \4, subpaths
+              (                                      # \4, subpaths
                   (?:\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\w.-]*)[^\#?] .*)+
               )
        }{
