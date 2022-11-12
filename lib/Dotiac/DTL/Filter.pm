@@ -1137,6 +1137,13 @@ sub append {
 	return $value->set($value->repr . $extra->repr);
 }
 
+sub teaser {
+  my $value=shift;
+  $value->safe;
+  $value->repr =~ /\Q<!-- #teaser -->\E(.*?)\Q<!-- #teaser -->\E/s;
+  return $value->set(ucfirst $1);
+}
+
 sub truncatewords {
 	my $value=shift;
 	my $words=shift;
