@@ -132,11 +132,6 @@ sub fetch_deps {
     for my $p (@path::patterns) {
       my ($re, $method, $args) = @$p;
       next unless $file =~ $re;
-      if ($args->{headers}) {
-        my $d = Data::Dumper->new([$args->{headers}], ['$args->{headers}']);
-        $d->Deepcopy(1)->Purity(1);
-        eval $d->Dump;
-      }
       if ($quick == 1 or $quick == 2) {
         $file = "$dirname$filename.html$lang";
         $data->{$file} = { path => $file, lang => $lang, %$args };
@@ -145,6 +140,11 @@ sub fetch_deps {
       }
       else {
         local $SunStarSys::Value::Offline = 1 if $quick == 3;
+        if ($args->{headers}) {
+          my $d = Data::Dumper->new([$args->{headers}], ['$args->{headers}']);
+          $d->Deepcopy(1)->Purity(1);
+          eval $d->Dump;
+        }
         my $s = view->can($method) or die "Can't locate method: $method\n";
         # quick_deps set to 2 to avoid infinite recursion on cyclic dependency graph
         my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, deps => $data, %$args, quick_deps => 2);
