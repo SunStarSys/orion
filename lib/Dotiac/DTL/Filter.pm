@@ -1144,6 +1144,12 @@ sub teaser {
   return $value->set(ucfirst $1);
 }
 
+sub vcs_date {
+  my $value = shift;
+  $value->repr =~ /\$Date:(?:[^(]+?)\(([^)]+)\)\s+\$/;
+  return $value->set($1);
+}
+
 sub truncatewords {
 	my $value=shift;
 	my $words=shift;
