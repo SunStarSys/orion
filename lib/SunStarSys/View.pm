@@ -26,7 +26,7 @@ use SunStarSys::Util qw/read_text_file sort_tables parse_filename/;
 use Data::Dumper ();
 
 push our @TEMPLATE_DIRS, "templates";
-our $VERSION = "1.16";
+our $VERSION = "1.90";
 
 # This is most widely used view.  It takes a 'template' argument and a 'path' argument.
 # Assuming the path ends in foo.mdtext, any files like foo.page/bar.mdtext will be parsed and
@@ -91,7 +91,7 @@ sub news_page {
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
   $args{deps} //= {};
 
-  read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
+  read_text_file $page_path, \%args unless exists $args{content} and exists $args{headers};
 
   view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
   my @d;
