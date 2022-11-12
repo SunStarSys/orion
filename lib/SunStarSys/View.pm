@@ -147,7 +147,7 @@ sub fetch_deps {
         local $SunStarSys::Value::Offline = 1 if $quick == 3;
         my $s = view->can($method) or die "Can't locate method: $method\n";
         # quick_deps set to 2 to avoid infinite recursion on cyclic dependency graph
-        my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, deps => $data, %$args, quick_deps => 2);
+        my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, %$args, quick_deps => 2);
         $file = "$dirname$filename.$ext$lang";
         $data->{$file} = $vars;
       }
