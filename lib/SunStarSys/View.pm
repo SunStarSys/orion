@@ -51,7 +51,7 @@ sub single_narrative {
     push @d, [$k, $v];
   }
   $args{deps} = [sort {$a->[0] cmp $b->[0]} @d] if @d;
- 
+
 
   $args{path} =~ s!\.[^.]+(?=[^/]+$)!\.html!;
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
@@ -183,7 +183,8 @@ sub sitemap {
   my %args = @_;
   my $template = "content$args{path}";
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
-  view->can("fetch_deps")->($args{path} => $args{deps} //= {}, $args{quick_deps};
+  $args{deps} //= {};
+  view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
   my $content = "";
   my ($filename, $dirname, $extension) = parse_filename $args{path};
