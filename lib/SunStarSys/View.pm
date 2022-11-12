@@ -27,7 +27,7 @@ use Data::Dumper ();
 use File::Basename ();
 
 push our @TEMPLATE_DIRS, "templates";
-our $VERSION = "1.90";
+our $VERSION = "2.0";
 
 # This is most widely used view.  It takes a 'template' argument and a 'path' argument.
 # Assuming the path ends in foo.mdtext, any files like foo.page/bar.mdtext will be parsed and
@@ -124,7 +124,9 @@ sub news_page {
 sub fetch_deps {
   my ($path, $data, $quick) = @_;
   $quick //= 0;
-  for (@{$path::dependencies{$path}}) {
+  my $deps = $path::dependencies{$path};
+  local %path::dependencies;
+  for (@$deps) {
     my $file = $_;
     next if exists $data->{$file};
     my ($filename, $dirname, $extension) = parse_filename;
