@@ -27,7 +27,7 @@ use Data::Dumper ();
 use File::Basename ();
 
 push our @TEMPLATE_DIRS, "templates";
-our $VERSION = "2.0";
+our $VERSION = "2.01";
 
 # This is most widely used view.  It takes a 'template' argument and a 'path' argument.
 # Assuming the path ends in foo.mdtext, any files like foo.page/bar.mdtext will be parsed and
