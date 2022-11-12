@@ -7,7 +7,6 @@
 # --source-base=path  trunk or a branch
 # --runners=N         number of runners to use (default 8)
 # --offline           don't process "dynamic" content from SunStarSys::Value::*
-
 use File::Basename;
 use Cwd 'abs_path';
 use POSIX qw/_exit/;
@@ -188,12 +187,45 @@ sub process_file :Sealed {
           eval $d->Dump;
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
-        my ($content, $ext) = $s->(path => $path, lang => $lang, %$args);
+        my ($content, $ext, $final_args) = $s->(path => $path, lang => $lang, %$args);
         open my $fh, ">:encoding(UTF-8)", "$target_base/$target_file.$ext$lang"
-            or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
+          or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
         print $fh $content;
         $matched = 1;
         syswrite_all "Built to $target_base/$target_file.$ext$lang.\n";
+
+        if (exists $$final_args{archive_root}
+            and exists $$final_args{headers}
+            and exists $$final_args{headers}{archive}
+            and $$final_args{content} =~ /\$Date:\s+(\d+)-(\d+)/
+            and not -f ((my $archive_dir = "$target_base/$$final_args{archive_path}/$1/$2/") . "$filename.$ext$lang")) {
+
+          unlink glob("$target_base/$$final_args{archive_path}/*/*/$filename.$ext$lang");
+          mkpath $archive_dir;
+          open $fh, ">:encoding(UTF-8)", "$archive_dir$filename.$ext$lang";
+            or die "Can't archive $target_file.$ext$lang: $!\n";
+          print $fh <<EOT;
+<!--#include virtual="/$target_file.$ext.$lang" -->
+EOT
+          syswrite_all "Archived to $archive_dir$filename.$ext$lang.\n";
+        }
+        if (exists $$final_args{category_root}
+            and exists $$final_args{headers}
+            and exists $$final_args{headers}{categories}) {
+
+          my $category_root = "$target_base/$$final_args{category_root}";
+           $$final_args{headers}{categories} = split /[;,]?,\s+/, $$final_args{headers}{categories} unless ref $$final_args{headers}{categories};
+          for my $cat (@{$$final_args{headers}{categories}}) {
+            next if -f "$category_root/$cat/$filename.$ext$lang";
+            mkpath "$category_root/$cat";
+            open $fh, ">:encoding(UTF-8)", "$category_root/$cat/$filename.$ext$lang"
+              or die "Can't categorize to '$category_root/$cat': $target_file.$ext$lang: $!\n";
+            print $fh <<EOT;
+<!--#include virtual="/$target_file.$ext.$lang" -->
+EOT
+            syswrite_all "Categorized to $category_root/$cat/$filename.$ext$lang.\n";
+          }
+        }
         last;
     }
 
