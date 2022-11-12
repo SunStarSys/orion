@@ -202,7 +202,7 @@ sub process_file :Sealed {
 
           unlink glob("$target_base/$$final_args{archive_path}/*/*/$filename.$ext$lang");
           mkpath $archive_dir;
-          open $fh, ">:encoding(UTF-8)", "$archive_dir$filename.$ext$lang";
+          open $fh, ">:encoding(UTF-8)", "$archive_dir$filename.$ext$lang"
             or die "Can't archive $target_file.$ext$lang: $!\n";
           print $fh <<EOT;
 <!--#include virtual="/$target_file.$ext.$lang" -->
