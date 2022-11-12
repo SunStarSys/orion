@@ -92,8 +92,6 @@ sub news_page {
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
   $args{deps} //= {};
 
-  read_text_file $page_path, \%args unless exists $args{content} and exists $args{headers};
-
   view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
   my @d;
   while (my ($k, $v) = each %{$args{deps}}) {
