@@ -213,20 +213,20 @@ sub sitemap {
 
   if ($args{nest}) {
     1 while $content =~ s{^(\s*-\s)                 # \1, prefix
-                  (                                     # \2, link
-                      \[ [^\]]+ \]
-                      \(
-                      (  [^\)]* / ) index\.html\b[\w.-]* # \3, (dir with trailing slash)
-                      \)
-                  )
-                  (                                          # \4, subpaths
-                      (?:\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\w.-]*)[^\#?] .*)+
-                  )
-           }{
-             my ($prefix, $link, $subpaths) = ($1, $2, $4);
-             $subpaths =~ s/\n/\n    /g;
-             "$prefix$link$subpaths"
-           }xme;
+              (                                     # \2, link
+                  \[ [^\]]+ \]
+                  \(
+                  (  [^\)]* / ) index\.html\b[\w.-]* # \3, (dir with trailing slash)
+                  \)
+              )
+              (                                          # \4, subpaths
+                  (?:\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\w.-]*)[^\#?] .*)+
+              )
+       }{
+         my ($prefix, $link, $subpaths) = ($1, $2, $4);
+         $subpaths =~ s/\n/\n    /g;
+         "$prefix$link$subpaths"
+       }xme;
   }
   $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
 
@@ -303,25 +303,25 @@ sub snippet {
   read_text_file $file, \%args unless exists $args{headers} and exists $args{content};
   my $key = "snippetA";
   $args{content} =~ s{\[snippet:([^\]]+)\]} # format is [snippet:arg1=val1:arg2=val2:...]
-                       {
-                           my $argspec = $1;
-                           my %a = (%args, map {split /=/, $_, 2} split /:/, $argspec);
-                           require SunStarSys::Value::Snippet; # see source for list of valid args
-                           $args{$key} = SunStarSys::Value::Snippet->new(%a);
-                           my $linenums = $a{numbers} ? "linenums" : "";
-                           my $filter = exists $a{lang} ?  "markdown" : "safe";
-                           my $rv = "<pre class='prettyprint $linenums prettyprinted'>{{ $key.fetch|$filter }}</pre>";
-                           if (defined(my $header = $args{snippet_header})) {
-                               $header =~ s/\$snippet\b/$key/g;
-                               $rv = "$header\n$rv";
-                           }
-                           if (defined(my $footer = $args{snippet_footer})) {
-                               $footer =~ s/\$snippet\b/$key/g;
-                               $rv .= "\n$footer";
-                           }
-                           ++$key;
-                           $rv;
-                       }ge;
+                     {
+                         my $argspec = $1;
+                         my %a = (%args, map {split /=/, $_, 2} split /:/, $argspec);
+                         require SunStarSys::Value::Snippet; # see source for list of valid args
+                         $args{$key} = SunStarSys::Value::Snippet->new(%a);
+                         my $linenums = $a{numbers} ? "linenums" : "";
+                         my $filter = exists $a{lang} ?  "markdown" : "safe";
+                         my $rv = "<pre class='prettyprint $linenums prettyprinted'>{{ $key.fetch|$filter }}</pre>";
+                         if (defined(my $header = $args{snippet_header})) {
+                           $header =~ s/\$snippet\b/$key/g;
+                           $rv = "$header\n$rv";
+                         }
+                         if (defined(my $footer = $args{snippet_footer})) {
+                           $footer =~ s/\$snippet\b/$key/g;
+                           $rv .= "\n$footer";
+                         }
+                         ++$key;
+                         $rv;
+                     }ge;
 
 
   my $view = next_view \%args;
@@ -336,8 +336,8 @@ sub reconstruct {
   my %args = @_;
   die "Can't reconstruct from existing content" unless exists $args{content};
   read_text_file \( $args{preprocess}
-                        ? Template($args{content})->render(\%args)
-                        : $args{content},
+                      ? Template($args{content})->render(\%args)
+                      : $args{content},
                     %args );
   my $view = next_view \%args;
   delete $args{preprocess}; # avoid duplication of template processing
@@ -356,18 +356,18 @@ sub trim_local_links {
 
   no warnings 'uninitialized';
   $args{content} =~ s/                 # trim markdown links
-                           \[
-                           ( [^\]]+ )
-                           \]
-                           \(
-                           ( (?!:http)[^\)#?]*? ) (?:\.\w+|\/) ([#?][^\)#?]+)?
+                         \[
+                         ( [^\]]+ )
+                         \]
+                         \(
+                         ( (?!:http)[^\)#?]*? ) (?:\.\w+|\/) ([#?][^\)#?]+)?
                            \)
-                     /[$1]($2$3)/gx;
+                   /[$1]($2$3)/gx;
 
   $args{content} =~ s/                 # trim html links
-                           href=(['"])
-                           ( (?!:http)[^'"?#]*? ) (?:\.\w+|\/) ([#?][^'"#?]+)?
-                           \1
+                         href=(['"])
+                         ( (?!:http)[^'"?#]*? ) (?:\.\w+|\/) ([#?][^'"#?]+)?
+                         \1
                      /href=$1$2$3$1/gx;
 
   return view->can($view)->(%args);
