@@ -122,7 +122,7 @@ sub main :Sealed {
   if (@new_sources) {
     syswrite_all "New content dectected: $_\n" for @new_sources;
     syswrite_all "Rebuilding site...\n";
-    syswrite_all "[flush]\n"; for $sockets->can_write(0);
+    syswrite_all "[flush]\n" for $sockets->can_write(0);
     @new_sources = ();
     @dirqueue = $dirq // ("cgi-bin", "content");
     goto LOOP;
