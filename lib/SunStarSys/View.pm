@@ -22,9 +22,10 @@ use strict;
 use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
-use SunStarSys::Util qw/read_text_file sort_tables parse_filename/;
+use SunStarSys::Util qw/read_text_file sort_tables parse_filename Dump/;
 use Data::Dumper ();
 use File::Basename ();
+use File::Path;
 
 push our @TEMPLATE_DIRS, "templates";
 our $VERSION = "2.01";
@@ -45,7 +46,7 @@ sub single_narrative {
 
   read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
 
-  view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
+  my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
   $args{path} =~ s!\.[^.]+(?=[^/]+$)!\.html!;
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
@@ -67,9 +68,54 @@ sub single_narrative {
   $args{content} = sort_tables($args{preprocess}
                                    ? Template($args{content})->render(\%args)
                                    : $args{content});
+  my ($filename, $directory, $ext) = parse_filename $file;
+  my $headers = Dump $args{headers};
 
+  if (exists $args{archive_root}
+      and exists $args{headers}
+      and exists $args{headers}{archive}
+      and $args{content} =~ /\$Date:\s+(\d+)-(\d+)/) {
+
+    for my $archive_dir ("content$args{archive_root}/$1/$2") {
+      my $f = "$archive_dir/$filename.$ext";
+      mkpath $archive_dir;
+      unlink glob("$archive_dir/../../*/*/$filename.$ext");
+      $f =- /(.*)/;
+      open my $fh, ">:encoding(UTF-8)", $1
+        or die "Can't archive $path to $f: $!\n";
+      print $fh <<EOT;
+--- 
+$headers
+--- 
+{% ssi "'$args{path}'" %}
+EOT
+      push @new_aources, $f;
+    }
+  }
+
+  if (exists $args{category_root}
+      and exists $args{headers}
+      and exists $args{headers}{categories}) {
+
+    $args{headers}{categories} = [split /[;,]\s+/, $args{headers}{categories}] unless ref $args{headers}{categories};
+    my $category_root = "content$args{category_root}";
+
+    for my $cat (@{$args{headers}{categories}}) {
+      next if -f (my $f = "$category_root/$cat/$filename.$ext");
+      mkpath "$category_root/$cat";
+      open my $fh, ">:encoding(UTF-8)", $f
+        or die "Can't categorize $path to $f: $!\n";
+      print $fh <<EOT;
+--- 
+$headers
+--- 
+{% ssi "'$args{path}'" %}
+EOT
+      push @new_sources, $f;
+    }
+  }
   # the extra (3rd) return value is for sitemap support
-  return Template($template)->render(\%args), html => \%args;
+  return Template($template)->render(\%args), html => \%args, @new_sources;
 }
 
 # Typical multi-narrative page view.  Has the same behavior as the above for foo.page/bar.mdtext
@@ -86,7 +132,7 @@ sub news_page {
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
   $args{deps} //= {};
 
-  view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
+  my @new_aources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
   $page_path =~ s!\.[^./]+$!.page!;
   if (-d $page_path) {
@@ -103,7 +149,7 @@ sub news_page {
   }
 
   # the extra (3rd) return value is for sitemap support
-  return Template($template)->render(\%args), html => \%args;
+  return Template($template)->render(\%args), html => \%args, @new_aources;
 }
 
 # overridable internal sub for computing deps
@@ -113,6 +159,7 @@ sub news_page {
 sub fetch_deps {
   my ($path, $data, $quick) = @_;
   $quick //= 2;
+  my @new_sources;
   for (@{$path::dependencies{$path}}) {
     my $file = $_;
     next if exists $data->{$file};
@@ -136,9 +183,10 @@ sub fetch_deps {
         local $SunStarSys::Value::Offline = 1 if $quick == 3;
         my $s = view->can($method) or die "Can't locate method: $method\n";
         # quick_deps set to 2 to avoid infinite recursion on cyclic dependency graph
-        my (undef, $ext, $vars) = $s->(path => $file, lang => $lang, %$args, quick_deps => 2);
+        my (undef, $ext, $vars, @ns) = $s->(path => $file, lang => $lang, %$args, quick_deps => 2);
         $file = "$dirname$filename.$ext$lang";
         $data->{$file} = $vars;
+        push @new_sources, @ns;
       }
       last;
     }
@@ -150,6 +198,7 @@ sub fetch_deps {
   }
   # transform second argument to fetch_deps() from a hashref to an arrayref
   $_[1] = [sort {$b->[1]{mtime} <=> $a->[1]{mtime}} @d];
+  return @new_sources;
 }
 
 # presumes the dependencies are all markdown files with subheadings of the form
@@ -180,7 +229,7 @@ sub sitemap {
   my $template = "content$args{path}";
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
   $args{deps} //= {};
-  view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
+  my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
   my $content = "";
   my ($filename, $dirname, $extension) = parse_filename $args{path};
@@ -220,7 +269,7 @@ sub sitemap {
   $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
 
   # the extra (3rd) return value is for sitemap support
-  return Template($template)->render(\%args), html => \%args;
+  return Template($template)->render(\%args), html => \%args, @new_aources;
 }
 
 # internal utility sub for the wrapper views that follow (not overrideable)
