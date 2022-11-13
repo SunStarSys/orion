@@ -27,7 +27,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use File::Path;
-use SunStarSys::Util qw/copy_if_newer parse_filename seed_deps/;
+use SunStarSys::Util qw/copy_if_newer parse_filename unload_package/;
 use Data::Dumper ();
 use SunStarSys::ASF;
 sub syswrite_all;
@@ -115,7 +115,14 @@ sub main :Sealed {
   }
 
   goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
-  @dirqueue = map dirname($_), @new_aources and goto LOOP if @new_sources;
+  @dirqueue = map dirname($_), @new_aources
+    and do {
+      @new_sources = ();
+      unload_package "path";
+      require path;
+      goto LOOP;
+    };
+
   shutdown $_, 1 for map $_->{socket}, @runners;
   syswrite_all "Waiting for kids...\n";
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
