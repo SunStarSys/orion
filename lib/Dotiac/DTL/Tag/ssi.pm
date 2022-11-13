@@ -15,17 +15,17 @@
 
 package Dotiac::DTL::Tag::ssi;
 use base qw/Dotiac::DTL::Tag/;
+use SunStarSys::Util qw/read_text_file/;
 use strict;
 use warnings;
 
-our $VERSION = 0.8;
+our $VERSION = 0.9;
 
 sub new {
 	my $class=shift;
 	my $self={p=>shift()};
 	my $name=shift;
 	die "This ssi needs a filename or variable" unless $name;
-	die "\$Dotiac::DTL::ALLOWED_INCLUDE_ROOTS is not set, can't use this tag" unless $Dotiac::DTL::ALLOWED_INCLUDE_ROOTS;
 	#my $parsed=$name=~s/\s+parsed$//;
 	my @name=Dotiac::DTL::get_variables($name);
 	$self->{parsed}=1 if $name[-1] and $name[-1] eq "parsed";
@@ -38,12 +38,12 @@ sub new {
 			$self->{content}=$tem->{first};
 		}
 		else {
-			open my $fh,"<",substr($name,1,-1) or die "Can't open ssi include $name";
-			$self->{content}=Dotiac::DTL::Tag->new(do {local $/;<$fh>});
-			close $fh;
+                  read_text_file "content" . substr($name,1,-1), \ my %data;
+                  $self->{content}=Dotiac::DTL::Tag->new($data{content});
 		}
 	}
 	else {
+                die "\$Dotiac::DTL::ALLOWED_INCLUDE_ROOTS is not set, can't use this tag" unless $Dotiac::DTL::ALLOWED_INCLUDE_ROOTS;
 		$self->{var}=$name[0];
 	}
 	bless $self,$class;
