@@ -61,8 +61,6 @@ require view;
     $SunStarSys::Value::Offline = 1 if $offline;
 }
 
-my @new_sources;
-
 sub main :Sealed {
   my $saw_error = 0;
   $runners = $path::runners if defined $path::runners and $path::runners < $runners;
@@ -70,7 +68,7 @@ sub main :Sealed {
   my @runners = map fork_runner(), 1..$runners;
   my @fd2rid;
   $fd2rid[fileno $runners[$_]->{socket}] = $_ for 0..$#runners;
-
+  my @new_sources;
   my @dirqueue = ("cgi-bin", "content");
   my IO::Select $sockets = "IO::Select";
   $sockets = $sockets->new;
@@ -112,7 +110,7 @@ sub main :Sealed {
       $saw_error++;
       next;
     }
-    push @dirqueue, grep length && $_ ne "working...", split /\n/;
+    push @dirqueue, grep length && $_ ne "working...", map {if (/^new: (.+)$/) {push @new_aources, $1; ()} else {$_}} split /\n/;
     $runners[$fd2rid[fileno $p]]->{wait} = /(?:^$)\Z/m;
   }
 
@@ -147,7 +145,7 @@ sub process_dir {
         }
         if (-f _) {
             mkpath "$target_base/$root" unless $made_target_dir++;
-            push @new_sources, eval { process_file($_) };
+            syswrite_all($wtr, "new: $_\n") for eval { process_file($_) };
             push @errors, [$_, $@] if $@;
         }
         else {
