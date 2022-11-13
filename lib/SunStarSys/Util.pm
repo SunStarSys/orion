@@ -326,7 +326,7 @@ sub fixup_code {
     }
 }
 
-our $write_deps = 0;
+my $write_deps = 0;
 
 sub walk_content_tree (&) {
   my $wanted = shift;
