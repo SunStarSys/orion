@@ -22,7 +22,7 @@ use strict;
 use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
-use SunStarSys::Util qw/read_text_file sort_tables parse_filename Dump/;
+use SunStarSys::Util qw/read_text_file sort_tables parse_filename seed_deps Dump/;
 use Data::Dumper ();
 use File::Basename ();
 use File::Path;
