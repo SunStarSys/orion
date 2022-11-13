@@ -7,6 +7,7 @@
 # --source-base=path  trunk or a branch
 # --runners=N         number of runners to use (default 8)
 # --offline           don't process "dynamic" content from SunStarSys::Value::*
+
 use File::Basename;
 use Cwd 'abs_path';
 use POSIX qw/_exit/;
@@ -34,10 +35,11 @@ sub syswrite_all;
 use sealed v4.1.8;
 use base 'sealed';
 
-my ($target_base, $source_base, $runners, $offline, @errors);
+my ($target_base, $source_base, $dirq, $runners, $offline, @errors);
 
 GetOptions ( "target-base=s", \$target_base,
              "source-base=s", \$source_base,
+             "dirqueue=s", \$dirq,
              "runners=i", \$runners,
              "offline", \$offline,
 );
@@ -69,7 +71,7 @@ sub main :Sealed {
   my @fd2rid;
   $fd2rid[fileno $runners[$_]->{socket}] = $_ for 0..$#runners;
   my @new_sources;
-  my @dirqueue = ("cgi-bin", "content");
+  my @dirqueue = $dirq // ("cgi-bin", "content");
   my IO::Select $sockets = "IO::Select";
   $sockets = $sockets->new;
   $sockets->add(map $_->{socket}, @runners);
