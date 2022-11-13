@@ -61,6 +61,7 @@ require view;
     $SunStarSys::Value::Offline = 1 if $offline;
 }
 
+my @new_sources;
 
 sub main :Sealed {
   my $saw_error = 0;
@@ -146,12 +147,8 @@ sub process_dir {
         }
         if (-f _) {
             mkpath "$target_base/$root" unless $made_target_dir++;
-            my (@new_sources) = eval { process_file($_) };
+            push @new_sources, eval { process_file($_) };
             push @errors, [$_, $@] if $@;
-            for my $dir (map dirname($_), @new_sources) {
-              seed_deps /^content(.*)/ for glob "$dir/*";
-              process_dir $dir, $wtr, "final";
-           }
         }
         else {
             warn "skipping unrecognized entry: $_\n";
