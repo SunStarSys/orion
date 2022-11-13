@@ -195,7 +195,7 @@ sub obliterate_package {
         undef $$fullname;
         undef @$fullname;
         undef %$fullname;
-        undef &$fullname;
+        undef &$fullname unless $pkg eq "main::path::";
         undef *$fullname;
     }
 
