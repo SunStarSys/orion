@@ -184,8 +184,6 @@ sub process_file :Sealed {
     my $path = $file;
     $path =~ s!^content!!;
 
-    my $matched;
-
     no warnings 'once';
     no strict 'refs';
 
@@ -204,15 +202,12 @@ sub process_file :Sealed {
         open my $fh, ">:encoding(UTF-8)", "$target_base/$target_file.$ext$lang"
           or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
         print $fh $content;
-        $matched = 1;
         syswrite_all "Built to $target_base/$target_file.$ext$lang.\n";
         return @new_sources;
     }
 
-    unless ($matched) {
-        copy_if_newer $file, "$target_base/$file" and
-          syswrite_all "Copied to $target_base/$file.\n";
-    }
+    copy_if_newer $file, "$target_base/$file" and
+      syswrite_all "Copied to $target_base/$file.\n";
 
     return;
 }
