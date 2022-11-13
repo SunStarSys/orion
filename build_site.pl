@@ -169,6 +169,7 @@ sub process_file :Sealed {
     }
 
     my $target_file = $dirname . $filename;
+    s/^content// for my $target_path = $target_file;
 
     my $path = $file;
     $path =~ s!^content!!;
@@ -197,33 +198,41 @@ sub process_file :Sealed {
         if (exists $$final_args{archive_root}
             and exists $$final_args{headers}
             and exists $$final_args{headers}{archive}
-            and $$final_args{content} =~ /\$Date:\s+(\d+)-(\d+)/
-            and not -f ((my $archive_dir = "$target_base/$$final_args{archive_path}/$1/$2/") . "$filename.$ext$lang")) {
+            and $$final_args{content} =~ /\$Date:\s+(\d+)-(\d+)/) {
 
-          unlink glob("$target_base/$$final_args{archive_path}/*/*/$filename.$ext$lang");
-          mkpath $archive_dir;
-          open $fh, ">:encoding(UTF-8)", "$archive_dir$filename.$ext$lang"
-            or die "Can't archive $target_file.$ext$lang: $!\n";
-          print $fh <<EOT;
-<!--#include virtual="/$target_file.$ext.$lang" -->
+          my $archive_tdir = "$target_base/content$$final_args{archive_root}/$1/$2";
+          my $archive_sdir = "$source_base/content$$final_args{archive_root}/$1/$2";
+          for my $archive_dir ($archive_sdir, $archive_tdir) {
+            next if -f "$archive_dir/$filename.$ext$lang";
+            mkpath $archive_dir;
+            unlink glob("$archive_dir/../../*/*/$filename.$ext$lang");
+
+            open $fh, ">:encoding(UTF-8)", "$archive_dir/$filename.$ext$lang"
+              or die "Can't archive $target_path.$ext$lang: $!\n";
+            print $fh <<EOT;
+<!--#include virtual="$target_path.$ext$lang" -->
 EOT
-          syswrite_all "Archived to $archive_dir$filename.$ext$lang.\n";
+            syswrite_all "Archived to $archive_dir/$filename.$ext$lang.\n";
+          }
         }
         if (exists $$final_args{category_root}
             and exists $$final_args{headers}
             and exists $$final_args{headers}{categories}) {
 
-          my $category_root = "$target_base/$$final_args{category_root}";
-           $$final_args{headers}{categories} = split /[;,]?,\s+/, $$final_args{headers}{categories} unless ref $$final_args{headers}{categories};
-          for my $cat (@{$$final_args{headers}{categories}}) {
-            next if -f "$category_root/$cat/$filename.$ext$lang";
-            mkpath "$category_root/$cat";
-            open $fh, ">:encoding(UTF-8)", "$category_root/$cat/$filename.$ext$lang"
-              or die "Can't categorize to '$category_root/$cat': $target_file.$ext$lang: $!\n";
-            print $fh <<EOT;
-<!--#include virtual="/$target_file.$ext.$lang" -->
+          $$final_args{headers}{categories} = [split /[;,]\s+/, $$final_args{headers}{categories}] unless ref $$final_args{headers}{categories};
+
+          for my $category_root ("$source_base/content$$final_args{category_root}", "$target_base/content$$final_args{category_root}") {
+
+            for my $cat (@{$$final_args{headers}{categories}}) {
+              next if -f "$category_root/$cat/$filename.$ext$lang";
+              mkpath "$category_root/$cat";
+              open $fh, ">:encoding(UTF-8)", "$category_root/$cat/$filename.$ext$lang"
+                or die "Can't categorize to '$category_root/$cat': $target_path.$ext$lang: $!\n";
+              print $fh <<EOT;
+<!--#include virtual="$target_path.$ext$lang" -->
 EOT
-            syswrite_all "Categorized to $category_root/$cat/$filename.$ext$lang.\n";
+              syswrite_all "Categorized to $category_root/$cat/$filename.$ext$lang.\n";
+            }
           }
         }
         last;
