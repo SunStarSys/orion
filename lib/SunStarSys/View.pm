@@ -86,12 +86,11 @@ sub single_narrative {
     $mon = sprintf "%02d", $mon + 1;
     $year += 1900;
 
-    for my $archive_dir ("content$args{archive_root}/$year/$mon") {
-      my $f = "$archive_dir/$filename.$ext";
-      next if -f;
+    my $archive_dir = "content$args{archive_root}/$year/$mon";
+    my $f = "$archive_dir/$filename.$ext";
+    unless (-f $f) {
       mkpath $archive_dir;
       unlink glob("$archive_dir/../../*/*/$filename.$ext");
-
       open my $fh, ">:encoding(UTF-8)", $f
         or die "Can't archive $path to $f: $!\n";
       print $fh <<EOT;
