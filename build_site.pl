@@ -27,7 +27,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use File::Path;
-use SunStarSys::Util qw/copy_if_newer parse_filename/;
+use SunStarSys::Util qw/copy_if_newer parse_filename seed_deps/;
 use Data::Dumper ();
 use SunStarSys::ASF;
 sub syswrite_all;
@@ -146,8 +146,12 @@ sub process_dir {
         }
         if (-f _) {
             mkpath "$target_base/$root" unless $made_target_dir++;
-            eval { process_file($_) };
+            my (@new_sources) = eval { process_file($_) };
             push @errors, [$_, $@] if $@;
+            for my $dir (map dirname($_), @new_sources) {
+              seed_deps /^content(.*)/ for glob "$dir/*";
+              process_dir $dir, $wtr, "final";
+           }
         }
         else {
             warn "skipping unrecognized entry: $_\n";
@@ -161,7 +165,7 @@ my %method_cache;
 sub process_file {
     my $file = shift;
     my ($filename, $dirname, $extension) = parse_filename $file;
-    s/^[^.]+// for my $lang = $extension;
+    s/^([^.]+)//, $extension = $1 for my $lang = $extension;
 
     if ($dirname =~ m!\b\.page/$!) {
         copy_if_newer $file, "$target_base/$file";
@@ -194,8 +198,7 @@ sub process_file {
         print $fh $content;
         $matched = 1;
         syswrite_all "Built to $target_base/$target_file.$ext$lang.\n";
-        process_file $_ for @new_sources;
-        last;
+        return @new_sources;
     }
 
     unless ($matched) {
