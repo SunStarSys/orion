@@ -378,7 +378,7 @@ sub seed_deps {
     }
     map glob("content$_"), map index($_, "/") == 0  ? $_ : "$dir/$_",
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies}
-        if exists $d{headers}{dependencies} and not exists $d{headers}{archive};
+        if exists $d{headers}{dependencies};
 
   while ($d{content} =~ /\{%\s*(include|ssi)\s+[\`"]([^\`"]+)[\`"]\s*-?%\}/g) {
     my $ssi = $1 eq "ssi";
