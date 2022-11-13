@@ -24,10 +24,10 @@ our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
-    my $mtime = stat($file)->mtime;
     my $cache = $rtf_ring_hdr->{cache}{$file};
+    $out->{mtime} = stat($file)->mtime unless ref $file;
 
-    if (defined $cache and $cache->{mtime} == $mtime) {
+    if (defined $cache and $cache->{mtime} == $out->{mtime}) {
 
       @{$out->{headers}}{keys %{$cache->{headers}}} = values %{$cache->{headers}};
 
@@ -107,7 +107,7 @@ sub read_text_file {
 
     @{$out->{headers}}{keys %$hdr} = values %$hdr;
     $out->{content} = $content;
-    return $. unless eof $fh;
+    return $. unless eof $fh and not ref $file;
     no warnings 'uninitialized';
     $content .= $_;
 
@@ -150,7 +150,7 @@ sub read_text_file {
       headers => $hdr,
       lines   => $.,
       link    => $link,
-      mtime   => $mtime,
+      mtime   => $out->{mtime},
     };
 
     return $.;
