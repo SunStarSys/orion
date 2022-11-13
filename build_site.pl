@@ -115,7 +115,7 @@ sub main :Sealed {
   }
 
   goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
-
+  @dirqueue = map dirname($_), @new_aources and goto LOOP if @new_sources;
   shutdown $_, 1 for map $_->{socket}, @runners;
   syswrite_all "Waiting for kids...\n";
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
