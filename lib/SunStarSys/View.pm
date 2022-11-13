@@ -40,6 +40,7 @@ our $VERSION = "2.01";
 
 sub single_narrative {
   my %args = @_;
+  my $path = $args{path};
   my $file = "content$args{path}";
   my $template = $args{template};
   $args{deps} //= {};
@@ -87,7 +88,7 @@ sub single_narrative {
 --- 
 $headers
 --- 
-{% ssi "'$args{path}'" %}
+{% ssi "'$path'" %}
 EOT
       push @new_aources, $f;
     }
@@ -109,7 +110,7 @@ EOT
 --- 
 $headers
 --- 
-{% ssi "'$args{path}'" %}
+{% ssi "'$path'" %}
 EOT
       push @new_sources, $f;
     }
