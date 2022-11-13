@@ -158,7 +158,7 @@ sub process_dir {
 
 my %method_cache;
 
-sub process_file :Sealed {
+sub process_file {
     my $file = shift;
     my ($filename, $dirname, $extension) = parse_filename $file;
     s/^[^.]+// for my $lang = $extension;
@@ -188,12 +188,13 @@ sub process_file :Sealed {
           eval $d->Dump;
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
-        my ($content, $ext, $final_args) = $s->(path => $path, lang => $lang, %$args);
+        my ($content, $ext, undef, @new_sources) = $s->(path => $path, lang => $lang, %$args);
         open my $fh, ">:encoding(UTF-8)", "$target_base/$target_file.$ext$lang"
           or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
         print $fh $content;
         $matched = 1;
         syswrite_all "Built to $target_base/$target_file.$ext$lang.\n";
+        process_file $_ for @new_sources;
         last;
     }
 
