@@ -122,11 +122,8 @@ sub main :Sealed {
   if (@new_sources) {
     syswrite_all "New content dectected: $_\n" for @new_sources;
     syswrite_all "Rebuilding site...\n";
-
+    syswrite_all "[flush]\n"; for $sockets->can_write(0);
     @new_sources = ();
-    unload_package "path";
-    require path;
-    SunStarSys::View::flush_memoize_cache;
     @dirqueue = $dirq // ("cgi-bin", "content");
     goto LOOP;
   }
@@ -190,7 +187,9 @@ sub process_file :Sealed {
     my $matched;
 
     no warnings 'once';
-    for my $p (@path::patterns) {
+    no strict 'refs';
+
+    for my $p (@{'path::patterns'}) {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
         if ($args->{headers}) {
@@ -250,8 +249,8 @@ sub fork_runner :Sealed {
         my $bytes;
         while (($bytes = sysread $p, $_, 4096, length) > 0) {
             last if substr($_, -1, 1) eq "\n";
-        }
-        process_dir($_, $parent) for split /\n/;
+          }
+        $_ eq "[flush]" ? ( SunStarSys::View::flush_memoize_cache, unload_package("path"), require path ) : process_dir($_, $parent) for split /\n/;
         last if $bytes <= 0;
 
         # notify parent we are waiting for more input
