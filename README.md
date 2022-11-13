@@ -7,6 +7,25 @@
 
 ```
 
+First time thru this will run forever, because the source tree in trunk needs
+this patch:
+
+```diff
+Index: trunk/lib/view.pm
+===================================================================
+--- trunk/lib/view.pm (revision 1905280)
++++ trunk/lib/view.pm (working copy)
+@@ -154,7 +154,7 @@
+     my %args = @_;
+     open my $fh, "content$args{path}" or die "Can't open $args{path}:$!";
+     read $fh, my $content, -s $fh;
+-    return $content, html => %args;
++    return $content, html => \%args;
+ }
+
+ sub breadcrumbs {
+```
+
 Compare with (content-trimmed-down) 60x slower JBake build port at <https://builds.apache.org/job/OpenOffice>.
 
 ## Buildable text content should be UTF-8
