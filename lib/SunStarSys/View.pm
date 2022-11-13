@@ -149,7 +149,7 @@ sub fetch_deps {
     push @d, [$k, $v];
   }
   # transform second argument to fetch_deps() from a hashref to an arrayref
-  $_[1] = [sort {$a->[0] cmp $b->[0]} @d];
+  $_[1] = [sort {$b->[1]{mtime} <=> $a->[1]{mtime}} @d];
 }
 
 # presumes the dependencies are all markdown files with subheadings of the form
