@@ -326,7 +326,7 @@ sub fixup_code {
     }
 }
 
-my $write_deps = 0;
+our $write_deps = 0;
 
 sub walk_content_tree (&) {
   my $wanted = shift;
@@ -363,7 +363,8 @@ END {
 # parses deps from file $_'s content and headers
 
 sub seed_deps {
-  my $path = $_;
+  my ($path) = (@_, $_);
+  $write_deps = 1 if @_;
   my $dir = dirname($path);
   read_text_file "content$path", \ my %d;
 
