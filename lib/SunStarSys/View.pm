@@ -75,11 +75,12 @@ sub single_narrative {
                                    ? Template($args{content})->render(\%args)
                                    : $args{content});
   my ($filename, $directory, $ext) = parse_filename $file;
+  my $archive = delete $args{headers}{archive};
   my $headers = Dump $args{headers};
 
   if (exists $args{archive_root}
       and exists $args{headers}
-      and exists $args{headers}{archive}
+      and defined $archive
       and $args{mtime}) {
 
     my ($mon, $year) = (gmtime $args{mtime})[4,5];
@@ -123,6 +124,7 @@ EOT
     }
   }
 
+  $args{headers}{archive} = $archive if defined $archive;
   return Template($template)->render(\%args), html => \%args, @new_sources;
 }
 
