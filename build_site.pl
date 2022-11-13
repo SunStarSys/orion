@@ -162,7 +162,7 @@ sub process_dir {
 
 my %method_cache;
 
-sub process_file {
+sub process_file :Sealed {
     my $file = shift;
     my ($filename, $dirname, $extension) = parse_filename $file;
     s/^([^.]+)//, $extension = $1 for my $lang = $extension;
