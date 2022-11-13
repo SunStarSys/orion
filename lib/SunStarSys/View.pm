@@ -11,24 +11,24 @@ package SunStarSys::View;
 #   quick_deps => 2, which keeps the content read off disk for processing too,
 #   quick_deps => 3, which just takes the deps builds temporarily "offline", and hence is the
 #                    most conservative of the three options;
-# * loops in the %path::dependencies graph are supported with a 'quick_deps' = 1 or 2 setting.
 # * 'snippet' wrapper view to preparse [snippet:arg1=val1:arg2=val2:...] template blocks;
 # * new args like 'preprocess', 'deps' and 'conf' with custom behavior;
 # * new wrapper views like 'reconstruct' and 'trim_local_links' that when combined with
 #   'snippet', allow markdown files in source code repos to be imported to the website;
 # * a more flexible 'sitemap' that takes a 'nest' argument to nest directory links into a tree
+
 use utf8;
 use strict;
 use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
-use SunStarSys::Util qw/read_text_file sort_tables parse_filename seed_deps Dump/;
+use SunStarSys::Util qw/read_text_file sort_tables parse_filename Dump/;
 use Data::Dumper ();
 use File::Basename ();
 use File::Path;
 
 push our @TEMPLATE_DIRS, "templates";
-our $VERSION = "2.01";
+our $VERSION = "2.02";
 
 # This is most widely used view.  It takes a 'template' argument and a 'path' argument.
 # Assuming the path ends in foo.mdtext, any files like foo.page/bar.mdtext will be parsed and
@@ -75,22 +75,26 @@ sub single_narrative {
   if (exists $args{archive_root}
       and exists $args{headers}
       and exists $args{headers}{archive}
-      and $args{content} =~ /\$Date:\s+(\d+)-(\d+)/) {
+      and $args{mtime}) {
 
-    for my $archive_dir ("content$args{archive_root}/$1/$2") {
+    my ($mon, $year) = (gmtime $args{mtime})[4,5];
+    $mon = sprintf "%02d", $mon + 1;
+    $year += 1900;
+
+    for my $archive_dir ("content$args{archive_root}/$year/$mon") {
       my $f = "$archive_dir/$filename.$ext";
+      next if -f;
       mkpath $archive_dir;
       unlink glob("$archive_dir/../../*/*/$filename.$ext");
-      $f =- /(.*)/;
-      open my $fh, ">:encoding(UTF-8)", $1
+
+      open my $fh, ">:encoding(UTF-8)", $f
         or die "Can't archive $path to $f: $!\n";
       print $fh <<EOT;
---- 
 $headers
---- 
-{% ssi "'$path'" %}
+---
+{% ssi \`$path\` %}
 EOT
-      push @new_aources, $f;
+      push @new_sources, $f;
     }
   }
 
@@ -107,15 +111,14 @@ EOT
       open my $fh, ">:encoding(UTF-8)", $f
         or die "Can't categorize $path to $f: $!\n";
       print $fh <<EOT;
---- 
 $headers
---- 
-{% ssi "'$path'" %}
+---
+{% ssi \`$path\` %}
 EOT
       push @new_sources, $f;
     }
   }
-  # the extra (3rd) return value is for sitemap support
+
   return Template($template)->render(\%args), html => \%args, @new_sources;
 }
 
@@ -133,7 +136,7 @@ sub news_page {
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
   $args{deps} //= {};
 
-  my @new_aources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
+  my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
   $page_path =~ s!\.[^./]+$!.page!;
   if (-d $page_path) {
@@ -150,7 +153,7 @@ sub news_page {
   }
 
   # the extra (3rd) return value is for sitemap support
-  return Template($template)->render(\%args), html => \%args, @new_aources;
+  return Template($template)->render(\%args), html => \%args, @new_sources;
 }
 
 # overridable internal sub for computing deps
@@ -161,12 +164,14 @@ sub fetch_deps {
   my ($path, $data, $quick) = @_;
   $quick //= 2;
   my @new_sources;
-  for (@{$path::dependencies{$path}}) {
+  no strict 'refs';
+
+  for (@{${'path::dependencies'}{$path}}) {
     my $file = $_;
     next if exists $data->{$file};
     my ($filename, $dirname, $extension) = parse_filename;
     s/^[^.]+// for my $lang = $extension;
-    for my $p (@path::patterns) {
+    for my $p (@{'path::patterns'}) {
       my ($re, $method, $args) = @$p;
       next unless $file =~ $re;
       if ($args->{headers}) {
@@ -197,8 +202,10 @@ sub fetch_deps {
   while (my ($k, $v) = each %$data) {
     push @d, [$k, $v];
   }
+  no warnings 'uninitialized'; # peculiar: should only happen with quick_deps>2
   # transform second argument to fetch_deps() from a hashref to an arrayref
   $_[1] = [sort {$b->[1]{mtime} <=> $a->[1]{mtime}} @d];
+
   return @new_sources;
 }
 
@@ -270,7 +277,7 @@ sub sitemap {
   $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
 
   # the extra (3rd) return value is for sitemap support
-  return Template($template)->render(\%args), html => \%args, @new_aources;
+  return Template($template)->render(\%args), html => \%args, @new_sources;
 }
 
 # internal utility sub for the wrapper views that follow (not overrideable)
@@ -330,6 +337,10 @@ sub breadcrumbs {
 
     $cache{$file} = [ view->can($view)->(%args) ];
     return @{$cache{$file}};
+  }
+
+  sub flush_memoize_cache {
+    %cache = ();
   }
 }
 

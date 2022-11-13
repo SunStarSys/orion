@@ -24,8 +24,8 @@ our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
+    $out->{mtime} = ref $file ? -1 : stat($file)->mtime;
     my $cache = $rtf_ring_hdr->{cache}{$file};
-    $out->{mtime} = stat($file)->mtime unless ref $file;
 
     if (defined $cache and $cache->{mtime} == $out->{mtime}) {
 
@@ -107,7 +107,8 @@ sub read_text_file {
 
     @{$out->{headers}}{keys %$hdr} = values %$hdr;
     $out->{content} = $content;
-    return $. unless eof $fh and not ref $file;
+    return $. unless eof $fh and $out->{mtime} > 0;
+
     no warnings 'uninitialized';
     $content .= $_;
 
@@ -330,11 +331,12 @@ my $write_deps = 0;
 
 sub walk_content_tree (&) {
   my $wanted = shift;
+  no strict 'refs';
 
-  if ($path::use_dependency_cache and -f "$ENV{TARGET_BASE}/.deps") {
+  if (${'path::use_dependency_cache'} and -f "$ENV{TARGET_BASE}/.deps") {
     # use the cached .deps file if the incremental build system deems it appropriate
     open my $deps, "<", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
-    *path::dependencies = Load join "", <$deps>;
+    *{'path::dependencies'} = Load join "", <$deps>;
     return;
   }
 
@@ -355,7 +357,8 @@ sub walk_content_tree (&) {
 END {
   if ($write_deps) {
     open my $deps, ">", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
-    print $deps Dump \%path::dependencies;
+    no strict 'refs';
+    print $deps Dump *{'path::dependencies'}{HASH};
   }
 }
 
@@ -364,11 +367,11 @@ END {
 
 sub seed_deps {
   my ($path) = (@_, $_);
-  $write_deps = 1 if @_;
   my $dir = dirname($path);
   read_text_file "content$path", \ my %d;
+  no strict 'refs';
 
-  push @{$path::dependencies{$path}}, grep $_ ne $path,
+  push @{${'path::dependencies'}{$path}}, grep $_ ne $path,
     grep {
       read_text_file $_, \ my %data;
       not exists $data{headers}{archive} and s/^content//
@@ -377,12 +380,13 @@ sub seed_deps {
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies}
         if exists $d{headers}{dependencies} and not exists $d{headers}{archive};
 
-  while ($d{content} =~ /\{%\s*include\s+"([^"]+)"\s*-?%\}/g) {
-    my $src = $1;
-    if (index($src, "./") == 0 or index($src, "../") == 0) {
-      $src = "$dir/$src", $src = s(/[.]/)(/)g;
+  while ($d{content} =~ /\{%\s*(include|ssi)\s+[\`"]([^\`"]+)[\`"]\s*-?%\}/g) {
+    my $ssi = $1 eq "ssi";
+    my $src = $2;
+    if ($ssi or index($src, "./") == 0 or index($src, "../") == 0) {
+      $src = "$dir/$src", $src = s(/[.]/)(/)g unless $ssi;
       1 while $src =~ s(/[^./][^/]+/[.]{2}/)(/);
-      push @{$path::dependencies{$path}}, $src;
+      push @{${'path::dependencies'}{$path}}, $src;
     }
   }
 }

@@ -16,11 +16,11 @@ use List::Util qw/shuffle/;
 use Socket;
 
 BEGIN {
-    my $script_path = dirname($0);
-    $script_path = abs_path($script_path);
-    $script_path =~ /(.*)/;
-    $script_path = $1;
-    unshift @INC, "$script_path/lib";
+  my $script_path = dirname($0);
+  $script_path = abs_path($script_path);
+  $script_path =~ /(.*)/;
+  $script_path = $1;
+  unshift @INC, "$script_path/lib";
 }
 
 use utf8;
@@ -29,6 +29,7 @@ use warnings;
 use Getopt::Long;
 use File::Path;
 use SunStarSys::Util qw/copy_if_newer parse_filename unload_package/;
+use SunStarSys::View;
 use Data::Dumper ();
 use SunStarSys::ASF;
 sub syswrite_all;
@@ -112,18 +113,23 @@ sub main :Sealed {
       $saw_error++;
       next;
     }
-    push @dirqueue, grep length && $_ ne "working...", map {if (/^new: (.+)$/) {push @new_aources, $1; ()} else {$_}} split /\n/;
+    push @dirqueue, grep length && $_ ne "working...", map /^new: (.+)$/ ? (push @new_sources, $1 and ()) : $_, split /\n/;
     $runners[$fd2rid[fileno $p]]->{wait} = /(?:^$)\Z/m;
   }
 
   goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
-  @dirqueue = map dirname($_), @new_aources
-    and do {
-      @new_sources = ();
-      unload_package "path";
-      require path;
-      goto LOOP;
-    };
+
+  if (@new_sources) {
+    syswrite_all "New content dectected: $_\n" for @new_sources;
+    syswrite_all "Rebuilding site...\n";
+
+    @new_sources = ();
+    unload_package "path";
+    require path;
+    SunStarSys::View::flush_memoize_cache;
+    @dirqueue = $dirq // ("cgi-bin", "content");
+    goto LOOP;
+  }
 
   shutdown $_, 1 for map $_->{socket}, @runners;
   syswrite_all "Waiting for kids...\n";
@@ -162,7 +168,6 @@ sub process_dir {
         }
     }
 }
-
 
 my %method_cache;
 
@@ -209,6 +214,8 @@ sub process_file :Sealed {
         copy_if_newer $file, "$target_base/$file" and
           syswrite_all "Copied to $target_base/$file.\n";
     }
+
+    return;
 }
 
 sub fork_runner :Sealed {
