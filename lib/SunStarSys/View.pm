@@ -24,7 +24,7 @@ use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use SunStarSys::Util qw/read_text_file sort_tables parse_filename Dump/;
 use Data::Dumper ();
-use File::Basename ();
+use File::Basename;
 use File::Path;
 
 push our @TEMPLATE_DIRS, "templates";
@@ -249,7 +249,7 @@ sub sitemap {
   s/^[^.]+\.// for my $lang = $extension;
   if ($args{path} =~ m!/(index|sitemap)\b[^/]*$!) {
     $args{headers}{title} //= $title{$1}{$lang}
-     . ucfirst File::Basename::basename($dirname);
+     . ucfirst basename($dirname);
   }
 
   for (grep shift @$_, sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_->[0]; [$path, @$_]} @{$args{deps}}) {
@@ -257,7 +257,7 @@ sub sitemap {
     my ($filename, $dirname) = parse_filename $$_[0];
     if ($$_[0] =~ m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
       $title = $title{+($1 || "index")}{$lang}
-          . ucfirst File::Basename::basename($dirname);
+          . ucfirst basename($dirname);
     }
     $content .= "- [$title]($$_[0])\n";
   }
