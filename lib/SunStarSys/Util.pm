@@ -373,7 +373,10 @@ sub seed_deps {
   read_text_file "content$path", \ my %d;
   no strict 'refs';
 
-  push @{$$dependencies{$path}}, grep {s/^content// and $_ ne $path}
+  push @{$$dependencies{$path}}, grep {
+    read_text_file $_, \ my %data;
+    not $data{headers}{archive} and s/^content// and $_ ne $path
+  }
     map glob("content$_"), map index($_, "/") == 0  ? $_ : "'$dir'/$_",
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies}
         if exists $d{headers}{dependencies};

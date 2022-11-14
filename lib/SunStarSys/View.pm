@@ -69,11 +69,14 @@ sub single_narrative {
 
   # only include parallel deps (from globs in the Dependencies header)
   my $dir = dirname $path;
-  $args{deps} = [grep {$dir eq dirname $_->[0] and !$_->[1]{headers}{archive}} @{$args{deps}}];
+  $args{deps} = [grep {$dir eq dirname $_->[0]} @{$args{deps}}];
 
-  $args{content} = sort_tables($args{preprocess}
-                                   ? Template($args{content})->render(\%args)
-                                   : $args{content});
+  $args{content} = sort_tables($args{content});
+
+  if ($args{preprocess}) {
+    $args{content} = sort_tables(Template($args{content})->render(\%args)) while $args{content} =~ /\{%\s+ssi\s+\`[^\`]+\`\s+%\}/;
+    $args{content} = sort_tables(Template($args{content})->render(\%args));
+  }
   my ($filename, $directory, $ext) = parse_filename $file;
   my $archive = delete $args{headers}{archive};
   my $headers = Dump $args{headers};
@@ -212,7 +215,7 @@ sub fetch_deps {
   }
   no warnings 'uninitialized'; # peculiar: should only happen with quick_deps>2
   # transform second argument to fetch_deps() from a hashref to an arrayref
-  $_[1] = [sort {$b->[1]{mtime} <=> $a->[1]{mtime}} @d];
+  $_[1] = [sort {$b->[1]{mtime} <=> $a->[1]{mtime} or $a->[0] cmp $b->[0]} @d];
 
   return @new_sources;
 }
