@@ -69,7 +69,7 @@ sub single_narrative {
 
   # only include parallel deps (from globs in the Dependencies header)
   my $dir = dirname $path;
-  $args{deps} = [grep {$dir eq dirname $_->[0]} @{$args{deps}}];
+  $args{deps} = [grep {$dir eq dirname $_->[0] and !$_->[1]{headers}{archive}} @{$args{deps}}];
 
   $args{content} = sort_tables($args{preprocess}
                                    ? Template($args{content})->render(\%args)
