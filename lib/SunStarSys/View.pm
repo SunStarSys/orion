@@ -28,7 +28,7 @@ use File::Basename;
 use File::Path;
 
 push our @TEMPLATE_DIRS, "templates";
-our $VERSION = "2.03";
+our $VERSION = "3.00";
 
 # This is most widely used view.  It takes a 'template' argument and a 'path' argument.
 # Assuming the path ends in foo.mdtext, any files like foo.page/bar.mdtext will be parsed and
@@ -71,13 +71,17 @@ sub single_narrative {
   my $dir = dirname $path;
   $args{deps} = [grep {$dir eq dirname $_->[0]} @{$args{deps}}];
 
-  $args{content} = sort_tables($args{content});
-
   if ($args{preprocess}) {
-    $args{content} = sort_tables(Template($args{content})->render(\%args)) while $args{content} =~ /\{%\s+ssi\s+\`[^\`]+\`\s+%\}/;
+    $args{content} =~ s/(\{%\s+ssi\s+\`[^\`]+\`\s+%\})/Template($1)->render({})/ge;
     $args{content} = sort_tables(Template($args{content})->render(\%args));
   }
+  else {
+    $args{content} = sort_tables($args{content});
+  }
+
   my ($filename, $directory, $ext) = parse_filename $file;
+  s/^[^.]+// for my $lang = $ext;
+
   my $archive = delete $args{headers}{archive};
   my $headers = Dump $args{headers};
 
@@ -89,8 +93,9 @@ sub single_narrative {
     my ($mon, $year) = (gmtime $args{mtime})[4,5];
     $mon = sprintf "%02d", $mon + 1;
     $year += 1900;
+    $args{archive_path} = "$args{archive_root}/$year/$mon";
 
-    my $archive_dir = "content$args{archive_root}/$year/$mon";
+    my $archive_dir = "content$args{archive_path}";
     my $f = "$archive_dir/$filename.$ext";
     unless (-f $f) {
       mkpath $archive_dir;
@@ -127,6 +132,7 @@ EOT
     }
   }
 
+  $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
   $args{headers}{archive} = $archive if defined $archive;
   return Template($template)->render(\%args), html => \%args, @new_sources;
 }
