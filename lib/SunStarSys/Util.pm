@@ -333,7 +333,6 @@ my $dependencies;
 
 sub walk_content_tree (&) {
   my $wanted = shift;
-  no strict 'refs';
   $dependencies = eval $dep_string;
 
   if (eval '$path::use_dependency_cache' and -f "$ENV{TARGET_BASE}/.deps") {
@@ -361,7 +360,6 @@ sub walk_content_tree (&) {
 END {
   if ($write_deps and $dependencies) {
     open my $deps, ">", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
-    no strict 'refs';
     print $deps Dump $dependencies;
   }
 }
