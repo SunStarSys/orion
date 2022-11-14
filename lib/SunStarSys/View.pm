@@ -28,7 +28,7 @@ use File::Basename;
 use File::Path;
 
 push our @TEMPLATE_DIRS, "templates";
-our $VERSION = "2.02";
+our $VERSION = "2.03";
 
 # This is most widely used view.  It takes a 'template' argument and a 'path' argument.
 # Assuming the path ends in foo.mdtext, any files like foo.page/bar.mdtext will be parsed and
@@ -253,7 +253,7 @@ sub sitemap {
      . ucfirst basename($dirname);
   }
 
-  for (grep shift @$_, sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_->[0]; [$path, @$_]} @{$args{deps}}) {
+  for (grep !$_->[-1]{headers}{archive} && shift @$_, sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_->[0]; [$path, @$_]} @{$args{deps}}) {
     my $title = $$_[1]{headers}{title};
     my ($filename, $dirname) = parse_filename $$_[0];
     if ($$_[0] =~ m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {

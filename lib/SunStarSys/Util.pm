@@ -24,7 +24,7 @@ our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
 sub read_text_file {
     my ($file, $out, $content_lines) = @_;
-    $out->{mtime} = ref $file ? -1 : stat($file)->mtime;
+    $out->{mtime} = defined ? $_->mtime : -1 for stat $file;
     my $cache = $rtf_ring_hdr->{cache}{$file};
 
     if (defined $cache and $cache->{mtime} == $out->{mtime}) {
@@ -55,7 +55,7 @@ sub read_text_file {
       return $cache->{lines};
     }
 
-    $file =~ /(.*)/;
+    $file =~ /(.*)/; #detaint me
     open my $fh, "<:encoding(UTF-8)", $1 or die "Can't open file $file: $!\n";
 
     my $headers = 1;
@@ -373,10 +373,10 @@ sub seed_deps {
 
   push @{${'path::dependencies'}{$path}}, grep $_ ne $path,
     grep {
-      read_text_file $_, \ my %data;
-      not exists $data{headers}{archive} and s/^content//
+        read_text_file $_, \ my %data;
+        not exists $data{headers}{archive} and s/^content//
     }
-    map glob("content$_"), map index($_, "/") == 0  ? $_ : "$dir/$_",
+    map glob("content$_"), map index($_, "/") == 0  ? $_ : "'$dir'/$_",
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies}
         if exists $d{headers}{dependencies};
 
