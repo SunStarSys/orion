@@ -87,15 +87,12 @@ eval '$status[$SVN::Wc::Status::' . "$_]=qq/\u$_/"
 sub _status {
     my $client = shift->new;
     my ($filename, $depth) = (@_, wantarray ? $SVN::Depth::infinity : $SVN::Depth::empty);
-    my $prefix = $filename;
-    $prefix =~ s![^/]+$!!;
     normalize_svn_path $filename;
     my @rv;
     my $callback = sub {
         my $path = shift;
 	my _p_svn_wc_status2_t $status = shift;
-	#$path =~ s!^\Q$prefix\E!!
-	#    or $path = "./";
+        $path =~ s!^\Q$filename\E!!;
 	push @rv, [$path => $status[$_]] for $status->text_status;
 	return 0;
     };

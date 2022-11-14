@@ -171,13 +171,15 @@ sub fetch_deps {
   $quick //= 2;
   my @new_sources;
   no strict 'refs';
+  my $dependencies = eval '*path::dependencies{HASH}';
+  my $patterns = eval '*path::patterns{ARRAY}';
 
-  for (@{${'path::dependencies'}{$path}}) {
+  for (@{$$dependencies{$path}}) {
     my $file = $_;
     next if exists $data->{$file};
     my ($filename, $dirname, $extension) = parse_filename;
     s/^[^.]+// for my $lang = $extension;
-    for my $p (@{'path::patterns'}) {
+    for my $p (@$patterns) {
       my ($re, $method, $args) = @$p;
       next unless $file =~ $re;
       if ($args->{headers}) {

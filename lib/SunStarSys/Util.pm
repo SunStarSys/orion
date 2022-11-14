@@ -328,15 +328,19 @@ sub fixup_code {
 }
 
 my $write_deps = 0;
+my $dep_string = 'no strict "refs"; *path::dependencies{HASH}';
+my $dependencies;
 
 sub walk_content_tree (&) {
   my $wanted = shift;
   no strict 'refs';
+  $dependencies = eval $dep_string;
 
-  if (${'path::use_dependency_cache'} and -f "$ENV{TARGET_BASE}/.deps") {
+  if (eval '$path::use_dependency_cache' and -f "$ENV{TARGET_BASE}/.deps") {
     # use the cached .deps file if the incremental build system deems it appropriate
     open my $deps, "<", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
-    *{'path::dependencies'} = Load join "", <$deps>;
+    eval '*path::dependencies = Load join "", <$deps>';
+    $dependencies = eval $dep_string;
     return;
   }
 
@@ -355,10 +359,10 @@ sub walk_content_tree (&) {
 }
 
 END {
-  if ($write_deps) {
+  if ($write_deps and $dependencies) {
     open my $deps, ">", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
     no strict 'refs';
-    print $deps Dump *{'path::dependencies'}{HASH};
+    print $deps Dump $dependencies;
   }
 }
 
@@ -371,7 +375,7 @@ sub seed_deps {
   read_text_file "content$path", \ my %d;
   no strict 'refs';
 
-  push @{${'path::dependencies'}{$path}}, grep $_ ne $path,
+  push @{$$dependencies{$path}}, grep $_ ne $path,
     grep {
         read_text_file $_, \ my %data;
         not exists $data{headers}{archive} and s/^content//
@@ -386,7 +390,7 @@ sub seed_deps {
     if ($ssi or index($src, "./") == 0 or index($src, "../") == 0) {
       $src = "$dir/$src", $src = s(/[.]/)(/)g unless $ssi;
       1 while $src =~ s(/[^./][^/]+/[.]{2}/)(/);
-      push @{${'path::dependencies'}{$path}}, $src;
+      push @{$$dependencies{$path}}, $src;
     }
   }
 }

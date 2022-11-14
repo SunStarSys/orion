@@ -64,6 +64,9 @@ require view;
     $SunStarSys::Value::Offline = 1 if $offline;
 }
 
+my $pattern_string = 'no strict "refs"; *path::patterns{ARRAY}';
+my $patterns = eval $pattern_string;
+
 sub main :Sealed {
   my $saw_error = 0;
   $runners = $path::runners if defined $path::runners and $path::runners < $runners;
@@ -122,7 +125,7 @@ sub main :Sealed {
   if (@new_sources) {
     syswrite_all "New content dectected: $_\n" for @new_sources;
     syswrite_all "Rebuilding site...\n";
-    syswrite_all "[flush]\n" for $sockets->can_write(0);
+    syswrite_all $_, "[flush]\n" for $sockets->can_write(0);
     @new_sources = ();
     @dirqueue = $dirq // ("cgi-bin", "content");
     goto LOOP;
@@ -184,10 +187,7 @@ sub process_file :Sealed {
     my $path = $file;
     $path =~ s!^content!!;
 
-    no warnings 'once';
-    no strict 'refs';
-
-    for my $p (@{'path::patterns'}) {
+    for my $p (@$patterns) {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
         if ($args->{headers}) {
@@ -245,7 +245,7 @@ sub fork_runner :Sealed {
         while (($bytes = sysread $p, $_, 4096, length) > 0) {
             last if substr($_, -1, 1) eq "\n";
           }
-        $_ eq "[flush]" ? ( SunStarSys::View::flush_memoize_cache, unload_package("path"), require path ) : process_dir($_, $parent) for split /\n/;
+        $_ eq "[flush]" ? ( SunStarSys::View::flush_memoize_cache, unload_package("path"), require path, ($patterns = eval $pattern_string) ) : process_dir($_, $parent) for split /\n/;
         last if $bytes <= 0;
 
         # notify parent we are waiting for more input
