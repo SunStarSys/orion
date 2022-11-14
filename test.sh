@@ -28,6 +28,6 @@ else
   svn co "$SVN_URL"/trunk
   sleep 3
 fi
-time perl build_site.pl --source-base=trunk --target-base=www
+time timeout 60 perl build_site.pl --source-base=trunk --target-base=www
 pkill -U $USER -f markdownd.js
 wait
