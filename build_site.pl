@@ -245,7 +245,19 @@ sub fork_runner :Sealed {
         while (($bytes = sysread $p, $_, 4096, length) > 0) {
             last if substr($_, -1, 1) eq "\n";
           }
-        $_ eq "[flush]" ? ( SunStarSys::View::flush_memoize_cache, unload_package("path"), require path, ($patterns = eval $pattern_string) ) : process_dir($_, $parent) for split /\n/;
+        for (split /\n/) {
+          if ($_ eq "[flush]") {
+            SunStarSys::View::flush_memoize_cache;
+            my $p = "path";
+            unload_package($p);
+            require "$p.pm";
+            $patterns = eval $pattern_string;
+            warn "ZOMG\n" unless @$patterns;
+          }
+          else {
+            process_dir($_, $parent);
+          }
+        }
         last if $bytes <= 0;
 
         # notify parent we are waiting for more input

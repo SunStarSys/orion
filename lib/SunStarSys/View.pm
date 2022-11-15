@@ -109,6 +109,15 @@ $headers
 EOT
       push @new_sources, $f;
     }
+    for my $f (grep {not -f} "$archive_dir/index.html$lang", dirname($archive_dir)."/index.html$lang") {
+      open my $fh, ">:encoding(UTF-8)", $f
+        or die "Can't open archive to $f: $!\n";
+      my $type = $f eq "$archive_dir/index.html$lang" ? "year" : "month";
+      print $fh <<EOT;
+{% include "$type.html" %}
+EOT
+      push @new_sources, $f;
+    }
   }
 
   if (exists $args{category_root}
@@ -119,16 +128,26 @@ EOT
     my $category_root = "content$args{category_root}";
 
     for my $cat (@{$args{headers}{categories}}) {
-      next if -f (my $f = "$category_root/$cat/$filename.$ext");
-      mkpath "$category_root/$cat";
-      open my $fh, ">:encoding(UTF-8)", $f
-        or die "Can't categorize $path to $f: $!\n";
-      print $fh <<EOT;
+      unless (-f (my $f = "$category_root/$cat/$filename.$ext")) {
+        mkpath "$category_root/$cat";
+        open my $fh, ">:encoding(UTF-8)", $f
+          or die "Can't categorize $path to $f: $!\n";
+        print $fh <<EOT;
 $headers
 ---
 {% ssi \`$path\` %}
 EOT
-      push @new_sources, $f;
+        push @new_sources, $f;
+      }
+
+      for my $f (grep {not -f} "$category_root/$cat/index.html$lang") {
+        open my $fh, ">:encoding(UTF-8)", $f
+          or die "Can't categorize $f: $!\n";
+        print $fh <<EOT;
+{% include "category.html" %}
+EOT
+        push @new_sources, $f;
+      }
     }
   }
 
@@ -249,6 +268,13 @@ my %title = (
   }
 );
 
+my %month = (
+  en => [qw/0 January February March April May June July August September October November December/],
+  es => [qw/0 enero febrero marzo abril mayo junio julio agostp  septiembre octubre noviembre diciembre/],
+  de => [qw/0 Januar Februrar März April Mai Juni Juli August September Oktober November Dezember/],
+  fr => [qw/0 janvier février mars avril mai juin juillet août septembre octobre novembre décembre/]
+);
+
 sub sitemap {
   my %args = @_;
   my $template = "content$args{path}";
@@ -261,7 +287,8 @@ sub sitemap {
   s/^[^.]+\.// for my $lang = $extension;
   if ($args{path} =~ m!/(index|sitemap)\b[^/]*$!) {
     $args{headers}{title} //= $title{$1}{$lang}
-     . ucfirst basename($dirname);
+      . ($dirname =~ m#/20\d{2}/(\d{2})/$#
+                 ? $month{$lang}[$1] : ucfirst basename $dirname);
   }
 
   for (grep !$_->[-1]{headers}{archive} && shift @$_, sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_->[0]; [$path, @$_]} @{$args{deps}}) {
@@ -269,7 +296,8 @@ sub sitemap {
     my ($filename, $dirname) = parse_filename $$_[0];
     if ($$_[0] =~ m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
       $title = $title{+($1 || "index")}{$lang}
-          . ucfirst basename($dirname);
+      . ($dirname =~ m#/20\d{2}/(\d{2})/$#
+                 ? $month{$lang}[$1] : ucfirst basename $dirname);
     }
     $content .= "- [$title]($$_[0])\n";
   }
