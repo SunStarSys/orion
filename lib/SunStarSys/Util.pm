@@ -207,12 +207,11 @@ sub obliterate_package {
 }
 
 sub unload_package {
-    for my $package (@_) {
-        obliterate_package $package;
-        my $modpath = $package;
-        s!::!/!g and $_ .= ".pm" for $modpath;
-        delete $INC{$modpath};
-    }
+  my $package = shift;
+  obliterate_package $package;
+  my $modpath = $package;
+  s!::!/!g and $_ .= ".pm" for $modpath;
+  return delete $INC{$modpath};
 }
 
 sub purge_from_inc {
