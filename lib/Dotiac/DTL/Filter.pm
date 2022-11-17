@@ -1149,7 +1149,8 @@ sub teaser {
 sub dirname {
   require File::Basename;
   my $value = shift;
-  return $value->set(File::Basename::dirname $value->repr);
+  my $dir = File::Basename::dirname $value->repr;
+  return $value->set($dir eq "." ? "" : $dir);
 }
 
 sub vcs_date {
