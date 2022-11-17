@@ -1140,13 +1140,23 @@ sub append {
 sub teaser {
   my $value=shift;
   $value->safe;
-  $value->repr =~ /\Q<!-- #teaser -->\E(.*?)\Q<!-- #teaser -->\E/s;
+  my $content = $value->repr;
+  $content =~ s/({%\s+ssi\s+\`[^\`]+\`\s+%})/Dotiac::DTL::Template($1)->render({})/ge;
+  $content =~ /\Q<!-- #teaser -->\E(.*?)\Q<!-- #teaser -->\E/s;
   return $value->set(ucfirst $1);
+}
+
+sub dirname {
+  require File::Basename;
+  my $value = shift;
+  return $value->set(File::Basename::dirname $value->repr);
 }
 
 sub vcs_date {
   my $value = shift;
-  $value->repr =~ /\$Date:(?:[^(]+?)\(([^)]+)\)\s+\$/;
+  my $content = $value->repr;
+  $content =~ s/({%\s+ssi\s+\`[^\`]+\`\s+%})/Dotiac::DTL::Template($1)->render({})/ge;
+  $content =~ /\$Date:(?:[^(]+?)\(([^)]+)\)\s+\$/;
   return $value->set($1);
 }
 
