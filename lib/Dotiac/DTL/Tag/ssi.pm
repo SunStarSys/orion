@@ -41,6 +41,7 @@ sub new {
                   require File::Basename;
                   my $path = substr $name, 1, -1;
                   my $dir = File::Basename::dirname $path;
+                  # transform relative urls to absolute form
                   read_text_file "content" . $path, \ my %data;
                   $data{content) =~ s!(src|href)=(['"])((?!http|/).*?)\2!$1=$2$dir/$3$2!g;
                   $data{content} =~ s!(\[[^\]]*\])\(((?!http|/)[^\)]+)\)!$1($dir/$2)!g;
