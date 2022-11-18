@@ -1141,10 +1141,18 @@ sub teaser {
   my $value=shift;
   $value->safe;
   my $content = $value->repr;
-  1 while $content =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Dotiac::DTL::Template($1)->render({})/ge;
   $content =~ /\Q<!-- #teaser -->\E(.*?)\Q<!-- #teaser -->\E/s;
   return $value->set(ucfirst $1);
 }
+
+sub ssi {
+  my $value=shift;
+  $value->safe;
+  my $content = $value->repr;
+  1 while $content =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Dotiac::DTL::Template($1)->render({})/ge;
+  return $value->set($content);
+}
+
 
 sub dirname {
   require File::Basename;
@@ -1156,7 +1164,6 @@ sub dirname {
 sub vcs_date {
   my $value = shift;
   my $content = $value->repr;
-  1 while $content =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Dotiac::DTL::Template($1)->render({})/ge;
   $content =~ /\$Date:(?:[^(]+?)\(([^)]+)\)\s+\$/;
   return $value->set($1);
 }
