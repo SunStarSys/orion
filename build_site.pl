@@ -248,7 +248,7 @@ sub fork_runner :Sealed {
         for (split /\n/) {
           if ($_ eq "[flush]") {
             SunStarSys::View::flush_memoize_cache;
-            my $path = unload_package("path");
+            my $path = unload_package("path") // "path.pm";
             require $path;
             $patterns = eval $pattern_string;
             warn "ZOMG\n" unless @$patterns;
