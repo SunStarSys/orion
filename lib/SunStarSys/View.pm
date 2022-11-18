@@ -333,6 +333,19 @@ sub next_view {
   return ref $args->{view} && @{$args->{view}} ? shift @{$args->{view}} : delete $args->{view};
 }
 
+sub ssi {
+  my %args = @_;
+  my $file = "content/$args{path}";
+  read_text_file $file, \%args unless defined $args{headers} and defined $args{content};
+
+  1 while $args{content} =~ s/(\{%\s+ssi\s+\`[^\`]+\`\s+%\})/Template($1)->render({})/ge;
+  $args{content} = sort_tables(Template($args{content})->render(\%args));
+  my $view = next_view \%args;
+  return view->can($view)->(%args);
+}
+
+
+
 # wrapper view for creating final content (eg sitemaps) that doesn't require being online
 # to service relevant content generation in dependencies, etc.
 
@@ -397,6 +410,8 @@ sub snippet {
   my $file = "content$args{path}";
   read_text_file $file, \%args unless exists $args{headers} and exists $args{content};
   my $key = "snippetA";
+
+
   $args{content} =~ s{\[snippet:([^\]]+)\]} # format is [snippet:arg1=val1:arg2=val2:...]
                      {
                          my $argspec = $1;
