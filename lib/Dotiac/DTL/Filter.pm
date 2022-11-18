@@ -1141,7 +1141,7 @@ sub teaser {
   my $value=shift;
   $value->safe;
   my $content = $value->repr;
-  $content =~ s/({%\s+ssi\s+\`[^\`]+\`\s+%})/Dotiac::DTL::Template($1)->render({})/ge;
+  1 while $content =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Dotiac::DTL::Template($1)->render({})/ge;
   $content =~ /\Q<!-- #teaser -->\E(.*?)\Q<!-- #teaser -->\E/s;
   return $value->set(ucfirst $1);
 }
@@ -1156,7 +1156,7 @@ sub dirname {
 sub vcs_date {
   my $value = shift;
   my $content = $value->repr;
-  $content =~ s/({%\s+ssi\s+\`[^\`]+\`\s+%})/Dotiac::DTL::Template($1)->render({})/ge;
+  1 while $content =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Dotiac::DTL::Template($1)->render({})/ge;
   $content =~ /\$Date:(?:[^(]+?)\(([^)]+)\)\s+\$/;
   return $value->set($1);
 }

@@ -4,11 +4,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#Parser.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#Parser.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -46,6 +46,7 @@ our $VERSION = 0.8;
 
 use strict;
 use warnings;
+no warnings 'recursion';
 
 sub new {
 	my $class=shift;
@@ -89,7 +90,7 @@ sub unparsed {
 				$text .= "{\%$c\%}";
 				$text .= $self->unparsed($template,$pos,@_) if $found and grep {$_ eq $tagname} @starttag;
 				$text .="{\%$$found\%}";
-				$$found="";				
+				$$found="";
 			}
 		}
 		else {
@@ -139,7 +140,7 @@ sub parse {
 					$r->next($self->parse($template,$pos,@_));
 				}
 				return $r;
-				
+
 			}
 			elsif ($n eq "{") {
 				my $pre = substr $$template,$start,$$pos-$start-1;
