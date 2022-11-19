@@ -1153,7 +1153,6 @@ sub ssi {
   return $value->set($content);
 }
 
-
 sub dirname {
   require File::Basename;
   my $value = shift;

@@ -19,6 +19,7 @@ package Dotiac::DTL::Tag;
 use strict;
 use warnings;
 our $VERSION = 0.8;
+no warnings 'recursion';
 
 sub new {
 	my $class=shift;

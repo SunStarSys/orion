@@ -3,11 +3,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#ifequal.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#ifequal.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -17,6 +17,7 @@ package Dotiac::DTL::Tag::ifequal;
 use base qw/Dotiac::DTL::Tag/;
 use strict;
 use warnings;
+no warnings 'recursion';
 
 our $VERSION = 0.8;
 
@@ -57,7 +58,7 @@ sub string {
 		return $self->{p}.$self->{true}->string(@_).$self->{n}->string(@_);
 	}
 	return $self->{p}.($self->{false}?$self->{false}->string(@_):"").$self->{n}->string(@_);
-	
+
 }
 sub perl {
 	my $self=shift;
@@ -151,7 +152,7 @@ Dotiac::DTL::Tag::ifequal - The {% ifequal VARIABLE1 VARIABLE2 %} tag
 
 =head1 DESCRIPTION
 
-Compoares two variables, and if they are equal, the content is rendered. 
+Compoares two variables, and if they are equal, the content is rendered.
 
 If they are not equal and an optional {% else %} block is found, that block is rendered.
 
@@ -194,4 +195,3 @@ Marc-Sebastian Lucksch
 perl@marc-s.de
 
 =cut
-
