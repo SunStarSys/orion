@@ -185,32 +185,31 @@ sub obliterate_package {
 
     no strict 'refs';
 
-    my($stem, $leaf) = $pkg =~ m/(.*::)(\w+::)$/;
+    my($stem, $leaf) = $pkg =~ m/^(.*::)(\w+::)$/ or die "Bad fqpn '$pkg'.\n";;
     my $stem_symtab = *{$stem}{HASH};
     return unless defined $stem_symtab and exists $stem_symtab->{$leaf};
 
     # free all the symbols and types in the package
     my $leaf_symtab = *{$stem_symtab->{$leaf}}{HASH};
     foreach my $name (keys %$leaf_symtab) {
-        my $fullname = $pkg . $name;
-        undef $$fullname;
-        undef @$fullname;
-        undef %$fullname;
-        undef &$fullname unless $pkg eq "main::path::";
-        undef *$fullname;
+      my $fullname = $pkg . $name;
+      undef $$fullname;
+      undef @$fullname;
+      undef %$fullname;
+      undef &$fullname unless $pkg eq "main::path::";
+      undef *$fullname;
     }
-
     # delete the symbol table
 
     %$leaf_symtab = ();
     delete $stem_symtab->{$leaf};
-}
+  }
 
 sub unload_package {
   my $package = shift;
   obliterate_package $package;
   my $modpath = $package;
-  s!::!/!g and $_ .= ".pm" for $modpath;
+  s!::!/!g, $_ .= ".pm" for $modpath;
   return delete $INC{$modpath};
 }
 

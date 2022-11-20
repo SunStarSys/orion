@@ -72,7 +72,6 @@ sub single_narrative {
   $args{deps} = [grep {$dir eq dirname $_->[0]} @{$args{deps}}];
 
   if ($args{preprocess}) {
-    $args{content} =~ s/(\{%\s+ssi\s+\`[^\`]+\`\s+%\})/Template($1)->render({})/ge;
     $args{content} = sort_tables(Template($args{content})->render(\%args));
   }
   else {
@@ -84,6 +83,8 @@ sub single_narrative {
 
   my $archive = delete $args{headers}{archive};
   my $headers = Dump $args{headers};
+  my $categories = delete $args{headers}{categories};
+  my $archive_headers = Dump $args{headers};
 
   if (exists $args{archive_root}
       and exists $args{headers}
@@ -103,7 +104,7 @@ sub single_narrative {
       open my $fh, ">:encoding(UTF-8)", $f
         or die "Can't archive $path to $f: $!\n";
       print $fh <<EOT;
-$headers
+$archive_headers
 ---
 {% ssi \`$path\` %}
 EOT
@@ -120,14 +121,15 @@ EOT
     }
   }
 
+  $categories = [split /[;,]\s+/, $categories] if defined($categories) and not ref $categories;
+
   if (exists $args{category_root}
       and exists $args{headers}
-      and exists $args{headers}{categories}) {
+      and defined $categories) {
 
-    $args{headers}{categories} = [split /[;,]\s+/, $args{headers}{categories}] unless ref $args{headers}{categories};
     my $category_root = "content$args{category_root}";
 
-    for my $cat (@{$args{headers}{categories}}) {
+    for my $cat (@{$categories}) {
       unless (-f (my $f = "$category_root/$cat/$filename.$ext")) {
         mkpath "$category_root/$cat";
         open my $fh, ">:encoding(UTF-8)", $f
@@ -153,6 +155,7 @@ EOT
 
   $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
   $args{headers}{archive} = $archive if defined $archive;
+  $args{headers}{categories} = $categories if defined $categories;
   return Template($template)->render(\%args), html => \%args, @new_sources;
 }
 
@@ -319,6 +322,7 @@ sub sitemap {
          "$prefix$link$subpaths"
        }xme;
   }
+
   $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
 
   # the extra (3rd) return value is for sitemap support
@@ -338,13 +342,10 @@ sub ssi {
   my $file = "content/$args{path}";
   read_text_file $file, \%args unless defined $args{headers} and defined $args{content};
 
-  1 while $args{content} =~ s/(\{%\s+ssi\s+\`[^\`]+\`\s+%\})/Template($1)->render({})/ge;
-  $args{content} = sort_tables(Template($args{content})->render(\%args));
+  1 while $args{content} =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Template($1)->render({})/ge;
   my $view = next_view \%args;
   return view->can($view)->(%args);
 }
-
-
 
 # wrapper view for creating final content (eg sitemaps) that doesn't require being online
 # to service relevant content generation in dependencies, etc.
@@ -410,7 +411,6 @@ sub snippet {
   my $file = "content$args{path}";
   read_text_file $file, \%args unless exists $args{headers} and exists $args{content};
   my $key = "snippetA";
-
 
   $args{content} =~ s{\[snippet:([^\]]+)\]} # format is [snippet:arg1=val1:arg2=val2:...]
                      {
