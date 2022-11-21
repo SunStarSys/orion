@@ -29,5 +29,7 @@ else
   sleep 3
 fi
 time timeout 60 perl build_site.pl --source-base=trunk --target-base=www
+rv=$?
 pkill -U $USER -f markdownd.js
 wait
+exit $rv

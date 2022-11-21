@@ -25,8 +25,8 @@ our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;
-  return unless -T $file;
   $out->{mtime} = defined ? $_->mtime : -1 for stat $file;
+  return unless -T _ or ref $file;
   my $cache = $rtf_ring_hdr->{cache}{$file};
 
   if (defined $cache and $cache->{mtime} == $out->{mtime}) {
