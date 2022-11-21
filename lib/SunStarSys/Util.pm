@@ -12,8 +12,9 @@ use warnings;
 
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename
-                    walk_content_tree seed_deps Load Dump/;
-our $VERSION = "2.1";
+                    walk_content_tree archived seed_deps Load Dump/;
+
+our $VERSION = "3.0";
 
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
@@ -23,138 +24,139 @@ my $rtf_ring_hdr = { next => undef, prev => undef, cache => {}, count => 0 };
 our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
 sub read_text_file {
-    my ($file, $out, $content_lines) = @_;
-    $out->{mtime} = defined ? $_->mtime : -1 for stat $file;
-    my $cache = $rtf_ring_hdr->{cache}{$file};
+  my ($file, $out, $content_lines) = @_;
+  return unless -T $file;
+  $out->{mtime} = defined ? $_->mtime : -1 for stat $file;
+  my $cache = $rtf_ring_hdr->{cache}{$file};
 
-    if (defined $cache and $cache->{mtime} == $out->{mtime}) {
+  if (defined $cache and $cache->{mtime} == $out->{mtime}) {
 
-      @{$out->{headers}}{keys %{$cache->{headers}}} = values %{$cache->{headers}};
+    @{$out->{headers}}{keys %{$cache->{headers}}} = values %{$cache->{headers}};
 
-      if (defined $content_lines and $content_lines < $cache->{lines}) {
-        $out->{content} = join "\n", (split "\n", $cache->{content})
-          [0..($content_lines-1)], "" if $content_lines > 0;
-        $out->{content} = "" if $content_lines == 0;
-      }
-      else {
-        $out->{content} = $cache->{content};
-      }
-
-      if ($rtf_ring_hdr->{next} != $cache->{link}) {
-        # MRU to front
-
-        my $link = $cache->{link};
-        $link->{prev}{next} = $link->{next};
-        $link->{next}{prev} = $link->{prev} if $link->{next};
-        $link->{next} = $rtf_ring_hdr->{next};
-        $rtf_ring_hdr->{next} = $link;
-        $link->{prev} = undef;
-        $link->{next}{prev} = $link;
-      }
-
-      return $cache->{lines};
+    if (defined $content_lines and $content_lines < $cache->{lines}) {
+      $out->{content} = join "\n", (split "\n", $cache->{content})
+        [0..($content_lines-1)], "" if $content_lines > 0;
+      $out->{content} = "" if $content_lines == 0;
+    }
+    else {
+      $out->{content} = $cache->{content};
     }
 
-    $file =~ /(.*)/; #detaint me
-    open my $fh, "<:encoding(UTF-8)", $1 or die "Can't open file $file: $!\n";
+    if ($rtf_ring_hdr->{next} != $cache->{link}) {
+      # MRU to front
 
-    my $headers = 1;
-    local $_;
-    my $content = "";
-    my $BOM = "\xEF\xBB\xBF";
-    my $hdr = {};
+      my $link = $cache->{link};
+      $link->{prev}{next} = $link->{next};
+      $link->{next}{prev} = $link->{prev} if $link->{next};
+      $link->{next} = $rtf_ring_hdr->{next};
+      $rtf_ring_hdr->{next} = $link;
+      $link->{prev} = undef;
+      $link->{next}{prev} = $link;
+    }
+
+    return $cache->{lines};
+  }
+
+  $file =~ /(.*)/; #detaint me
+  open my $fh, "<:encoding(UTF-8)", $1 or die "Can't open file $file: $!\n";
+
+  my $headers = 1;
+  local $_;
+  my $content = "";
+  my $BOM = "\xEF\xBB\xBF";
+  my $hdr = {};
 
  LOOP:
-    while (<$fh>) {
-        if ($headers) {
-            if ($. == 1) {
-                s/^$BOM//;
-                if (/^---\s+$/) {
-                    my $yaml = "";
-                    while (<$fh>) {
-                        last if /^---\s+$/;
-                        $yaml .= $_;
-                    }
-                    $hdr = Load($yaml);
-                    $headers = 0, next LOOP;
-                }
-            }
-            $headers = 0, next if /^\r?\n/;
-            my ($name, $val) = split /:\s+/, $_, 2;
-            $headers = 0, redo LOOP
-                unless $name =~ /^[\w-]+$/ and defined $val;
-            $name =~ tr/A-Z-/a-z_/;
-            chomp $val;
-            while (<$fh>) {
-                $$hdr{$name} = $val, redo LOOP
-                    unless s/^\s+(?=\S)/ /;
-                chomp;
-                $val .= $_;
-            }
-            $$hdr{$name} = $val;
+  while (<$fh>) {
+    if ($headers) {
+      if ($. == 1) {
+        s/^$BOM//;
+        if (/^---\s+$/) {
+          my $yaml = "";
+          while (<$fh>) {
+            last if /^---\s+$/;
+            $yaml .= $_;
+          }
+          $hdr = Load($yaml);
+          $headers = 0, next LOOP;
         }
-        last LOOP if defined $content_lines and $content_lines-- == 0;
-        no warnings 'uninitialized';
-        $content .= $_;
+      }
+      $headers = 0, next if /^\r?\n/;
+      my ($name, $val) = split /:\s+/, $_, 2;
+      $headers = 0, redo LOOP
+        unless $name =~ /^[\w-]+$/ and defined $val;
+      $name =~ tr/A-Z-/a-z_/;
+      chomp $val;
+      while (<$fh>) {
+        $$hdr{$name} = $val, redo LOOP
+          unless s/^\s+(?=\S)/ /;
+        chomp;
+        $val .= $_;
+      }
+      $$hdr{$name} = $val;
     }
-    if (exists $hdr->{atom}) {
-        for ($hdr->{atom}) {
-            if (/^(\S+)\s*(?:"([^"]+)")?\s*$/)  {
-                $_ = { url => $1, title => $2 || "" };
-            }
-        }
-    }
-
-    @{$out->{headers}}{keys %$hdr} = values %$hdr;
-    $out->{content} = $content;
-    return $. unless eof $fh and $out->{mtime} > 0;
-
+    last LOOP if defined $content_lines and $content_lines-- == 0;
     no warnings 'uninitialized';
     $content .= $_;
-
-    if (defined $cache) {
-      # file modified on disk; clear cache and link
-
-      my $rm_me = $cache->{link};
-      for (qw/prev next/) {
-        $rtf_ring_hdr->{$_} = $rm_me->{$_} if $rtf_ring_hdr->{$_} == $rm_me;
+  }
+  if (exists $hdr->{atom}) {
+    for ($hdr->{atom}) {
+      if (/^(\S+)\s*(?:"([^"]+)")?\s*$/)  {
+        $_ = { url => $1, title => $2 || "" };
       }
-      $rm_me->{prev}{next} = $rm_me->{next} if $rm_me->{prev};
-      $rm_me->{next}{prev} = $rm_me->{prev} if $rm_me->{next};
-      undef %$cache;
-      undef %$rm_me;
-      $rtf_ring_hdr->{count}--;
     }
+  }
 
-    # add link to front
+  @{$out->{headers}}{keys %$hdr} = values %$hdr;
+  $out->{content} = $content;
+  return $. unless eof $fh and $out->{mtime} > 0;
 
-    my $link = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
-    $rtf_ring_hdr->{next} = $link;
-    $rtf_ring_hdr->{prev} //= $link;
-    $link->{next}{prev} = $link if $link->{next};
-    $rtf_ring_hdr->{count}++;
+  no warnings 'uninitialized';
+  $content .= $_;
 
-    while ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
-      # drop LRU
+  if (defined $cache) {
+    # file modified on disk; clear cache and link
 
-      my $rm_me = $rtf_ring_hdr->{prev};
-      $rtf_ring_hdr->{prev} = $rm_me->{prev};
-      $rtf_ring_hdr->{next} = undef unless $rm_me->{prev};
-      $rm_me->{prev}{next} = undef if $rm_me->{prev};
-      delete $rtf_ring_hdr->{cache}{$rm_me->{file}};
-      undef %$rm_me;
-      $rtf_ring_hdr->{count}--;
+    my $rm_me = $cache->{link};
+    for (qw/prev next/) {
+      $rtf_ring_hdr->{$_} = $rm_me->{$_} if $rtf_ring_hdr->{$_} == $rm_me;
     }
+    $rm_me->{prev}{next} = $rm_me->{next} if $rm_me->{prev};
+    $rm_me->{next}{prev} = $rm_me->{prev} if $rm_me->{next};
+    undef %$cache;
+    undef %$rm_me;
+    $rtf_ring_hdr->{count}--;
+  }
 
-    $rtf_ring_hdr->{cache}{$file} = {
-      content => $content,
-      headers => $hdr,
-      lines   => $.,
-      link    => $link,
-      mtime   => $out->{mtime},
-    };
+  # add link to front
 
-    return $.;
+  my $link = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
+  $rtf_ring_hdr->{next} = $link;
+  $rtf_ring_hdr->{prev} //= $link;
+  $link->{next}{prev} = $link if $link->{next};
+  $rtf_ring_hdr->{count}++;
+
+  while ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
+    # drop LRU
+
+    my $rm_me = $rtf_ring_hdr->{prev};
+    $rtf_ring_hdr->{prev} = $rm_me->{prev};
+    $rtf_ring_hdr->{next} = undef unless $rm_me->{prev};
+    $rm_me->{prev}{next} = undef if $rm_me->{prev};
+    delete $rtf_ring_hdr->{cache}{$rm_me->{file}};
+    undef %$rm_me;
+    $rtf_ring_hdr->{count}--;
+  }
+
+  $rtf_ring_hdr->{cache}{$file} = {
+    content => $content,
+    headers => $hdr,
+    lines   => $.,
+    link    => $link,
+    mtime   => $out->{mtime},
+  };
+
+  return $.;
 }
 
 sub copy_if_newer {
@@ -362,18 +364,26 @@ END {
   }
 }
 
+sub archived {
+  my ($path) = (@_, $_);
+  my $file = "content/$path";
+  read_text_file $file, \ my %data;
+  return $data{headers}{archive};
+}
+
 # invoke this inside a walk_content_tree {} block:
 # parses deps from file $_'s content and headers
+
 
 sub seed_deps {
   my ($path) = (@_, $_);
   my $dir = dirname($path);
   read_text_file "content$path", \ my %d;
   no strict 'refs';
+  return if archived $path;
 
   push @{$$dependencies{$path}}, grep {
-    read_text_file $_, \ my %data;
-    not $data{headers}{archive} and s/^content// and $_ ne $path
+    s/^content// and $_ ne $path and not archived
   }
     map glob("content$_"), map index($_, "/") == 0  ? $_ : "'$dir'/$_",
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies}
@@ -385,7 +395,7 @@ sub seed_deps {
     if ($ssi or index($src, "./") == 0 or index($src, "../") == 0) {
       $src = "$dir/$src", $src = s(/[.]/)(/)g unless $ssi;
       1 while $src =~ s(/[^./][^/]+/[.]{2}/)(/);
-      push @{$$dependencies{$path}}, $src;
+      push @{$$dependencies{$path}}, $src unless archived $src;
     }
   }
 }

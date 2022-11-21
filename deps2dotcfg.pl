@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # requires a www/.deps file, a and graphviz install for the `dot` shell command
-# yields a deps.gv config file, and a few per-language deps.svg.gz.* files.
+# yields per-lang deps.gv.* config files, and per-language deps.svg.gz.* files.
 use utf8;
 use strict;
 use warnings;
