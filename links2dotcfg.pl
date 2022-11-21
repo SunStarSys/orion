@@ -27,7 +27,7 @@ for my $idx (0..3) {
     read_text_file "www/content$node", \ my %data;
     $data{content} //= "";
     while ($data{content} =~ /
-                         (href|src|action)=(['"])
+                         <[^>]+(href|src|action)=(['"])
                          ( (?!https?:|mailto:)[^'"?#]*? ) ([#?][^'"#?]+)?
                          \2/gx) {
       my $url = $3;
