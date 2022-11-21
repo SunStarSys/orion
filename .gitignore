@@ -2,3 +2,5 @@ trunk
 www
 package-lock.json
 node_modules/
+deps.*
+links.*
