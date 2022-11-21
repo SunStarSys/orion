@@ -466,20 +466,20 @@ sub trim_local_links {
   read_text_file "content$args{path}", \%args unless exists $args{content};
 
   no warnings 'uninitialized';
-  $args{content} =~ s/                 # trim markdown links
+  $args{content} =~ s(                 # trim markdown links
                          \[
                          ( [^\]]+ )
                          \]
                          \(
-                         ( (?!:http)[^\)#?]*? ) (?:\.\w+|\/) ([#?][^\)#?]+)?
+                         ( (?!https?://|mailto://|\{)[^\)#?]*? ) (?:\.\w+|\/) ([#?][^\)#?]+)?
                          \)
-                   /[$1]($2$3)/gx;
+                   )([$1]($2$3))gx;
 
-  $args{content} =~ s/                 # trim html links
+  $args{content} =~ s(                 # trim html links
                          (href|src)=(['"])
-                         ( (?!:http)[^'"?#]*? ) (?:\.\w+|\/) ([#?][^'"#?]+)?
-                         \1
-                     /$1=$2$3$4$2/gx;
+                         ( (?!https?://|mailto://|\{)[^'"?#]*? ) (?:\.\w+|\/) ([#?][^'"#?]+)?
+                         \2
+                     )($1=$2$3$4$2)gx;
 
   return view->can($view)->(%args);
 }
@@ -490,30 +490,30 @@ sub normalize_links {
   read_text_file "content$args{path}", \%args unless exists $args{content};
 
   no warnings 'uninitialized';
-  $args{content} =~ s/                 # trim markdown links
+  $args{content} =~ s{                 # trim markdown links
                          \[
                          ( [^\]]+ )
                          \]
                          \(
-                         ( (?!:http)[^\)#?]*? ) ([#?][^\)#?]+)?
+                         ( (?!https?://|mailto://|\{)[^\)#?]*? ) ([#?][^\)#?]+)?
                          \)
-                     /
+                     }{
                        my $url = $2;
                        $url =~ s!/\./!/!g;
                        1 while $url =~ s#/[^/]+/\.\./#/#;
                        "[$1]($url$3)"
-                     /gex;
+                     }gex;
 
-  $args{content} =~ s/                 # trim html links
+  $args{content} =~ s{                 # trim html links
                          (href|src)=(['"])
-                         ( (?!:http)[^'"?#]*? ) (?:\.\w+|\/) ([#?][^'"#?]+)?
-                         \1
-                     /
-                      my $url = $3;
+                         ( (?!https?://|mailto://|\{)[^'"?#]*? ) ([#?][^'"#?]+)?
+                         \2
+                     }{
+                       my $url = $3;
                        $url =~ s!/\./!/!g;
                        1 while $url =~ s#/[^/]+/\.\./#/#;
                        "$1=$2$url$4$2"
-                     /gex;
+                     }gex;
   return view->can($view)->(%args);
 }
 
