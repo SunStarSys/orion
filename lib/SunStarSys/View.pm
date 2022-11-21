@@ -476,11 +476,44 @@ sub trim_local_links {
                    /[$1]($2$3)/gx;
 
   $args{content} =~ s/                 # trim html links
-                         href=(['"])
+                         (href|src)=(['"])
                          ( (?!:http)[^'"?#]*? ) (?:\.\w+|\/) ([#?][^'"#?]+)?
                          \1
-                     /href=$1$2$3$1/gx;
+                     /$1=$2$3$4$2/gx;
 
+  return view->can($view)->(%args);
+}
+
+sub normalize_links {
+  my %args = @_;
+  my $view = next_view \%args;
+  read_text_file "content$args{path}", \%args unless exists $args{content};
+
+  no warnings 'uninitialized';
+  $args{content} =~ s/                 # trim markdown links
+                         \[
+                         ( [^\]]+ )
+                         \]
+                         \(
+                         ( (?!:http)[^\)#?]*? ) ([#?][^\)#?]+)?
+                         \)
+                     /
+                       my $url = $2;
+                       $url =~ s!/\./!/!g;
+                       1 while $url =~ s#/[^/]+/\.\./#/#;
+                       "[$1]($url$3)"
+                     /gex;
+
+  $args{content} =~ s/                 # trim html links
+                         (href|src)=(['"])
+                         ( (?!:http)[^'"?#]*? ) (?:\.\w+|\/) ([#?][^'"#?]+)?
+                         \1
+                     /
+                      my $url = $3;
+                       $url =~ s!/\./!/!g;
+                       1 while $url =~ s#/[^/]+/\.\./#/#;
+                       "$1=$2$url$4$2"
+                     /gex;
   return view->can($view)->(%args);
 }
 

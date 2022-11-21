@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/env -S perl -Ilib
 # requires a www/.deps file, a and graphviz install for the `dot` shell command
 # yields per-lang deps.gv.* config files, and per-language deps.svg.gz.* files.
 use utf8;
