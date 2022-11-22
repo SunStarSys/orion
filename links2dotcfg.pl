@@ -60,4 +60,5 @@ for my $idx (0..3) {
   system "grep -Fce '->' links.gv$lang[$idx]";
   print "Generating links.svg.gz$lang[$idx] ...";
   system "twopi -Tsvgz links.gv$lang[$idx] > links.svg.gz$lang[$idx]";
+  print " done\n";
 }
