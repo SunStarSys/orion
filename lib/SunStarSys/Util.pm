@@ -12,7 +12,7 @@ use warnings;
 
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename
-                    walk_content_tree archived seed_deps Load Dump/;
+                    walk_content_tree archived seed_file_deps Load Dump/;
 
 our $VERSION = "3.0";
 
