@@ -5,7 +5,7 @@ use utf8;
 use strict;
 use warnings;
 use YAML::XS;
-
+$| = 1;
 return 1 unless -f "www/.deps";
 open my $fh, "<:encoding(UTF-8)", "www/.deps", or die "Can't open www/.deps: $!";
 read $fh, my $content, -s $fh or die "WTF?";
@@ -18,7 +18,7 @@ my @lang = qw/.en .es .de .fr/;
 
 for my $idx (0..3) {
   my ($root) = grep s!trunk/content!!, <trunk/content/sitemap.*$lang[$idx]> or die "Can't find root document: $!";
-
+  warn "root is $root for $lang[$idx]\n";
   my @dep_nodes = ($root);
   my %dot;
   while (@dep_nodes and (my $node = shift @dep_nodes)) {
@@ -44,5 +44,11 @@ for my $idx (0..3) {
   }
   print $fh "}\n";
   close $fh;
+  print "Vertices: ";
+  system "grep -Evce '->|\\{|\\}' deps.gv$lang[$idx]";
+  print "Edges: ";
+  system "grep -Fce '->' deps.gv$lang[$idx]";
+  print "Generating deps.svg.gz $lang[$idx] ...";
   system "dot -Tsvgz deps.gv$lang[$idx] > deps.svg.gz$lang[$idx]";
+  print " done.\n";
 }
