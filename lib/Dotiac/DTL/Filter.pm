@@ -1160,6 +1160,13 @@ sub dirname {
   return $value->set($dir eq "." ? "" : $dir);
 }
 
+sub basename {
+  require File::Basename;
+  my $value = shift;
+  my $base = File::Basename::basename $value->repr;
+  return $value->set($base);
+}
+
 sub vcs_date {
   my $value = shift;
   my $content = $value->repr;
