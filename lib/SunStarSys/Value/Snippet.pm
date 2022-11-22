@@ -67,7 +67,7 @@ sub pretty_uri {
     my $self = shift;
     my $uri = $self->{uri};
     $uri =~ s!repos/svn!viewvc! if $self->{type} eq "svn";
-    $uri =~ s!/raw/!/blob/! and $uri .= "#L" . join "-L", @{$self->{lines}} if $self->{type} eq "github";
+    $uri =~ s!/raw/!/blob/! and $self->{lines} and $uri .= "#L" . join "-L", @{$self->{lines}} if $self->{type} eq "github";
     return $uri;
 }
 
