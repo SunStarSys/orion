@@ -375,7 +375,7 @@ sub archived {
 # parses deps from file $_'s content and headers
 
 
-sub seed_deps {
+sub seed_file_deps {
   my ($path) = (@_, $_);
   my $dir = dirname($path);
   read_text_file "content$path", \ my %d;
