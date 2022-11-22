@@ -68,8 +68,8 @@ sub single_narrative {
   }
 
   # only include parallel deps (from globs in the Dependencies header)
-  my $dir = dirname $path;
-  $args{deps} = [grep {$dir eq dirname $_->[0]} @{$args{deps}}];
+  my $dir = $args{deps_root} // dirname($path);
+  $args{deps} = [grep {index(dirname($_->[0]), $dir)==0} @{$args{deps}}];
 
   if ($args{preprocess}) {
     $args{content} = sort_tables(Template($args{content})->render(\%args));
@@ -223,7 +223,7 @@ sub fetch_deps {
         $file = "$dirname$filename.html$lang";
         $data->{$file} = { path => $file, lang => $lang, %$args };
         # just read the headers for $quick == 1
-        read_text_file "content/$_", $data->{$file}, $quick == 1 ? 0 : undef;
+        read_text_file "content$_", $data->{$file}, $quick == 1 ? 0 : undef;
       }
       else {
         local $SunStarSys::Value::Offline = 1 if $quick == 3;
