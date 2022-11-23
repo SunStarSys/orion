@@ -121,7 +121,7 @@ EOT
     }
   }
 
-  $categories = [split /[;,]\s+/, $categories] if defined($categories) and not ref $categories;
+  $categories = [sort split /[;,]\s+/, $categories] if defined($categories) and not ref $categories;
 
   if (exists $args{category_root}
       and exists $args{headers}
