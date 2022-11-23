@@ -1130,6 +1130,40 @@ sub truncate {
 	return $value->set(substr $value->repr, 0, $chars->content);
 }
 
+=pod
+
+=head1 SunStar Systems Added Filters
+
+=over4
+
+=item append
+
+Appends extra value to input. Value can be a varname or a quoted string.
+
+=item teaser
+
+Looks for teaser block in input string and passes its contents to ucfirst().
+
+=item ssi
+
+Recursively evaluates ssi tags in passed input string.
+
+=item dirname
+
+File::Basename::dirname of input.
+
+=item basename
+
+File::Basename::basename of input/
+
+=item vcs_date
+
+Filters svn:keyword "$Date:...$" line in input content for day-month-year info.
+
+=back
+
+=cut
+
 sub append {
 	my $value=shift;
 	my $extra=shift;
