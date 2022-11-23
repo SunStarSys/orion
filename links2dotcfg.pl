@@ -25,7 +25,7 @@ my @language = qw/English Spanish German French/;
 my @lang = @ARGV ? @ARGV : qw/.en .es .de .fr/;
 for my $idx (0..$#lang) {
   my ($root) = grep s!www/content!!, <www/content/$root_file_base.*$lang[$idx]> or die "Can't find root document at /$root_file_base: $!";
-  warn "root is $root for $lang[$idx]\n";
+  warn "root is $root for $language[$idx]: '$lang[$idx]'\n";
 
   my @link_nodes = ($root);
   my %links;
