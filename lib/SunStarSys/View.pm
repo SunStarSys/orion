@@ -37,6 +37,9 @@ our $VERSION = "3.00";
 # Now supports templating within the markdown sources.
 # Pass this a true 'preprocess' arg to enable template preprocessing of markdown sources...
 # 'deps' arrayref and 'conf' arguments have special behavior (passed to foo.page/bar.mdtext)
+#
+#
+#
 
 sub single_narrative {
   my %args = @_;
@@ -338,6 +341,8 @@ sub next_view {
   return ref $args->{view} && @{$args->{view}} ? shift @{$args->{view}} : delete $args->{view};
 }
 
+# recursively evaluates ssi tags in content
+
 sub ssi {
   my %args = @_;
   my $file = "content/$args{path}";
@@ -365,11 +370,11 @@ sub breadcrumbs {
   my @path = split m!/!, shift;
   pop @path;
   my @rv;
-  my $relpath = "";
+  my $abspath = "";
   for (@path) {
-      $relpath .= "$_/";
+      $abspath .= "$_/";
       $_ ||= "Home";
-      push @rv, qq(<a href="$relpath">\u$_</a>);
+      push @rv, qq(<a href="$abspath">\u$_</a>);
   }
   return join "&nbsp;&raquo;&nbsp;", @rv;
 }
@@ -383,6 +388,11 @@ sub breadcrumbs {
 # process of performance behavior because by default 8 child 'runners' will process the site
 # build in parallel, and reducing that number will tend to counteract the performance gains of
 # caching built pages in sites with complex dependencies.
+#
+# mostly unnecessary outside of "quick_deps > 2", given how
+# SunStarSys::Util::read_text_file's cache does the heavy lift
+# at lib/path.pm load time during walk_content_tree {}.
+
 
 {
   my %cache;
@@ -476,7 +486,7 @@ sub trim_local_links {
                    )([$1]($2$3))gx;
 
   $args{content} =~ s(                 # trim html links
-                         (href|src)=(['"])
+                         (<[^>]+(?:href|src))=(['"])
                          ( (?!https?://|mailto://|\{)[^'"?#]*? ) (?:\.\w+|\/) ([#?][^'"#?]+)?
                          \2
                      )($1=$2$3$4$2)gx;
@@ -505,7 +515,7 @@ sub normalize_links {
                      }gex;
 
   $args{content} =~ s{                 # trim html links
-                         (href|src)=(['"])
+                         (<[^>]+(?:href|src))=(['"])
                          ( (?!https?://|mailto://|\{)[^'"?#]*? ) ([#?][^'"#?]+)?
                          \2
                      }{

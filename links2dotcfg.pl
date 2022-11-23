@@ -1,6 +1,15 @@
 #!/usr/bin/env -S perl -Ilib
 # requires a www/.deps file, a and graphviz install for the `dot` shell command
 # yields per-lang deps.gv.* config files, and per-language deps.svg.gz.* files.
+#
+# You can use this script for any static website, by plopping the documentroot into www/content, and doing something like this for a rootfile at index.html:
+#
+# % ./links2dotcfg.pl index ""
+#
+# the "index" arg overrides "sitemap" as the starting point for the link walk.
+# the "" arg will override the multiviews languages inherent to sunstarsys.com
+#
+
 use utf8;
 use strict;
 use warnings;
@@ -10,10 +19,12 @@ use File::Basename;
 $| = 1;
 my $nn = 0;
 
+my $root_file_base = shift // "sitemap";
+
 my @language = qw/English Spanish German French/;
-my @lang = qw/.en .es .de .fr/;
-for my $idx (0..3) {
-  my ($root) = grep s!www/content!!, <www/content/sitemap.*$lang[$idx]> or die "Can't find root document: $!";
+my @lang = @ARGV ? @ARGV : qw/.en .es .de .fr/;
+for my $idx (0..$#lang) {
+  my ($root) = grep s!www/content!!, <www/content/$root_file_base.*$lang[$idx]> or die "Can't find root document at /$root_file_base: $!";
   warn "root is $root for $lang[$idx]\n";
 
   my @link_nodes = ($root);
