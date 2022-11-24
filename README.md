@@ -25,14 +25,13 @@ Index: trunk/lib/view.pm
  sub breadcrumbs {
 ```
 
+Compare with (content-trimmed-down) 60x slower JBake build port at <https://builds.apache.org/job/OpenOffice>.
+
 ### TO generate the link topology graph (SVGZ) for OpenOffice.Org, run
 
 ```shell
     % ./links2dotcfg.pl index ""
 ```
-
-Compare with (content-trimmed-down) 60x slower JBake build port at <https://builds.apache.org/job/OpenOffice>.
-
 ## Buildable text content should be UTF-8
 
 ## Perl prerequisites
