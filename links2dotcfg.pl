@@ -4,7 +4,7 @@
 #
 # You can use this script for any static website, by plopping the documentroot into www/content, and doing something like this for a rootfile at index.html:
 #
-# % ./links2dotcfg.pl index ""
+# % ./links2dotcfg.pl '^$' index ""
 #
 # the "index" arg overrides "sitemap" as the starting point for the link walk.
 # the "" arg will override the multiviews languages inherent to sunstarsys.com
@@ -18,6 +18,8 @@ use SunStarSys::Util qw/read_text_file/;
 use File::Basename;
 $| = 1;
 my $nn = 0;
+
+my $red_edge_re = shift;
 
 my $root_file_base = shift // "sitemap";
 
@@ -60,7 +62,9 @@ for my $idx (0..$#lang) {
   for (sort {$a->{id} <=> $b->{id}} values %links) {
     print $fh "$_->{name} [name=$_->{name}];\n";
     for my $value (map $links{$_} || $_, @{$_->{links}}) {
-      print $fh "$_->{name} -> $value->{name};\n";
+      my $color = "";
+      $color = " [color=red]" if defined $red_edge_re and $value->{name} =~ $red_edge_re;
+      print $fh "$_->{name} -> $value->{name}$color;\n";
     }
   }
   print $fh "}\n";
