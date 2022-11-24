@@ -73,8 +73,8 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 ```yaml
     - lib/
       - SunStarSys/
-      - View.py (volunteers needed!)
-      - Util.py (I will handle this)
+        - View.py (volunteers needed!)
+        - Util.py (I will handle this)
 
     - build_file.py (volunteers?)
     - build_site.py (volunteers?)
