@@ -30,7 +30,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 ### TO generate the link topology graph (SVGZ) for OpenOffice.Org, run
 
 ```shell
-    % ./links2dotcfg.pl index ""
+    % ./links2dotcfg.pl '^$' index ""
 ```
 ## Buildable text content should be UTF-8
 
