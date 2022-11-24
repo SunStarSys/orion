@@ -4,7 +4,6 @@
 
 ```shell
    % SVN_URL=https://svn.apache.org/repos/asf/openoffice/ooo-site ./test.sh
-
 ```
 
 First time thru this will run forever, because the source tree in trunk needs
@@ -24,6 +23,12 @@ Index: trunk/lib/view.pm
  }
 
  sub breadcrumbs {
+```
+
+### TO generate the link topology graph (SVGZ) for OpenOffice.Org, run
+
+```shell
+    % ./links2dotcfg.pl index ""
 ```
 
 Compare with (content-trimmed-down) 60x slower JBake build port at <https://builds.apache.org/job/OpenOffice>.
