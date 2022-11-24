@@ -16,6 +16,8 @@ my $nn = 0;
 my @language = qw/English Spanish German French/;
 my @lang = qw/.en .es .de .fr/;
 
+my $red_edge_re = shift;
+
 for my $idx (0..3) {
   my ($root) = grep s!trunk/content!!, <trunk/content/sitemap.*$lang[$idx]> or die "Can't find root document: $!";
   warn "root is $root for $lang[$idx]\n";
@@ -39,7 +41,9 @@ for my $idx (0..3) {
     print $fh "$_->{name} [name=$_->{name}];\n";
     for my $value (map $dot{$_} || $_, @{$_->{deps}}) {
       $value = $dot{$value} = { deps => $$yaml_deps{$value}, id => $nn++, name=>"\"$value\""} unless ref $value;
-      print $fh "$_->{name} -> $value->{name};\n";
+      my $color = "";
+      $color=" [color=red]" if defined $red_edge_re and $value->{name} =~ $red_edge_re;
+      print $fh "$_->{name} -> $value->{name}$color;\n";
     }
   }
   print $fh "}\n";
