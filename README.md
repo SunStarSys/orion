@@ -1,4 +1,4 @@
-# SunStar Systems CMS (SSG Build Toolchain)
+# SunStar Systems' Orion&trade; Enterprise Wiki (SSG Build Toolchain)
 
 ## TO BUILD THE OpenOffice.Org SITE to ./www (at ~1 GB/s, or 50 μs/file, on modern hardware)
 
