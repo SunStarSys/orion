@@ -152,19 +152,15 @@ sub safenew {
 		$file=~s/^\w+\://g; #Windows GRR
 		1 while $file=~s/^\.\.[\\\/]//g;
 	}
-	unless ( -e $file or -e "$file.pm") {
-		my $rfile=File::Spec->catfile(".",$currentdir,$file);
-		foreach my $dir (@Dotiac::DTL::TEMPLATE_DIRS) {
-			$rfile=File::Spec->catfile($dir,"$file.html") and last if -e File::Spec->catfile($dir,"$file.html");
-			$rfile=File::Spec->catfile($dir,"$file.txt") and last if -e File::Spec->catfile($dir,"$file.txt");
-			$rfile=File::Spec->catfile($dir,$file) and last if -e File::Spec->catfile($dir,$file);
-		}
-		return Dotiac::DTL->new($rfile) if -e $rfile or -e "$rfile.pm";
-	}
-	my $p=$Dotiac::DTL::PARSER;
-	my $r=Dotiac::DTL->new($file);
-	$Dotiac::DTL::PARSER=$p;
-	return $r;
+        my $found = 0;
+        my $rfile;
+        foreach my $dir (@Dotiac::DTL::TEMPLATE_DIRS) {
+            $rfile=File::Spec->catfile($dir,"$file.html") and ++$found and last if -e File::Spec->catfile($dir,"$file.html");
+            $rfile=File::Spec->catfile($dir,"$file.txt") and ++$found and last if -e File::Spec->catfile($dir,"$file.txt");
+            $rfile=File::Spec->catfile($dir,$file) and ++$found and last if -e File::Spec->catfile($dir,$file);
+          }
+        return Dotiac::DTL->new($rfile) if $found;
+        die "Can't locate template '$file': $!";
 }
 
 sub compiled {

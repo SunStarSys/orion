@@ -6,6 +6,7 @@ use SVN::Client;
 use SVN::Wc;
 use SVN::Delta;
 use SVN::Core;
+use APR::Pool;
 use strict;
 use warnings;
 use base 'Exporter';
@@ -128,6 +129,22 @@ sub svn_ps {
     my ($target, $propname, $propval) = @_;
     print "Setting '$propname' on $target.\n"
         and $ctx->propset($propname, $propval, $target, 0);
+}
+
+my %scr_cache;
+sub svn_can_read {
+  return unless exists $ENV{TARGET_BASE};
+  my $ctx = shift->new;
+  my $filename = shift;
+  normalize_svn_path $filename;
+  require Cwd;
+  $filename = Cwd::cwd . "/$filename" unless index($filename, "/") == 0;
+  return if $scr_cache{$filename} or not $filename =~ s#^/x1/cms/wcbuild/([^/]+)/##;
+  my $url = "https://vcs.sunstarsys.com/repos/svn/$1/cms-sites/$filename";
+  my $pool = APR::Pool->new;
+  my $c = SVN::Client::create_context($pool);
+  $ctx->info($url, "HEAD", "HEAD", sub {shift}, 0, $c, $pool);
+  ++$scr_cache{$filename};
 }
 
 my %vc_cache;

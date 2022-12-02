@@ -3,11 +3,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#include.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#include.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -16,6 +16,7 @@
 
 package Dotiac::DTL::Tag::include;
 use base qw/Dotiac::DTL::Tag/;
+use SunStarSys::SVNUtil;
 use strict;
 use warnings;
 
@@ -29,13 +30,13 @@ sub new {
 	$name=(Dotiac::DTL::get_variables($name))[0];
 	my $f=substr $name,0,1;
 	my $e=substr $name,-1,1;
-	if ($f eq "`" and $e eq "`") {
+        if ($f eq "`" and $e eq "`") {
 		$self->{load}=Dotiac::DTL::devar($name,{},0);
-		my $tem = Dotiac::DTL->safenew($self->{load});
+                my $tem = Dotiac::DTL->safenew($self->{load});
 		$self->{content}=$tem->{first};
 	}
 	else {
-		$self->{var}=$name;
+          $self->{var}=$name;
 	}
 	bless $self,$class;
 	return $self;
@@ -84,7 +85,7 @@ sub string {
 	my $r=$self->{p}.$tem->{first}->string(@_).($self->{n}?$self->{n}->string(@_):"");
 	$Dotiac::DTL::included{$s}=0;
 	return $r
-	
+
 }
 sub perl {
 	my $self=shift;

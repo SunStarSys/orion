@@ -3,11 +3,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#extends.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#extends.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -15,12 +15,12 @@
 
 package Dotiac::DTL::Tag::extends;
 use base qw/Dotiac::DTL::Tag/;
+use SunStarSys::SVNUtil;
 use strict;
 use warnings;
 require Scalar::Util;
 
 our $VERSION = 0.8;
-
 sub new {
 	my $class=shift;
 	my $self={p=>shift()};
@@ -85,7 +85,7 @@ sub string {
 		die "Can't extend with \"$tem\"";
 	}
 	return $self->{p}.$tem->{first}->string(@_).($self->{n}?$self->{n}->string(@_):"");
-	
+
 }
 sub perl {
 	my $self=shift;
@@ -100,7 +100,7 @@ sub perl {
 		print $fh (Data::Dumper->Dump([$self->{var}],["\$name$id"]));
 	}
 	$id=$self->{data}->perl($fh,$id+1,@_);
-	return $self->{n}->perl($fh,$id+1,@_) if $self->{n};	
+	return $self->{n}->perl($fh,$id+1,@_) if $self->{n};
 	return $id;
 }
 sub perlprint {
@@ -125,7 +125,7 @@ sub perlprint {
 		print $fh $in,"}\n";
 		print $fh $in,"\$template$id"."->{first}->print(\$vars,\$escape,\@_);\n";
 	}
-	return $self->{n}->perlprint($fh,$nid+1,$level,@_) if $self->{n};	
+	return $self->{n}->perlprint($fh,$nid+1,$level,@_) if $self->{n};
 	return $nid;
 }
 sub perlstring {
@@ -150,7 +150,7 @@ sub perlstring {
 		print $fh $in,"}\n";
 		print $fh $in,"\$r.=\$template$id"."->{first}->string(\$vars,\$escape,\@_);\n";
 	}
-	return $self->{n}->perlstring($fh,$nid+1,$level,@_) if $self->{n};	
+	return $self->{n}->perlstring($fh,$nid+1,$level,@_) if $self->{n};
 	return $nid;
 }
 sub perlcount {
@@ -226,12 +226,12 @@ Template file:
 		{% block sidebartext1 %}Great news{% endblock %}
 		{% block sidebartext2 %}Dotiac::DTL finished{% endblock %}
 	{% endextends %}
-	<div id="page"> 
+	<div id="page">
 	Page content
 	</div>
 	{% extends "footer.html" %}
 		{% block foottext %}Author: me{% endblock foo %}
-	{% endextends %} 
+	{% endextends %}
 	</body></html>
 
 Most tags update blocks even if they shouldn't, this is why this won't work as you expect.

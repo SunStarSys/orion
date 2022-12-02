@@ -250,6 +250,7 @@ sub normalize_svn_path {
         tr!/!/!s;
         s!/$!!;
         s!^(https?):/!$1://!;
+        s!/\./!/!g;
         1 while s!/[^/]+/\.\.(/|$)!$1!;
     }
 }

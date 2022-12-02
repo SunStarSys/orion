@@ -16,6 +16,7 @@
 package Dotiac::DTL::Tag::ssi;
 use base qw/Dotiac::DTL::Tag/;
 use SunStarSys::Util qw/read_text_file/;
+use SunStarSys::SVNUtil;
 use strict;
 use warnings;
 
@@ -42,6 +43,7 @@ sub new {
                   my $path = substr $name, 1, -1;
                   my $dir = File::Basename::dirname $path;
                   # transform relative urls to absolute form
+                  SunStarSys::SVNUtil->svn_can_read("content$path"); # sanity check, will die unless svnauthz passes
                   read_text_file "content" . $path, \ my %data;
                   $data{content} =~ s#(<[^>]+(?:src|href))=(['"])(?!https?://|/|mailto://|\{)(.*?)\2#$1=$2$dir/$3$2#g;
                   $data{content} =~ s#(\[[^\]]*\])\((?!https?://|/|\{|mailto://)([^\)]+)\)#$1($dir/$2)#g;
