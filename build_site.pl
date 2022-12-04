@@ -32,9 +32,10 @@ use SunStarSys::Util qw/copy_if_newer parse_filename unload_package/;
 use SunStarSys::View;
 use Data::Dumper ();
 use SunStarSys::ASF;
-sub syswrite_all;
+use IO::Compress::Gzip qw/gzip/;
 use sealed v4.1.8;
 use base 'sealed';
+sub syswrite_all;
 
 my ($target_base, $source_base, $dirq, $runners, $offline, @errors);
 
@@ -177,7 +178,8 @@ sub process_file :Sealed {
     s/^([^.]+)//, $extension = $1 for my $lang = $extension;
 
     if ($dirname =~ m!\b\.page/$!) {
-        copy_if_newer $file, "$target_base/$file";
+        my ($dest, $copied) = copy_if_newer $file, "$target_base/$file";
+        print "Copied to $dest.\n" if $copied;
         return;
     }
 
@@ -199,15 +201,22 @@ sub process_file :Sealed {
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
         my ($content, $ext, undef, @new_sources) = $s->(path => $path, lang => $lang, %$args);
-        open my $fh, ">:encoding(UTF-8)", "$target_base/$target_file.$ext$lang"
+        if ($$args{compress}) {
+          utf8::encode($content);
+          gzip \($content, my $compressed);
+          $lang .= ".gz";
+          $content = $compressed;
+        }
+        my $encoding = $$args{compress} ? "raw" : "encoding(UTF-8)";
+        open my $fh, ">:$encoding", "$target_base/$target_file.$ext$lang"
           or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
         print $fh $content;
         syswrite_all "Built to $target_base/$target_file.$ext$lang.\n";
         return @new_sources;
     }
 
-    copy_if_newer $file, "$target_base/$file" and
-      syswrite_all "Copied to $target_base/$file.\n";
+    my ($dest, $copied) = copy_if_newer $file, "$target_base/$file";
+    syswrite_all "Copied to $dest.\n" if $copied;
 
     return;
 }
@@ -248,10 +257,10 @@ sub fork_runner :Sealed {
         for (split /\n/) {
           if ($_ eq "[flush]") {
             SunStarSys::View::flush_memoize_cache;
-            my $path = unload_package("path") // "path.pm";
-            require $path;
+            unload_package("path") or die "Can't unload package path\n";
+            require "path.pm";
             $patterns = eval $pattern_string;
-            warn "ZOMG\n" unless @$patterns;
+            die "ZOMG\n" unless @$patterns;
           }
           else {
             process_dir($_, $parent);

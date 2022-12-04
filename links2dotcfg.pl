@@ -15,6 +15,7 @@ use strict;
 use warnings;
 use YAML::XS;
 use SunStarSys::Util qw/read_text_file/;
+use IO::Uncompress::Gunzip 'gunzip';
 use File::Basename;
 $| = 1;
 my $nn = 0;
@@ -26,7 +27,7 @@ my $root_file_base = shift // "sitemap";
 my @language = qw/English Spanish German French/;
 my @lang = @ARGV ? @ARGV : qw/.en .es .de .fr/;
 for my $idx (0..$#lang) {
-  my ($root) = grep s!www/content!!, <www/content/$root_file_base.*$lang[$idx]> or die "Can't find root document at /$root_file_base: $!";
+  my ($root) = grep s!www/content!!, <www/content/$root_file_base.*$lang[$idx]*> or die "Can't find root document at /$root_file_base: $!";
   warn "root is $root for $language[$idx]: '$lang[$idx]'\n";
 
   my @link_nodes = ($root);
@@ -38,7 +39,13 @@ for my $idx (0..$#lang) {
       name => "\"$node\""
     };
     next if $node !~ /\.html/;
-    read_text_file "www/content$node", \ my %data;
+    my $file = "www/content/$node";
+    if ($file =~ /\.gz$/) {
+      gunzip $file, \ my $uncompressed;
+      $file = \$uncompressed;
+    }
+
+    read_text_file $file, \ my %data;
     $data{content} //= "";
     while ($data{content} =~ /
                          <[^>]+(href|src|action)=(['"])
@@ -74,6 +81,6 @@ for my $idx (0..$#lang) {
   print "Edges: ";
   system "grep -Fce '->' links.gv$lang[$idx]";
   print "Generating links.svg.gz$lang[$idx] ...";
-  system "twopi -Tsvgz links.gv$lang[$idx] > links.svg.gz$lang[$idx]";
+  system "twopi -Tsvgz links.gv$lang[$idx] > links.svg$lang[$idx].gz";
   print " done\n";
 }

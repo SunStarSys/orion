@@ -26,6 +26,7 @@ use SunStarSys::Util qw/read_text_file sort_tables parse_filename Dump/;
 use Data::Dumper ();
 use File::Basename;
 use File::Path;
+use IO::Compress::Gzip 'gzip';
 
 push our @TEMPLATE_DIRS, "templates";
 our $VERSION = "3.00";
@@ -88,6 +89,7 @@ sub single_narrative {
   my $headers = Dump $args{headers};
   my $categories = delete $args{headers}{categories};
   my $archive_headers = Dump $args{headers};
+  my $keywords = $args{headers}{keywords};
 
   if (exists $args{archive_root}
       and exists $args{headers}
@@ -124,7 +126,8 @@ EOT
     }
   }
 
-  $categories = [sort split /[;,]\s+/, $categories] if defined($categories) and not ref $categories;
+  $categories = [sort split /[;,]\s*/, $categories] if defined($categories) and not ref $categories;
+  $keywords = [sort split /[;,]\s*/, $keywords] if defined($keywords) and not ref $keywords;
 
   if (exists $args{category_root}
       and exists $args{headers}
@@ -159,6 +162,7 @@ EOT
   $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
   $args{headers}{archive} = $archive if defined $archive;
   $args{headers}{categories} = $categories if defined $categories;
+  $args{headers}{keywords} = $keywords if defined $keywords;
   return Template($template)->render(\%args), html => \%args, @new_sources;
 }
 
@@ -224,6 +228,7 @@ sub fetch_deps {
       }
       if ($quick == 1 or $quick == 2) {
         $file = "$dirname$filename.html$lang";
+        $file .= ".gz" if $$args{compress};
         $data->{$file} = { path => $file, lang => $lang, %$args };
         # just read the headers for $quick == 1
         read_text_file "content$_", $data->{$file}, $quick == 1 ? 0 : undef;
@@ -234,6 +239,7 @@ sub fetch_deps {
         # quick_deps set to 2 to avoid infinite recursion on cyclic dependency graph
         my (undef, $ext, $vars, @ns) = $s->(path => $file, lang => $lang, %$args, quick_deps => 2);
         $file = "$dirname$filename.$ext$lang";
+        $file .= ".gz" if $$args{compress};
         $data->{$file} = $vars;
         push @new_sources, @ns;
       }
@@ -412,6 +418,15 @@ sub breadcrumbs {
   sub flush_memoize_cache {
     %cache = ();
   }
+}
+
+sub compress {
+  my %args = @_;
+  my $view = next_view \%args;
+  my @rv = view->can($view)->(%args);
+  utf8::encode($rv[0]);
+  gzip \($rv[0], my $compressed);
+  return $compressed, "$rv[1].gz", @rv[2..$#rv];
 }
 
 # wrapper view for pulling snippets out of code repos; see thrift site sources for sample usage

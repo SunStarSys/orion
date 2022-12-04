@@ -4,15 +4,18 @@ use YAML::XS;
 use File::Basename;
 use File::Copy;
 use File::Find;
+use IO::Compress::Gzip 'gzip';
 use Cwd;
 use File::stat;
 use Fcntl ":flock";
+use utf8;
 use strict;
 use warnings;
 
+
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename
-                    walk_content_tree archived seed_file_deps Load Dump/;
+                    walk_content_tree archived seed_file_deps seed_file_acl Load Dump/;
 
 our $VERSION = "3.0";
 
@@ -25,7 +28,8 @@ our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;
-  $out->{mtime} = defined ? $_->mtime : -1 for stat $file;
+  $out->{mtime} = $_->mtime for map File::stat::populate(CORE::stat(_)), grep -f, $file;
+  $out->{mtime} //= -1;
   return unless -T _ or ref $file;
   my $cache = $rtf_ring_hdr->{cache}{$file};
 
@@ -57,8 +61,10 @@ sub read_text_file {
     return $cache->{lines};
   }
 
-  $file =~ /(.*)/; #detaint me
-  open my $fh, "<:encoding(UTF-8)", $1 or die "Can't open file $file: $!\n";
+  $file =~ /(.*)/;
+  $file = $1 unless ref $file;
+  my $encoding = ref $file ? "raw" : "encoding(UTF-8)";
+  open my $fh, "<:$encoding", $file or die "Can't open file $file: $!\n";
 
   my $headers = 1;
   local $_;
@@ -68,12 +74,14 @@ sub read_text_file {
 
  LOOP:
   while (<$fh>) {
+    utf8::decode $_ if ref $file;
     if ($headers) {
       if ($. == 1) {
         s/^$BOM//;
         if (/^---\s+$/) {
           my $yaml = "";
           while (<$fh>) {
+            utf8::decode $_ if ref $file;
             last if /^---\s+$/;
             $yaml .= $_;
           }
@@ -88,6 +96,7 @@ sub read_text_file {
       $name =~ tr/A-Z-/a-z_/;
       chomp $val;
       while (<$fh>) {
+        utf8::decode $_ if ref $file;
         $$hdr{$name} = $val, redo LOOP
           unless s/^\s+(?=\S)/ /;
         chomp;
@@ -109,9 +118,9 @@ sub read_text_file {
 
   @{$out->{headers}}{keys %$hdr} = values %$hdr;
   $out->{content} = $content;
+  no warnings 'uninitialized';
   return $. unless eof $fh and $out->{mtime} > 0;
 
-  no warnings 'uninitialized';
   $content .= $_;
 
   if (defined $cache) {
@@ -164,9 +173,15 @@ sub copy_if_newer {
     die "Undefined arguments to copy($src, $dest)\n"
         unless defined $src and defined $dest;
     my $copied = 0;
+    my $compress = 0;
+    $dest .= ".gz" and $compress++ if -T $src and $dest =~ m#/content/#;
     copy $src, $dest and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
+    if ($compress and $copied) {
+      gzip $dest, "$dest.tmp";
+      rename "$dest.tmp", $dest;
+    }
     chmod 0755, $dest if -x $src;
-    return $copied;
+    return $dest, $copied;
 }
 
 # NOTE: This will break your runtime if you call this on a package
@@ -328,19 +343,30 @@ sub fixup_code {
     }
 }
 
-my $write_deps = 0;
+my $write_files = 0;
 my $dep_string = 'no strict "refs"; *path::dependencies{HASH}';
 my $dependencies;
+
+my $acl_string = 'no strict "refs"; *path::acl{ARRAY}';
+my $acl;
 
 sub walk_content_tree (&) {
   my $wanted = shift;
   $dependencies = eval $dep_string;
+  $acl = eval $acl_string;
 
-  if (eval '$path::use_dependency_cache' and -f "$ENV{TARGET_BASE}/.deps") {
-    # use the cached .deps file if the incremental build system deems it appropriate
-    open my $deps, "<", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
-    eval '*path::dependencies = Load join "", <$deps>';
-    $dependencies = eval $dep_string;
+  if (eval '$path::use_cache') {
+    if (-f "$ENV{TARGET_BASE}/.deps") {
+      # use the cached .deps file if the incremental build system deems it appropriate
+      open my $deps, "<:encoding(UTF-8)", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
+      eval '*path::dependencies = Load join "", <$deps>';
+      $dependencies = eval $dep_string;
+    }
+    if (-f "$ENV{TARGET_BASE}/.acl") {
+      open my $fh, "<:encoding(UTF-8)", "$ENV{TARGET_BASE}/.acl" or die "Can't open .acl for reading: $!";
+      eval '*path::acl = Load join "", <$fh>';
+      $acl = eval $acl_string;
+    }
     return;
   }
 
@@ -354,14 +380,18 @@ sub walk_content_tree (&) {
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
 
-  $write_deps = 1;
+  $write_files = 1;
   return 1;
 }
 
 END {
-  if ($write_deps and $dependencies) {
-    open my $deps, ">", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
+  if ($write_files and $dependencies) {
+    open my $deps, ">:encoding(UTF-8)", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
     print $deps Dump $dependencies;
+  }
+  if ($write_files and $acl) {
+    open my $fh, ">:encoding(UTF-8)", "$ENV{TARGET_BASE}/.acl" or die "Can't open '.acl' for writing: $!";
+    print $fh Dump $acl;
   }
 }
 
@@ -374,7 +404,6 @@ sub archived {
 
 # invoke this inside a walk_content_tree {} block:
 # parses deps from file $_'s content and headers
-
 
 sub seed_file_deps {
   my ($path) = (@_, $_);
@@ -401,6 +430,22 @@ sub seed_file_deps {
   }
 }
 
+sub seed_file_acl {
+  my ($path) = (@_, $_);
+  read_text_file "content$path", \ my %d;
+  no strict 'refs';
+  if (exists $d{headers}{acl}) {
+    push @$acl, {
+      path => $path,
+      rules => ref $d{headers}{acl}
+      ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl}}
+    };
+    $$acl[-1]{rules}{'*'} = '';
+    $$acl[-1]{rules}{admin} = 'rw';
+    return 1;
+  }
+  return;
+}
 1;
 
 =head1 LICENSE

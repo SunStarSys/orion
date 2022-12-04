@@ -52,7 +52,7 @@ for my $idx (0..3) {
   system "grep -Evce '->|\\{|\\}' deps.gv$lang[$idx]";
   print "Edges: ";
   system "grep -Fce '->' deps.gv$lang[$idx]";
-  print "Generating deps.svg.gz$lang[$idx] ...";
-  system "dot -Tsvgz deps.gv$lang[$idx] > deps.svg.gz$lang[$idx]";
+  print "Generating deps.svg$lang[$idx].gz ...";
+  system "dot -Tsvgz deps.gv$lang[$idx] > deps.svg$lang[$idx].gz";
   print " done.\n";
 }
