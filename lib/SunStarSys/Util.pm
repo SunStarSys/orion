@@ -344,7 +344,6 @@ sub fixup_code {
     }
 }
 
-my $write_files = 0;
 my $dep_string = 'no strict "refs"; *path::dependencies{HASH}';
 my $dependencies;
 
@@ -381,16 +380,15 @@ sub walk_content_tree (&) {
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
 
-  $write_files = 1;
   return 1;
 }
 
 END {
-  if ($write_files and $dependencies) {
+  if ($dependencies) {
     open my $deps, ">:encoding(UTF-8)", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
     print $deps Dump $dependencies;
   }
-  if ($write_files and $acl) {
+  if ($acl) {
     open my $fh, ">:encoding(UTF-8)", "$ENV{TARGET_BASE}/.acl" or die "Can't open '.acl' for writing: $!";
     print $fh Dump $acl;
   }
@@ -412,23 +410,25 @@ sub seed_file_deps {
   read_text_file "content$path", \ my %d;
   no strict 'refs';
   return if archived $path;
-
-  push @{$$dependencies{$path}}, grep {
-    s/^content// and $_ ne $path and not archived
-  }
+  my %seen;
+  @{$$dependencies{$path}} = grep !$seen{$_}++, @{$$dependencies{$path} // []},
+    grep {
+      s/^content// and $_ ne $path and not archived
+    }
     map glob("content$_"), map index($_, "/") == 0  ? $_ : "'$dir'/$_",
-    ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies}
-        if exists $d{headers}{dependencies};
+    ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies} // "";
 
+  no warnings 'uninitialized';
   while ($d{content} =~ /\{%\s*(include|ssi)\s+[\`"]([^\`"]+)[\`"]\s*-?%\}/g) {
     my $ssi = $1 eq "ssi";
     my $src = $2;
     if ($ssi or index($src, "./") == 0 or index($src, "../") == 0) {
       $src = "$dir/$src", $src = s(/[.]/)(/)g unless $ssi;
       1 while $src =~ s(/[^./][^/]+/[.]{2}/)(/);
-      push @{$$dependencies{$path}}, $src unless archived $src;
+      push @{$$dependencies{$path}}, $src unless archived $src or $seen{$src}++;
     }
   }
+  delete $$dependencies{$path} unless @{$$dependencies{$path}};
 }
 
 sub seed_file_acl {
@@ -436,13 +436,22 @@ sub seed_file_acl {
   read_text_file "content$path", \ my %d;
   no strict 'refs';
   if (exists $d{headers}{acl}) {
-    push @$acl, {
-      path => $path,
-      rules => ref $d{headers}{acl}
-      ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl}}
-    };
-    $$acl[-1]{rules}{'*'} = '';
-    $$acl[-1]{rules}{admin} = 'rw';
+    my ($prior) = grep $_->{path} eq $path, @$acl;
+    if ($prior) {
+      $$prior{rules} = ref $d{headers}{acl}
+      ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl} // ""};
+      $$prior{rules}{'*'} = '';
+      $$prior{rules}{repos_admin} = 'rw';
+    }
+    else {
+      push @$acl, {
+        path => $path,
+        rules => ref $d{headers}{acl}
+        ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl}}
+      };
+      $$acl[-1]{rules}{'*'} = '';
+      $$acl[-1]{rules}{repos_admin} = 'rw';
+    }
     return 1;
   }
   return;
