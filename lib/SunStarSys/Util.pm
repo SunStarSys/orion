@@ -93,7 +93,7 @@ sub read_text_file {
       my ($name, $val) = split /:\s+/, $_, 2;
       $headers = 0, redo LOOP
         unless $name =~ /^[\w-]+$/ and defined $val;
-      $name =~ tr/A-Z-/a-z_/;
+      $name = lc $name;
       chomp $val;
       while (<$fh>) {
         utf8::decode $_ if ref $file;
@@ -449,11 +449,15 @@ sub seed_file_acl {
   no strict 'refs';
   if (exists $d{headers}{acl}) {
     my ($prior) = grep $_->{path} eq $path, @$acl;
-    if ($prior and $$prior{unlocked}) {
+    if ($prior) {
+      return if $$prior{locked};
+      my $existing_rules = $$prior{rules};
       $$prior{rules} = ref $d{headers}{acl}
-      ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl} // ""};
+        ? $d{headers}{acl}: {split /[;,=\s]+/, $d{headers}{acl} // ""};
+      @{$$prior{rules}}{keys %$existing_rules} = values %$existing_rules
+        unless $$prior{unlocked};
       $$prior{rules}{'*'} = '';
-      $$prior{rules}{repos_admin} = 'rw';
+      $$prior{rules}{svnadmin} = 'rw';
     }
     else {
       push @$acl, {
@@ -463,7 +467,7 @@ sub seed_file_acl {
         ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl}}
       };
       $$acl[-1]{rules}{'*'} = '';
-      $$acl[-1]{rules}{repos_admin} = 'rw';
+      $$acl[-1]{rules}{svnadmin} = 'rw';
     }
     return 1;
   }
