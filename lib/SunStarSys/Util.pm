@@ -260,15 +260,17 @@ sub touch {
     }
 }
 
+#ttc
 sub sanitize_relative_path {
   for (@_) {
     s#^[\\/]+##g;
     s/^\w+://g; #Windows GRR
     s#([\\/])+#$1#g;
     1 while s#[\\/][^\\/]+[\\/]\.\.[\\/]#/#;
-    1 while s#^\.\.[\\/]##;
+    s#^(?:\.\.[\\/])+##;
   }
 }
+#ttc
 
 sub normalize_svn_path {
     for (@_) {
@@ -447,7 +449,7 @@ sub seed_file_acl {
   no strict 'refs';
   if (exists $d{headers}{acl}) {
     my ($prior) = grep $_->{path} eq $path, @$acl;
-    if ($prior) {
+    if ($prior and $$prior{unlocked}) {
       $$prior{rules} = ref $d{headers}{acl}
       ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl} // ""};
       $$prior{rules}{'*'} = '';
@@ -456,6 +458,7 @@ sub seed_file_acl {
     else {
       push @$acl, {
         path => $path,
+        unlocked => 1,
         rules => ref $d{headers}{acl}
         ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl}}
       };
