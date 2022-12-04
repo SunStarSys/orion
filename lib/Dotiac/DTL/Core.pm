@@ -148,9 +148,10 @@ sub safenew {
 	my $class=shift;
 	my $file=shift;
 	unless ($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS and int($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS) > 2) {
-		$file=~s/^[\\\/]//g;
+		$file=~s/^[\\\/]+//g;
 		$file=~s/^\w+\://g; #Windows GRR
-		1 while $file=~s/^\.\.[\\\/]//g;
+                $file =~ s#([\\/])+#$1#g;
+		1 while $file =~ s#([\\/])[^\\/]+\1\.\.\1#$1#;
 	}
         my $found = 0;
         my $rfile;
