@@ -177,8 +177,9 @@ sub copy_if_newer {
     $dest .= ".gz" and $compress++ if -T $src and $dest =~ m#/content/#;
     copy $src, $dest and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
     if ($compress and $copied) {
-      gzip $dest, "$dest.tmp";
-      rename "$dest.tmp", $dest;
+      utf8::encode my $d = $dest;
+      gzip $d, "$d.tmp";
+      rename "$d.tmp", $d;
     }
     chmod 0755, $dest if -x $src;
     return $dest, $copied;
