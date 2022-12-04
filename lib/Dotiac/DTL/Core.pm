@@ -26,7 +26,9 @@ use Scalar::Util qw/reftype blessed/;
 use Carp;
 use File::Spec ();
 use File::Basename ();
+use SunStarSys::Util qw/sanitize_relative_path/;
 use base 'sealed';
+
 {
 package Dotiac::DTL;
 our $TEMPLATE_STRING_IF_INVALID=""; #If there was no parameter found
@@ -148,11 +150,8 @@ sub safenew {
 	my $class=shift;
 	my $file=shift;
 	unless ($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS and int($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS) > 2) {
-		$file=~s/^[\\\/]+//g;
-		$file=~s/^\w+\://g; #Windows GRR
-                $file =~ s#([\\/])+#$1#g;
-		1 while $file =~ s#([\\/])[^\\/]+\1\.\.\1#$1#;
-	}
+          sanitize_relative_path $file;
+        }
         my $found = 0;
         my $rfile;
         foreach my $dir (@Dotiac::DTL::TEMPLATE_DIRS) {

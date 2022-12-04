@@ -14,7 +14,7 @@ use warnings;
 
 
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
-                    unload_package purge_from_inc touch normalize_svn_path parse_filename
+                    unload_package purge_from_inc touch normalize_svn_path sanitize_relative_path parse_filename
                     walk_content_tree archived seed_file_deps seed_file_acl Load Dump/;
 
 our $VERSION = "3.0";
@@ -258,6 +258,16 @@ sub touch {
         utime undef, undef, $_
             or die "Can't touch $_: $!\n";
     }
+}
+
+sub sanitize_relative_path {
+  for (@_) {
+    s#^[\\/]+##g;
+    s/^\w+://g; #Windows GRR
+    s#([\\/])+#$1#g;
+    1 while s#[\\/][^\\/]+[\\/]\.\.[\\/]#/#;
+    1 while s#^\.\.[\\/]##;
+  }
 }
 
 sub normalize_svn_path {
