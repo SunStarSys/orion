@@ -176,7 +176,7 @@ sub copy_if_newer {
     my $compress = 0;
     $dest .= ".gz" and $compress++ if -T $src and $dest =~ m#/content/#;
     copy $src, $dest and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
-    if ($compress and $copied) {
+    if ($compress and $copied and eval '$path::compress') {
       utf8::encode my $d = $dest;
       gzip $d, "$d.tmp";
       rename "$d.tmp", $d;
