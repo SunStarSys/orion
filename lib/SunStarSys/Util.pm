@@ -448,26 +448,24 @@ sub seed_file_acl {
   read_text_file "content$path", \ my %d;
   no strict 'refs';
   if (exists $d{headers}{acl}) {
-    my ($prior) = grep $_->{path} eq $path, @$acl;
+    my ($prior) = grep $_->{path} eq "content$path", @$acl;
     if ($prior) {
       return if $$prior{locked};
       my $existing_rules = $$prior{rules};
       $$prior{rules} = ref $d{headers}{acl}
-        ? $d{headers}{acl}: {split /[;,=\s]+/, $d{headers}{acl} // ""};
+        ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /\s*[;,]\s*/, $d{headers}{acl}};
       @{$$prior{rules}}{keys %$existing_rules} = values %$existing_rules
         unless $$prior{unlocked};
-      $$prior{rules}{'*'} = '';
-      $$prior{rules}{svnadmin} = 'rw';
+      $$prior{rules}{'@svnadmin'} = 'rw';
     }
     else {
       push @$acl, {
-        path => $path,
+        path => "content$path",
         unlocked => 1,
         rules => ref $d{headers}{acl}
-        ? $d{headers}{acl} : {split /[;,=\s]+/, $d{headers}{acl}}
+          ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /\s*[;,]\s*/, $d{headers}{acl}}
       };
-      $$acl[-1]{rules}{'*'} = '';
-      $$acl[-1]{rules}{svnadmin} = 'rw';
+      $$acl[-1]{rules}{'@svnadmin'} = 'rw';
     }
     return 1;
   }

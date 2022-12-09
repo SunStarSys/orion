@@ -12,7 +12,8 @@ use Fcntl qw/SEEK_SET/;
 use base "sealed";
 
 sub _create_auth :Sealed {
-    my Apache2::RequestRec $r = pop or return [];
+  my $pool = pop;
+  my Apache2::RequestRec $r = pop or return [];
     $r = $r->main unless $r->is_initial_req;
     my $authcb = sub {
         my $cred = shift;
@@ -22,52 +23,147 @@ sub _create_auth :Sealed {
     };
 
     return [
-        SVN::Client::get_ssl_server_trust_file_provider($r->pool),
-        SVN::Client::get_simple_prompt_provider($authcb, 1, $r->pool),
+        SVN::Client::get_ssl_server_trust_file_provider($pool),
+        SVN::Client::get_simple_prompt_provider($authcb, 1, $pool),
     ];
+}
+
+sub SVN::Pool::DESTROY {
+  return 1;
 }
 
 sub new {
     my ($class, $r) = @_;
     shift; shift;
-    my $pool = $r ? $r->pool : APR::Pool->new;
-    unshift @_, auth => $class->_create_auth($r), pool => $pool;
+    my $pool = $r ? SVN::Pool->_wrap(${$r->pool}) : APR::Pool->new;
+    unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool;
     my $client = SVN::Client->new(@_) or die "Can't create SVN::Client: $!";
     return bless {
              r => $r,
-        client => $client,
+             client => $client,
+             pool => $pool,
     }, $class;
 }
 
-sub r      {shift->{r}}
-sub client {shift->{client}}
+sub r       {shift->{r}}
+sub client  {shift->{client}}
+sub context {shift->{client}->{ctx}}
+sub pool    {shift->{pool}}
 
-sub update {
-    my ($self, $filename, $recurse) = @_;
-    normalize_svn_path $filename;
-    my $dir = dirname $filename;
-    my $pool = $self->r->pool;
-    my SunStarSys::SVN::Client $svn = $self->client;
-    my (@add, @delete, @restore, @update);
-    my %dispatch = (
-        $SVN::Wc::Notify::Action::add           => \@add,
-        $SVN::Wc::Notify::Action::update_add    => \@add,
-        $SVN::Wc::Notify::Action::update_delete => \@delete,
-        $SVN::Wc::Notify::Action::restore       => \@restore,
-        $SVN::Wc::Notify::Action::update_update => \@update,
+sub merge :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my ($filename, $target_path, $target_revision, $dry_run) = @_;
+  ($filename, $target_path) = map dirname($_), $filename, $target_path if $filename !~ m#/$#;
+
+  normalize_svn_path $filename, $target_path;
+
+  my Apache2::RequestRec $r = $self->r;
+  my SVN::Client $svn = $self->client;
+  my (@add, @delete, @restore, @update, @conflict);
+  my %dispatch = (
+    $SVN::Wc::Notify::Action::add           => \@add,
+    $SVN::Wc::Notify::Action::update_add    => \@add,
+    $SVN::Wc::Notify::Action::update_delete => \@delete,
+    $SVN::Wc::Notify::Action::restore       => \@restore,
+    $SVN::Wc::Notify::Action::update_update => \@update,
+    $SVN::Wc::Notify::State::conflicted     => \@conflict,
+);
+
+  my $notifier = sub {
+    my ($path, $action, undef, undef, $state) = @_;
+    $path =~ s!^\Q$filename\E/?!!;
+    push @{$dispatch{$state}}, $path and return 1 if exists $dispatch{$state};
+    push @{$dispatch{$action}}, $path if exists $dispatch{$action};
+  };
+  local $_;
+  my $ctx = $self->context;
+  $svn->notify($notifier);
+
+  my $rv = "--- ";
+
+  if ($target_revision !~ /^-/) {
+    $svn->merge_peg3(
+      $target_path,
+      [1, $target_revision],
+      $target_revision,
+      $filename,
+      $SVN::Depth::infinity, #1, recursive
+      0, # ignore_ancestry
+      0, # force
+      0, # record-only
+      $dry_run,
+      undef,
+      $ctx,
+      $self->pool
     );
+    $rv .= "Merging r$target_revision into '.':\n";
+  }
+  else {
+    $svn->merge3(
+      $filename, #src1
+      -$target_revision, #rev1
+      $filename, #src2
+      -$target_revision - 1, #rev2
+      $target_path, # path
+      $SVN::Depth::infinity,#1, # recursive
+      1, # ignore_ancestry
+      0, # force
+      0, #record-only
+      $dry_run,
+      undef,
+      $ctx,
+      $self->pool
+    );
+    $rv .= "Reverse-merging r" . (-$target_revision) . " into '.':\n";
+  }
+  $rv .= "C   $_\n" for @conflict;
+  $rv .= "M   $_\n" for @update;
+  $rv .= "A   $_\n" for @add;
+  $rv .= "R   $_\n" for @restore;
+  $rv .= "D   $_\n" for @delete;
 
-    $svn->notify(sub {
-        my ($path, $action) = @_;
-        $path =~ s!^\Q$filename\E/?!!;
-        push @{$dispatch{$action}}, $path if exists $dispatch{$action};
-    });
+  return $rv;
 
-    my $ctx = SVN::Client::create_context($pool);
+}
 
-    my $revision = $svn->update($filename, "HEAD", 1,  $ctx, $pool);
-    return add => \@add, delete => \@delete, restore => \@restore, update => \@update,
-	revision => $revision;
+
+sub update :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my ($filename, $depth) = @_;
+  normalize_svn_path $filename;
+  my $dir = dirname $filename;
+  my Apache2::RequestRec $r = $self->r;
+  my SVN::Client $svn = $self->client;
+  my (@add, @delete, @restore, @update, @conflict);
+  my %dispatch = (
+    $SVN::Wc::Notify::Action::add           => \@add,
+    $SVN::Wc::Notify::Action::update_add    => \@add,
+    $SVN::Wc::Notify::Action::update_delete => \@delete,
+    $SVN::Wc::Notify::Action::restore       => \@restore,
+    $SVN::Wc::Notify::Action::update_update => \@update,
+    $SVN::Wc::Notify::State::conflicted     => \@conflict,
+  );
+
+  my $notifier = sub {
+    my ($path, $action, undef, undef, $state) = @_;
+    $path =~ s!^\Q$filename\E/?!!;
+    push @{$dispatch{$state}}, $path and return 1 if exists $dispatch{$state};
+    push @{$dispatch{$action}}, $path if exists $dispatch{$action};
+  };
+
+  my $ctx = $self->context;
+  $svn->notify($notifier);
+  $depth = $SVN::Depth::infinity; # hard-coded
+  my $revision = $svn->update3($filename, "HEAD", $depth, 1,  1, 0, $ctx, $self->pool);
+  my $rv = "--- Updated '.' to HEAD:\n";
+  $rv .= "C   $_\n" for @conflict;
+  $rv .= "U   $_\n" for @update;
+  $rv .= "A   $_\n" for @add;
+  $rv .= "R   $_\n" for @restore;
+  $rv .= "D   $_\n" for @delete;
+
+  return $rv;
+}
 
 =pod
 
@@ -104,13 +200,11 @@ sub update {
 
 =cut
 
-}
-
 sub copy {
     my ($self, $source, $target) = @_;
     normalize_svn_path $_ for $source, $target;
-    my $pool = $self->r->pool;
-    my $ctx = SVN::Client::create_context($pool);
+    my $pool = $self->pool;
+    my $ctx = $self->context;
     my $client = $self->client;
     $client->copy($source, 'WORKING', $target, $ctx, $pool);
 }
@@ -118,8 +212,8 @@ sub copy {
 sub move {
     my ($self, $source, $target, $force) = (@_, 1);
     normalize_svn_path $_ for $source, $target;
-    my $pool = $self->r->pool;
-    my $ctx = SVN::Client::create_context($pool);
+    my $pool = $self->pool;
+    my $ctx = $self->context;
     my $client = $self->client;
     $client->move($source, 'HEAD', $target, $force, $ctx, $pool);
 }
@@ -127,12 +221,11 @@ sub move {
 sub delete {
     my ($self, $filename, $force) = (@_, 1);
     normalize_svn_path $filename;
-    my $pool = $self->r->pool;
-    my $ctx = SVN::Client::create_context($pool);
+    my $pool = $self->pool;
+    my $ctx = $self->context;
     my $client = $self->client;
     $client->delete($filename, $force, $ctx, $pool);
 }
-
 
 my @status;
 eval '$status[$SVN::Wc::Status::' . "$_]=qq/\u$_/"
@@ -156,29 +249,29 @@ sub status :Sealed {
 	push @rv, [$path => $status[$_]] for $status->text_status;
 	return 0;
     };
-    my $pool = $r->pool;
+    my $pool = $self->pool;
 
-    $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef, SVN::Client::create_context($pool), $pool);
+    $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef, $self->context, $pool);
     return map @$_, @rv if wantarray;
     return $rv[0]->[1];
 }
 
-sub info :Sealed {
+sub info {
     my SunStarSys::SVN::Client $self = shift;
     my Apache2::RequestRec $r = $self->r;
     my SVN::Client $client = $self->client;
     my ($filename, $callback, $remote_revision) = @_;
-    my $pool = $r->pool;
-    my $ctx = SVN::Client::create_context($pool);
+    my $pool = $self->pool;
+    my $ctx = $self->context;
     normalize_svn_path $filename;
-    $client->info($filename, undef, $remote_revision, $callback, 0, $ctx, $pool);
+    $client->info($filename, undef, $remote_revision // "WORKING", $callback, 0, $ctx, $pool);
 }
 
 sub mkdir {
     my ($self, $url, $make_parents) = (@_, 1);
     $url =~/(.*)/;
-    my $pool = $self->r->pool;
-    my $ctx = SVN::Client::create_context($pool);
+    my $pool = $self->pool;
+    my $ctx = $self->context;
     $self->client->mkdir3($1, $make_parents, undef, $ctx, $pool);
 }
 
@@ -188,7 +281,7 @@ sub diff {
     normalize_svn_path $filename;
     open my $dfh, "+>", undef;
     open my $efh, "+>", undef;
-    $self->client->diff([], $filename, 'BASE', $filename, 'WORKING', $recursive, 0, 1, $dfh, $efh, SVN::Client::create_context($r->pool), $r->pool);
+    $self->client->diff([], $filename, 'BASE', $filename, 'WORKING', $recursive, 0, 1, $dfh, $efh, $self->context, $self->pool);
     seek $_, 0, SEEK_SET for $dfh, $efh;
     return join "", <$dfh>, <$efh>;
 }

@@ -79,7 +79,6 @@ my %st_dispatch = (
     '~'  => "obstructed",
 );
 
-
 my @status;
 eval '$status[$SVN::Wc::Status::' . "$_]=qq/\u$_/"
     for qw/modified conflicted added deleted unversioned
@@ -103,15 +102,30 @@ sub _status {
     return $rv[0]->[1];
 }
 
-
 sub svn_status {
     my %status = _status(@_);
     my %rv;
     # ignores property mods, etc.; turns out we don't need them for our use-case
     while (my($k, $v) = each %status) {
-        push @{$rv{+lc  $v}}, $k;
+        push @{$rv{+lc  $v}}, $k if defined $v;
     }
     return %rv;
+}
+
+sub svn_commit {
+  my $ctx = shift->new;
+  $ctx->log_msg(sub { ${$_[0]} = "Automated commit-back" });
+  $ctx->commit(@_);
+}
+
+sub svn_revert {
+  my $ctx = shift->new;
+  $ctx->revert(@_);
+}
+
+sub svn_cleanup {
+  my $ctx = shift->new;
+  $ctx->cleanup(@_);
 }
 
 sub svn_add {
@@ -149,7 +163,9 @@ sub svn_can_read {
 
 my %vc_cache;
 sub is_version_controlled {
-    $vc_cache{$_[0]} //= (-d "$_[0]/.svn" or `svn info '$_[0]' 2>&1` !~ / is not a working copy/) || 0;
+  local $@;
+  eval {__PACKAGE__->_status(@_)};
+  return not $@;
 }
 
 1;
