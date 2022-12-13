@@ -43,7 +43,7 @@ sub new {
                   my $path = substr $name, 1, -1;
                   sanitize_relative_path $path;
                   my $ok = 0;
-                  for my $p (@path::patterns) {
+                  for my $p (eval '@path::patterns') {
                     my ($re, $method, $args) = @$p;
                     next unless "/$path" =~ $re;
                     ++$ok if $args->{category_root} or $args->{archive_root};

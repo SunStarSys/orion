@@ -1140,9 +1140,9 @@ sub truncate {
 
 Appends extra value to input. Value can be a varname or a quoted string.
 
-=item teaser
+=item lede
 
-Looks for teaser block in input string and passes its contents to ucfirst().
+Looks for "{# lede #}" -boundaried block in input string and passes its contents to ucfirst().
 
 =item ssi
 
@@ -1171,11 +1171,11 @@ sub append {
 	return $value->set($value->repr . $extra->repr);
 }
 
-sub teaser {
+sub lede {
   my $value=shift;
   $value->safe;
   my $content = $value->repr;
-  $content =~ /\Q<!-- #teaser -->\E(.*?)\Q<!-- #teaser -->\E/s;
+  $content =~ /\Q{# lede #}\E(.*?)\Q{# lede #}\E/s;
   return $value->set(ucfirst $1);
 }
 
