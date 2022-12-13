@@ -523,10 +523,10 @@ sub normalize_links {
                          ( (?!https?://|mailto://|\{)[^\)#?]*? ) ([#?][^\)#?]+)?
                          \)
                      }{
-                       my $url = $2;
+                       my ($title, $url, $suffix) =($1, $2, $3);
                        $url =~ s!/\./!/!g;
                        1 while $url =~ s#/[^/]+/\.\./#/#;
-                       "[$1]($url$3)"
+                       "[$title]($url$suffix)"
                      }gex;
 
   $args{content} =~ s{                 # trim html links
@@ -534,10 +534,10 @@ sub normalize_links {
                          ( (?!https?://|mailto://|\{)[^'"?#]*? ) ([#?][^'"#?]+)?
                          \2
                      }{
-                       my $url = $3;
+                       my ($tag, $quote, $url, $suffix) = ($1, $2, $3, $4);
                        $url =~ s!/\./!/!g;
                        1 while $url =~ s#/[^/]+/\.\./#/#;
-                       "$1=$2$url$4$2"
+                       "$tag=$quote$url$suffix$quote"
                      }gex;
   return view->can($view)->(%args);
 }
