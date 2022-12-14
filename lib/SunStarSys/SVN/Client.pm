@@ -32,6 +32,15 @@ sub SVN::Pool::DESTROY {
   return 1;
 }
 
+sub SVN::Client::log_msg {
+    my $self = shift;
+
+    if (scalar(@_) == 1) {
+      $self->{'log_msg_callback'} = [$_[0], $self->{'ctx'}->log_msg_baton3($_[0])];
+    }
+    return $self->{'log_msg_callback'};
+}
+
 sub new {
     my ($class, $r) = @_;
     shift; shift;
@@ -264,7 +273,7 @@ sub info {
     my $pool = $self->pool;
     my $ctx = $self->context;
     normalize_svn_path $filename;
-    $client->info($filename, undef, $remote_revision // "WORKING", $callback, 0, $ctx, $pool);
+    $client->info($filename, undef, $remote_revision, $callback, 0, $ctx, $pool);
 }
 
 sub mkdir {
@@ -295,7 +304,7 @@ sub AUTOLOAD {
 
   if (defined(my $client_method = $_[0]->client->can($method_name))) {
     *$AUTOLOAD = sub {
-      my ($client, $r) = @{+shift}{qw/client r/};
+      my ($client, $r, $pool) = @{+shift}{qw/client r pool/};
       my $filename = $_[0];
       if (ref $filename) {
         $filename = $r->filename;
@@ -307,7 +316,7 @@ sub AUTOLOAD {
       my ($repos, $user, $lock) = $filename =~ m{^/x1/cms/wc(?:build)?/([^/]+)/([^-/]+)};
       ($repos, $user) = $_[2] =~ m{^/x1/cms/wc/([^/]+)/([^-/]+)} unless defined $repos and defined $user;
       $lock = get_lock("/x1/cms/locks/$repos-wc-$user") if defined $repos and defined $user;
-      $client_method->($client, @_);
+      $client_method->($client, @_, $pool);
     };
     goto &{*{$AUTOLOAD}{CODE}};
   }
