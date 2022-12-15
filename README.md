@@ -107,6 +107,8 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
         content, ext, args = s(**args)
 ```
 
+Markdown-based mermaid+mindmap rendering tests:
+
 ```mermaid
 graph TD
     A[Christmas] -->|Get money| B(Go shopping)
