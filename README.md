@@ -106,3 +106,207 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
         args[path] = path
         content, ext, args = s(**args)
 ```
+
+```mermaid
+graph TD
+    A[Christmas] -->|Get money| B(Go shopping)
+    B --> C{Let me think}
+    C -->|One| D[Laptop]
+    C -->|Two| E[iPhone]
+    C -->|Three| F[fa:fa-car Car]
+```
+
+```mermaid
+sequenceDiagram
+    participant Alice
+    participant Bob
+    Alice->>John: Hello John, how are you?
+    loop Healthcheck
+        John->>John: Fight against hypochondria
+    end
+    Note right of John: Rational thoughts<br/>prevail...
+    John-->>Alice: Great!
+    John->>Bob: How about you?
+    Bob-->>John: Jolly good!
+```
+```mermaid
+erDiagram
+    CUSTOMER }|..|{ DELIVERY-ADDRESS : has
+    CUSTOMER ||--o{ ORDER : places
+    CUSTOMER ||--o{ INVOICE : "liable for"
+    DELIVERY-ADDRESS ||--o{ ORDER : receives
+    INVOICE ||--|{ ORDER : covers
+    ORDER ||--|{ ORDER-ITEM : includes
+    PRODUCT-CATEGORY ||--|{ PRODUCT : contains
+    PRODUCT ||--o{ ORDER-ITEM : "ordered in"
+```
+```mermaid
+stateDiagram-v2
+    [*] --> Still
+    Still --> [*]
+    Still --> Moving
+    Moving --> Still
+    Moving --> Crash
+    Crash --> [*]
+```
+```mermaid
+gantt
+    title A Gantt Diagram
+    dateFormat  YYYY-MM-DD
+    section Section
+    A task           :a1, 2014-01-01, 30d
+    Another task     :after a1  , 20d
+    section Another
+    Task in sec      :2014-01-12  , 12d
+    another task      : 24d
+```
+```mermaid
+pie title Commits to orion on GitHub
+	"Sunday" : 4
+	"Monday" : 5
+	"Tuesday" : 7
+  "Wednesday" : 3
+```
+```mermaid
+classDiagram
+    Animal <|-- Duck
+    Animal <|-- Fish
+    Animal <|-- Zebra
+    Animal : +int age
+    Animal : +String gender
+    Animal: +isMammal()
+    Animal: +mate()
+    class Duck{
+      +String beakColor
+      +swim()
+      +quack()
+    }
+    class Fish{
+      -int sizeInFeet
+      -canEat()
+    }
+    class Zebra{
+      +bool is_wild
+      +run()
+    }
+```
+```mermaid
+gitGraph
+    commit
+    commit
+    branch develop
+    checkout develop
+    commit
+    commit
+    checkout main
+    merge develop
+    commit
+    commit
+```
+```mermaid
+%%{init:{"theme":"default"}}%%
+graph TB
+    sq[Square shape] --> ci((Circle shape))
+
+    subgraph A
+        od>Odd shape]-- Two line<br/>edge comment --> ro
+        di{Diamond with <br/> line break} -.-> ro(Rounded<br>square<br>shape)
+        di==>ro2(Rounded square shape)
+    end
+
+    %% Notice that no text in shape are added here instead that is appended further down
+    e --> od3>Really long text with linebreak<br>in an Odd shape]
+
+    %% Comments after double percent signs
+    e((Inner / circle<br>and some odd <br>special characters)) --> f(,.?!+-*ز)
+
+    cyr[Cyrillic]-->cyr2((Circle shape Начало));
+
+     classDef green fill:#9f6,stroke:#333,stroke-width:2px;
+     classDef orange fill:#f96,stroke:#333,stroke-width:4px;
+     class sq,e green
+     class di orange
+```
+```mermaid
+mindmap
+  root((mindmap))
+    Origins
+      Long history
+      ::icon(fa fa-book)
+      Popularisation
+        British popular psychology author Tony Buzan
+    Research
+      On effectivness<br/>and features
+      On Automatic creation
+        Uses
+            Creative techniques
+            Strategic planning
+            Argument mapping
+    Tools
+      Pen and paper
+      Mermaid
+```
+```mermaid
+journey
+    title My working day
+    section Go to work
+      Make tea: 5: Me
+      Go upstairs: 3: Me
+      Do work: 1: Me, Cat
+    section Go home
+      Go downstairs: 5: Me
+      Sit down: 3: Me
+```
+```mermaid
+flowchart TB
+classDef borderless stroke-width:0px
+classDef darkBlue fill:#00008B, color:#fff
+classDef brightBlue fill:#6082B6, color:#fff
+classDef gray fill:#62524F, color:#fff
+classDef gray2 fill:#4F625B, color:#fff
+
+subgraph publicUser[ ]
+    A1[[Public User<br/> Via REST API]]
+    B1[Backend Services/<br/>frontend services]
+end
+class publicUser,A1 gray
+
+subgraph authorizedUser[ ]
+    A2[[Authorized User<br/> Via REST API]]
+    B2[Backend Services/<br/>frontend services]
+end
+class authorizedUser,A2 darkBlue
+
+subgraph booksSystem[ ]
+    A3[[Books System]]
+    B3[Allows interacting with book records]
+end
+class booksSystem,A3 brightBlue
+
+
+publicUser--Reads records using-->booksSystem
+authorizedUser--Reads and writes records using-->booksSystem
+
+subgraph authorizationSystem[ ]
+    A4[[Authorization System]]
+    B4[Authorizes access to resources]
+end
+
+subgraph publisher1System[ ]
+    A5[[Publisher 1 System]]
+    B5[Gives details about books published by them]
+end
+subgraph publisher2System[ ]
+    A6[[Publisher 2 System]]
+    B6[Gives details about books published by them]
+end
+class authorizationSystem,A4,publisher1System,A5,publisher2System,A6 gray2
+
+booksSystem--Accesses authorization details using-->authorizationSystem
+booksSystem--Accesses publisher details using-->publisher1System
+booksSystem--Accesses publisher details using-->publisher2System
+
+class A1,A2,A3,A4,A5,A6,B1,B2,B3,B4,B5,B6 borderless
+
+click A3 "https://github.com/csymapp/mermaid-c4-model/blob/master/containerDiagram.md" "booksSystem"
+```
