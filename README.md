@@ -42,7 +42,7 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 - APR::Request (which has a build dependency on mod_perl)
 
 ### (IoC) Build API
-<!-- ioc -->
+
 Core Build Engine:
 
 - provide `@path::patterns` in lib/path.pm
@@ -50,6 +50,7 @@ Core Build Engine:
 - grok the associated API you need to conform to as expressed below
 
 ```perl
+#api
   ...
 
   my $path = "/path/to/source/file";
@@ -67,9 +68,9 @@ Core Build Engine:
   copy($path, "$target_base/content$path") unless $matched;
 
   ...
-
+#api
 ```
-<!-- ioc -->
+
 ## HOWTO
 
 ### Create a source tree with the following layout
