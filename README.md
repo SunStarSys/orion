@@ -41,8 +41,6 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 - YAML::XS
 - APR::Request (which has a build dependency on mod_perl)
 
-
-
 ### (IoC) Build API
 
 Core Build Engine:
@@ -61,7 +59,7 @@ Core Build Engine:
     next unless $path =~ $re;
     ++$matched;
 
-    my ($content, $mime_extension, $final_args, @new_sources) = view->can("$method")->(path => $path, lang => $lang, %$args);
+    my ($content, $mime_extension, $final_args, @new_sources) = view->can($method)->(path => $path, lang => $lang, %$args);
 
 ... write UTF $content to target file with associated $mime_extension file-type
   }
