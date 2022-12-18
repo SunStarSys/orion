@@ -61,7 +61,7 @@ Core Build Engine:
     next unless $path =~ $re;
     ++$matched;
 
-    my ($content, $mime_extension, $new_args, @new_sources) = view->can("$method")->(path => $path, lang => $lang, %$args);
+    my ($content, $mime_extension, $final_args, @new_sources) = view->can("$method")->(path => $path, lang => $lang, %$args);
 
 ... write UTF $content to target file with associated $mime_extension file-type
   }
