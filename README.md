@@ -64,7 +64,7 @@ Core Build Engine:
 ... write UTF $content to target file with associated $mime_extension file-type
   }
 
-  copy($path, "$target_base$path") unless $matched;
+  copy($path, "$target_base/content$path") unless $matched;
 
   ...
 
