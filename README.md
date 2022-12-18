@@ -43,9 +43,13 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 
 
 
-### API
+### (IoC) Build API
 
-Core Build Enging:
+Core Build Engine:
+
+- provide `@path::patterns` in lib/path.pm
+- provide `view code` in lib/view.pm (typically derived from `SunStarSys::View`)
+- grok the associated API you need to conform to as expressed below
 
 ```perl
   ...
