@@ -41,13 +41,32 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 - YAML::XS
 - APR::Request (which has a build dependency on mod_perl)
 
-## New build system is based on node.js and Editor.md: markdownd.js
 
-### npm prerequisites: jquery, navigator, jsdom
 
-### markdownd.js ENV VARS: NODE_PATH, EDITOR_MD, and MARKDOWN_PORT
+### API
 
-### Enjoy: no more deltas between online editor previews and build system markdown rendering
+Core Build Enging:
+
+```perl
+  ...
+
+  my $path = "/path/to/source/file";
+
+  for my $p (@path::patterns) {
+    my ($re, $method, $args) = @$p;
+    next unless $path =~ $re;
+    ++$matched;
+
+    my ($content, $mime_extension, $new_args, @new_sources) = view->can("$method")->(path => $path, lang => $lang, %$args);
+
+... write UTF $content to target file with associated $mime_extension file-type
+  }
+
+  copy($path, "$target_base$path") unless $matched;
+
+  ...
+
+```
 
 ## HOWTO
 
