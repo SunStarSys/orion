@@ -1226,7 +1226,7 @@ sub vcs_author {
   $ENV{REPOS} //= "public";
   if ($content =~ /\$Author:\s+([\w.@-]+)\s+\$/) {
     my $svnuser = $1;
-    tie my %pw, DB_File => "/x1/repos/svn-auth/$ENV{REPOS}/user+group", O_RDONLY or return $value->set(undef);
+    tie my %pw, DB_File => "/x1/repos/svn-auth/$ENV{REPOS}/user+group", O_RDONLY or return $value->set($svnuser);
     no warnings 'uninitialized';
     my ($comment) = (split /:/, $pw{$svnuser})[2] =~ /^([^<]+)/;
     my $name = substr($comment // "Unknown ", 0, -1);
