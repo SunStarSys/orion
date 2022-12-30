@@ -62,6 +62,10 @@ sub newandcompile {
 	return $class->new(@_,1);
 }
 
+sub flush_cache {
+  %cache = ();
+}
+
 {
 	no warnings "redefine";
 	sub new {

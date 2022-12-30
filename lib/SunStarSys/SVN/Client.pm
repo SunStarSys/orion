@@ -28,24 +28,20 @@ sub _create_auth :Sealed {
     ];
 }
 
-sub SVN::Pool::DESTROY {
-  return 1;
-}
-
 sub SVN::Client::log_msg {
     my $self = shift;
 
-    if (scalar(@_) == 1) {
+    if (@_) {
       $self->{'log_msg_callback'} = [$_[0], $self->{'ctx'}->log_msg_baton3($_[0])];
     }
-    return $self->{'log_msg_callback'};
+    return $$self{'log_msg_callback'}[1];
 }
 
 sub new {
     my ($class, $r) = @_;
     shift; shift;
-    my $pool = $r ? SVN::Pool->_wrap(${$r->pool}) : APR::Pool->new;
-    unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool;
+    my $pool = $r ? SVN::Pool->_wrap(${$r->pool}) : SVN::Pool->new;
+    unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool, config => undef;
     my $client = SVN::Client->new(@_) or die "Can't create SVN::Client: $!";
     return bless {
              r => $r,

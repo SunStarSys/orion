@@ -145,6 +145,13 @@ sub svn_ps {
         and $ctx->propset($propname, $propval, $target, 0);
 }
 
+sub svn_diff {
+  my $ctx = shift->new;
+  my ($target, $revision, $recursive, $out, $err) = @_;
+  $ctx->diff(undef, $target, $revision-1, $target, $revision, $recursive, 0, 1,
+$out // \*STDOUT, $err // \*STDERR);
+}
+
 my %scr_cache;
 sub svn_can_read {
   return unless exists $ENV{TARGET_BASE};

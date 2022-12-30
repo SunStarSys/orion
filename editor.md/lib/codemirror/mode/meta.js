@@ -12,6 +12,7 @@
   "use strict";
 
   CodeMirror.modeInfo = [
+    {name: "Apache", mime: "text/x-apache", mode: "apache" },
     {name: "APL", mime: "text/apl", mode: "apl", ext: ["dyalog", "apl"]},
     {name: "Asterisk", mime: "text/x-asterisk", mode: "asterisk", file: /^extensions\.conf$/i},
     {name: "C", mime: "text/x-csrc", mode: "clike", ext: ["c", "h"]},

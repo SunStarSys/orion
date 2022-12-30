@@ -176,7 +176,7 @@ sub copy_if_newer {
     my $compress = 0;
     $dest .= ".gz" and $compress++ if -T $src and $dest =~ m#/content/#;
     copy $src, $dest and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
-    if ($compress and $copied and eval '$path::compress') {
+    if ($compress and $copied) {
       utf8::encode my $d = $dest;
       gzip $d, "$d.tmp";
       rename "$d.tmp", $d;
@@ -440,6 +440,12 @@ sub seed_file_deps {
       1 while $src =~ s(/[^./][^/]+/[.]{2}/)(/);
       push @{$$dependencies{$path}}, $src unless archived $src or $seen{$src}++;
     }
+  }
+  my ($base, undef, $ext) = parse_filename $path;
+  my $attachments_dir = "content$dir/$base.page";
+  if (-d $attachments_dir) {
+    s/^[^\.]*// for my $lang = $ext;
+    push @{$$dependencies{$path}}, grep s/^content// && !$seen{$_}++, glob("'$attachments_dir'/*$lang");
   }
   delete $$dependencies{$path} unless @{$$dependencies{$path}};
 }

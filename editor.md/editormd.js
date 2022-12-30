@@ -43,7 +43,7 @@
 
     if (typeof (jQuery_flowchart) != "undefined") {
 	// AWAITING jsdom SVGMatrix implementation
-	// jQuery_flowchart($, flowchart(w, Raphael(w)));
+	jQuery_flowchart($, flowchart(w, Raphael(w)));
     }
 
     if (typeof ($) === "undefined") {
@@ -170,6 +170,8 @@
                                                // Support Editor.md logo icon emoji :editormd-logo: :editormd-logo-1x: > 1~8x;
         tex                  : false,          // TeX(LaTeX), based on KaTeX
         flowChart            : false,          // flowChart.js only support IE9+
+        mermaid              : false,
+        graphviz             : false,
         sequenceDiagram      : false,          // sequenceDiagram.js only support IE9+
         previewCodeHighlight : true,
 
@@ -532,7 +534,40 @@
                     return ;
                 }
 
-                if(settings.flowChart || settings.sequenceDiagram)
+                if (settings.mermaid)
+                {
+                    _this.editormd.loadCSS(loadPath + "../css/mermaid.min", function () {
+                        _this.editormd.loadScript(loadPath + "mermaid.min", function () {
+                            _this.editormd.loadScript(loadPath + "mermaid-mindmap.min", function () {
+                                _this.editormd.$mermaid = mermaid;
+                                mermaid.registerExternalDiagrams([window["mermaid-mindmap"]], {lazyLoad: false});
+                                mermaid.initialize({theme:"dark"});
+                                var idx = 0;
+                                for (const e of _this.previewContainer.find(".mermaid").toArray()) {
+                                    _this.editormd.$mermaid.render("mermaid-" + ++idx, $(e).text(), function(graph) {
+                                        e.outerHTML = graph;
+                                    });
+                                }
+                            });
+                        });
+                    });
+                }
+                if (settings.graphviz)
+                {
+                    _this.editormd.loadScript(loadPath + "d3.min", function () {
+                        _this.editormd.loadScript(loadPath + "wasm/index.min", function () {
+                            _this.editormd.loadScript(loadPath + "d3-graphviz", function () {
+                                _this.editormd.$d3 = d3;
+                                for (const e of _this.previewContainer.find(".graphviz").toArray()) {
+                                    _this.editormd.$d3.select(e).graphviz().renderDot($(e).text());
+                                    e.innerHTML = ""
+                                }
+                            });
+                        });
+                    });
+                }
+
+                if (settings.flowChart || settings.sequenceDiagram)
                 {
 		    _this.editormd.loadScript(loadPath + "raphael.min", function() {
 
@@ -570,7 +605,7 @@
 		    _this.loadedDisplay();
                 }
 	    };
-	    _this.editormd.loadCSS(loadPath + "codemirror/codemirror.min");
+	    _this.editormd.loadCSS(loadPath + "codemirror/codemirror");
 
 	    if (settings.searchReplace && !settings.readOnly)
 	    {
@@ -583,24 +618,25 @@
 		_this.editormd.loadCSS(loadPath + "codemirror/addon/fold/foldgutter");
 	    }
 
-	    _this.editormd.loadScript(loadPath + "codemirror/codemirror.min", function() {
+	    _this.editormd.loadScript(loadPath + "codemirror/codemirror", function() {
 		_this.editormd.$CodeMirror = CodeMirror;
 
 		editormd.loadScript(loadPath + "codemirror/modes.min", function() {
 
-		    editormd.loadScript(loadPath + "codemirror/addons.min", function() {
+                    editormd.loadScript(loadPath + "codemirror/addon/hint/show-hint", function () {
+		        editormd.loadScript(loadPath + "codemirror/addons.min", function() {
 
-			_this.setCodeMirror();
-			_this.setToolbar();
+			    _this.setCodeMirror();
+			    _this.setToolbar();
 
-			if (settings.mode !== "gfm" && settings.mode !== "markdown")
-			{
-			    _this.loadedDisplay();
+			    if (settings.mode !== "gfm" && settings.mode !== "markdown")
+			    {
+			        _this.loadedDisplay();
 
-			    return false;
-			}
+			        return false;
+			    }
 
-
+                        });
 			editormd.loadScript(loadPath + "marked.min", function() {
 
 			    editormd.$marked = marked;
@@ -711,6 +747,54 @@
             var settings         = this.settings;
             var editor           = this.editor;
 
+            function acl_complete(cm, options) {
+                return new Promise(function(accept) {
+                    setTimeout(function() {
+                        var cursor = cm.getCursor(), line=cm.getLine(cursor.line);
+
+                        if (typeof(comp) !== undefined && /^acl: |\@/i.test(line)) {
+                            var start = cursor.ch, end = cursor.ch;
+                            while (start > 0 && /[\w.@-]/.test(line.slice(start > 1 ? start-2: start-1,start))) --start;
+                            while (end < line.length && /[\w.@-]/.test(line.slice(end-1,end+1))) ++end;
+                            var shortened = 0;
+                            while (line.slice(start, end).indexOf("@@") >= 0) { start++; shortened++;}
+                            if (!shortened)
+                                while (!/^acl: /i.test(line) && line.slice(start, end).indexOf("@") == 0)
+                                    ++start;
+                            var word = line.slice(start, end).toLowerCase();
+                            var match = [];
+                            for (var i = 0; i < comp.length; i++) {
+                                if (comp[i].displayText.toLowerCase().indexOf(word) >= 0)
+                                    match.push(comp[i]);
+                                else if (word.indexOf("@") == 0)
+                                    if (comp[i].groups)
+                                        for (const e of comp[i].groups)
+                                            if (e.displayText.toLowerCase().indexOf(word) >= 0)
+                                                match.push(e);
+                                else if (comp[i].groups)
+                                    for (const e of comp[i].groups)
+                                        for (const m of e.members)
+                                            if (m.displayText.toLowerCase().indexOf(word) >= 0)
+                                                match.push(m);
+                                else if (comp[i].members)
+                                    for (const m of comp[i].members)
+                                        if (m.displayText.toLowerCase().indexOf(word) >= 0)
+                                            match.push(m);
+                            }
+                            if (match.length > 0) {
+                                while (line.slice(start-1, end).indexOf("@") == 0) { --start; ++shortened }
+                                var data = {
+                                    list: match,
+                                    from: CodeMirror.Pos(cursor.line, (!/^acl: /i.test(line) && shortened) ? start+1 : start),
+                                    to: CodeMirror.Pos(cursor.line, end)
+                                }
+                                return accept(data);
+                            }
+                        }
+                        return accept({list: ["\t"], from: CodeMirror.Pos(cursor.line,start), to: CodeMirror.Pos(cursor.line,end)});
+                    }, 100);
+                });
+            }
             if (settings.editorTheme !== "default")
             {
                 this.editormd.loadCSS(settings.path + "codemirror/theme/" + settings.editorTheme);
@@ -730,8 +814,10 @@
                 extraKeys                 : {
                                                 "Ctrl-Q": function(cm) {
                                                     cm.foldCode(cm.getCursor());
-                                                }
+                                                },
+                                                "Tab": "autocomplete"
                                             },
+                hintOptions               : {hint: acl_complete },
                 foldGutter                : settings.codeFold,
                 gutters                   : ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
                 matchBrackets             : settings.matchBrackets,
@@ -1523,7 +1609,7 @@
 
             this.previewContainer.find("." + editormd.classNames.tex).each(function(){
                 var tex  = $(this);
-                editormd.$katex.render(tex.text(), tex[0]);
+                editormd.$katex.render(tex.text(), tex[0], {display: true, macros: macros_physics});
 
                 tex.find(".katex").css("font-size", "1.6em");
             });
@@ -1554,6 +1640,20 @@
                 }
 
                 previewContainer.find(".flowchart").flowChart();
+            }
+            if (settings.mermaid && editormd.$mermaid) {
+                var idx = 0;
+                for (const e of previewContainer.find(".mermaid").toArray()) {
+                    editormd.$mermaid.render("mermaid-" + ++idx, $(e).text(), function(graph) {
+                        e.outerHTML = graph;
+                    });
+                }
+            }
+            if (settings.graphviz && editormd.$d3) {
+                for (const e of previewContainer.find(".graphviz").toArray()) {
+                    editormd.$d3.select(e).graphviz().renderDot($(e).text());
+                    e.innerHTML = ""
+                }
             }
 
             if (settings.sequenceDiagram) {
@@ -1827,7 +1927,7 @@
             var preview          = this.preview;
             var settings         = this.settings;
 	    var editormd         = this.editormd;
-	    
+
             this.containerMask.hide();
 
             this.save();
@@ -2035,6 +2135,8 @@
                 atLink               : settings.atLink,           // for @link
                 emailLink            : settings.emailLink,        // for mail address auto link
                 flowChart            : settings.flowChart,
+                mermaid              : settings.mermaid,
+                graphviz             : settings.graphviz,
                 sequenceDiagram      : settings.sequenceDiagram,
                 previewCodeHighlight : settings.previewCodeHighlight,
             };
@@ -2118,7 +2220,7 @@
                     }
                 }
 
-                if (settings.flowChart || settings.sequenceDiagram)
+                if (settings.flowChart || settings.sequenceDiagram || settings.mermaid || settings.graphviz)
                 {
                     flowchartTimer = setTimeout(function(){
                         clearTimeout(flowchartTimer);
@@ -2737,7 +2839,7 @@
             var cm       = this.cm;
             var settings = this.settings;
 	    var editormd = this.editormd;
-	    
+
             path = settings.pluginPath + path;
 
             if (typeof define === "function")
@@ -3391,7 +3493,7 @@
     };
 
     editormd.regexs = {
-        atLink        : /@(\w+)/g,
+        atLink        : /@([@\w.\/=-]+)/g,
         email         : /(\w+)@(\w+)\.(\w+)\.?(\w+)?/g,
         emailLink     : /(mailto:)?([\w.-]+)@([\w-]+)(?:\.([\w-]+))*/g,
         emoji         : /:([\w\+-]+):/g,
@@ -3529,8 +3631,52 @@
                         return $1.replace(/@/g, "_#_&#64;_#_");
                     });
 
-                    text = text.replace(atLinkReg, function($1, $2) {
-                        return "<a href=\"" + editormd.urls.atLinkBase + "" + $2 + "\" title=\"&#64;" + $2 + "\" class=\"at-link\">" + $1 + "</a>";
+                    text = text.replace(atLinkReg, function($a, $b) {
+                        if (typeof comp !== undefined && /=$/.test($b)) {
+                            for (const e of comp) {
+                                if (e.text == $b) {
+                                    var idx = e.displayText.indexOf(":");
+                                    var end = e.displayText.length;
+                                    if (idx >= 0 && end >= 0)
+                                        return "<a class=\"at-link\" href=\"mailto://" + escape(e.displayText.slice(idx+1, end)).replace("@", "&#64;") + "\">" + e.displayText.slice(idx+1, end).replace("@", "&#64;").replace("<", "&lt;").replace(">", "&gt;") + "</a>";
+                                    if (/^@/.test($b)) {
+                                        var friends = [];
+                                        for (const u of e.members) {
+                                            idx = u.displayText.indexOf(":");
+                                            end = u.displayText.length;
+                                            if (idx >= 0 && end >= 0)
+                                                friends.push("<a class=\"at-link\" href=\"mailto://" + escape(u.displayText.slice(idx+1, end)).replace("@", "&#64;") + "\">" + u.displayText.slice(idx+1, end).replace("@", "&#64;").replace("<", "&lt;").replace(">", "&gt;") + "</a>");
+                                        }
+                                        return friends.join(", ");
+                                    }
+                                }
+                                else if (e.groups) {
+                                    for (const f of e.groups) {
+                                        if (/^@/.test($b))
+                                            if (f.text == $b) {
+                                                var friends = [];
+                                                for (const h of f.members) {
+                                                    var idx = h.displayText.indexOf(":");
+                                                    var end = h.displayText.length;
+                                                    if (idx >= 0 && end >= 0)
+                                                        friends.push("<a class=\"at-link\" href=\"mailto://" + escape(h.displayText.slice(idx+1, end)).replace("@", "&#64;") + "\">" + h.displayText.slice(idx+1, end).replace("@", "&#64;").replace("<", "&lt;").replace(">", "&gt;") + "</a>");
+                                                }
+                                                return friends.join(", ");
+                                            }
+                                        else
+                                            for (const h of f.members) {
+                                                if (h.text == $b) {
+                                                    var idx = h.displayText.indexOf(":");
+                                                    var end = h.displayText.length;
+                                                    if (idx >= 0 && end >= 0)
+                                                        return "<a class=\"at-link\" href=\"mailto://" + escape(h.displayText.slice(idx+1, end)).replace("@", "&#64;") + "\">" + h.displayText.slice(idx+1, end).replace("@", "&#64;").replace("<", "&lt;").replace(">", "&gt;") + "</a>";
+                                                }
+                                            }
+                                    }
+                                }
+                            }
+                        }
+                        return "<a href=\"" + editormd.urls.atLinkBase + "" + $b + "\" title=\"&#64;" + $b + "\" class=\"at-link\">" + $a + "</a>";
                     }).replace(/_#_&#64;_#_/g, "@");
                 }
 
@@ -3664,9 +3810,17 @@
             {
                 return "<div class=\"sequence-diagram\">" + code + "</div>";
             }
-            else if ( lang === "flow")
+            else if (lang === "flow")
             {
                 return "<div class=\"flowchart\">" + code + "</div>";
+            }
+            else if (lang === "mermaid")
+            {
+                return "<div class=\"mermaid\">" + code + "</div>";
+            }
+            else if (lang === "graphviz")
+            {
+                return "<div class=\"graphviz\">" + code + "</div>";
             }
             else if ( lang === "math" || lang === "latex" || lang === "katex")
             {
@@ -4040,6 +4194,20 @@
             if (settings.flowChart) {
 		div.find(".flowchart").flowChart();
 	    }
+            if (settings.mermaid && editormd.$mermaid) {
+                var idx = 0;
+                for (const e of previewContainer.find(".mermaid").toArray()) {
+                    editormd.$mermaid.render("mermaid-" + ++idx, $(e).text(), function(graph) {
+                        e.outerHTML = graph;
+                    });
+                }
+            }
+            if (settings.graphviz && editormd.$d3) {
+                for (const e of previewContainer.find(".graphviz").toArray()) {
+                    editormd.$d3.select(e).graphviz().renderDot($(e).text());
+                    e.innerHTML = ""
+                }
+            }
 
         }
 
@@ -4048,7 +4216,7 @@
             var katexHandle = function() {
                 div.find("." + editormd.classNames.tex).each(function(){
                     var tex  = $(this);
-                    katex.render(tex.html().replace(/&lt;/g, "<").replace(/&gt;/g, ">"), tex[0]);
+                    katex.render(tex.html().replace(/&lt;/g, "<").replace(/&gt;/g, ">"), tex[0], {display:true, macros:macros_physics});
                     tex.find(".katex").css("font-size", "1.6em");
                 });
             };
@@ -4213,7 +4381,8 @@
     // You can custom KaTeX load url.
     editormd.katexURL  = {
         css : "/editor.md/lib/katex.min",
-        js  : "/editor.md/lib/katex.min"
+        js  : "/editor.md/lib/katex.min",
+        physics: "/editor.md/lib/katex-physics"
     };
 
     editormd.kaTeXLoaded = false;
@@ -4226,8 +4395,11 @@
      */
 
     editormd.loadKaTeX = function (callback) {
-        editormd.loadCSS(editormd.katexURL.css, function(){
-            editormd.loadScript(editormd.katexURL.js, callback || function(){});
+        editormd.loadCSS(editormd.katexURL.css, function() {
+            editormd.loadScript(editormd.katexURL.js, function() {
+                editormd.loadScript(editormd.katexURL.physics, callback || function(){
+                });
+            });
         });
     };
 

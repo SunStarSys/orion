@@ -27,6 +27,7 @@ use Data::Dumper ();
 use File::Basename;
 use File::Path;
 use IO::Compress::Gzip 'gzip';
+use LWP::UserAgent;
 
 push our @TEMPLATE_DIRS, "templates";
 our $VERSION = "3.00";
@@ -167,6 +168,52 @@ EOT
 }
 
 
+sub asymptote {
+  my %args = @_;
+  my $lang = $args{lang};
+  my $page_path = "content$args{path}";
+  my ($base) = parse_filename $page_path;
+  my $attachments_dir = dirname($page_path) . "/$base.page";
+  read_text_file $page_path, \%args unless exists $args{content} and exists $args{headers};
+  my $prefix = "asyA";
+  my @sources;
+  $args{content} =~ s{^\`{3}asy(?:mptote)?\s+(.*?)^\`{3}$}{
+    s/^\s+settings.*\n//msg for my $body = $1;
+    my $ua = LWP::UserAgent->new;
+    my $cached=0;
+    -d $attachments_dir or mkpath $attachments_dir;
+    if (-f "$attachments_dir/$prefix.asy$lang" and open my $fh, "<:encoding(UTF-8)", "$attachments_dir/$prefix.asy$lang") {
+      read $fh, my $content, -s $fh;
+      if ($content eq $body) {
+        ++$cached;
+      }
+    }
+    unless ($cached) {
+      open my $fh, ">:encoding(UTF-8)", "$attachments_dir/$prefix.asy$lang" or die $!;
+      print $fh $body;
+      push @sources, "$attachments_dir/$prefix.asy";
+      my $res = LWP::UserAgent->new->post('http://192.168.254.1:8080/', Content => $body);
+      if ($res->is_success) {
+        -d $attachments_dir or mkpath $attachments_dir;
+        my $file = "$attachments_dir/$prefix.html$lang";
+        if (open my $fh, ">:encoding(UTF-8)", $file) {
+          print $fh $res->decoded_content;
+          push @sources, $file;
+        }
+      }
+      else {
+        die "asy html rendering of '$prefix' failed (" . $res->status_line . "): " . $res->decoded_content;
+      }
+    }
+    my $rv = qq(\n<iframe id="$prefix" class="asymptote" src="$base.page/$prefix.html$lang" frameborder="0"></iframe>\n);
+    ++$prefix;
+    $rv;
+  }msge;
+  my $view = next_view(\%args);
+  return view->can($view)->(%args), @sources;
+}
+
+
 # Typical multi-narrative page view.  Has the same behavior as the above for foo.page/bar.mdtext
 # files, parsing them into a bar variable for the template.
 #
@@ -249,7 +296,7 @@ sub fetch_deps {
   }
   my @d;
   while (my ($k, $v) = each %$data) {
-    push @d, [$k, $v];
+    push @d, [$k, $v] unless $k =~ m#\.page/#; # skip attachments
   }
   no warnings 'uninitialized'; # peculiar: should only happen with quick_deps>2
   # transform second argument to fetch_deps() from a hashref to an arrayref

@@ -17,6 +17,11 @@
 package Dotiac::DTL::Filter;
 use strict;
 use warnings;
+use DB_File;
+use POSIX qw/:fcntl_h/;
+
+
+
 require Scalar::Util;
 our $VERSION = 0.8;
 
@@ -1160,6 +1165,11 @@ File::Basename::basename of input/
 
 Filters svn:keyword "$Date:...$" line in input content for day-month-year info.
 
+
+=item vcs_author
+
+Filters svn:keyword "$Author:...$" line in input content for author svnuser id
+
 =back
 
 =cut
@@ -1206,6 +1216,27 @@ sub vcs_date {
   my $content = $value->repr;
   $content =~ /\$Date:(?:[^(]+?)\(([^)]+)\)\s+\$/;
   return $value->set($1);
+}
+
+sub vcs_author {
+  my $value = shift;
+  my $content = $value->repr;
+  my $lang = shift->repr;
+  my $markdown_search = 1;
+  $ENV{REPOS} //= "public";
+  if ($content =~ /\$Author:\s+([\w.@-]+)\s+\$/) {
+    my $svnuser = $1;
+    tie my %pw, DB_File => "/x1/repos/svn-auth/$ENV{REPOS}/user+group", O_RDONLY or return $value->set(undef);
+    no warnings 'uninitialized';
+    my ($comment) = (split /:/, $pw{$svnuser})[2] =~ /^([^<]+)/;
+    my $name = substr($comment // "Unknown ", 0, -1);
+    my $urlencname = urlencode($value->set($name))->repr;
+    my $rv = $markdown_search ?qq(<a href="/dynamic/search/?regex=$svnuser=;lang=$lang;markdown_search=1">) : qq(<a href="/dynamic/search/?regex=%22$urlencname%22;lang=$lang;markdown_search=0">);
+    $rv .= "$name</a>";
+    $value->safe;
+    return $value->set($rv);
+  }
+  return $value->set(undef);
 }
 
 sub truncatewords {

@@ -14,6 +14,8 @@ use POSIX qw/_exit/;
 use IO::Select;
 use List::Util qw/shuffle/;
 use Socket;
+use File::stat;
+use File::Path 'mkpath';
 
 BEGIN {
   my $script_path = dirname($0);
@@ -37,13 +39,14 @@ use sealed v4.1.8;
 use base 'sealed';
 sub syswrite_all;
 
-my ($target_base, $source_base, $dirq, $runners, $offline, @errors);
+my ($revision, $target_base, $source_base, $dirq, $runners, $offline, @errors);
 
 GetOptions ( "target-base=s", \$target_base,
              "source-base=s", \$source_base,
-             "dirqueue=s", \$dirq,
-             "runners=i", \$runners,
-             "offline", \$offline,
+             "dirqueue=s",    \$dirq,
+             "runners=i",     \$runners,
+             "offline",       \$offline,
+             "revision=i",    \$revision,
 );
 
 die <<USAGE unless defined $target_base and -d $source_base;
@@ -55,6 +58,16 @@ $runners ||= 8; # 8 is arbitrary but educated guess
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET_BASE} = $target_base;
+
+mkpath "$target_base/.build-log";
+open my $build_log, ">>:encoding(UTF-8)", "$target_base/.build-log/$revision.log" or die "Can't open .build-log/$revision.log: $!";
+
+$|=1;
+$|=1, select $_ for select $build_log;
+$|=1, select $_ for select \*STDERR;
+
+$SIG{__WARN__} = sub { print STDERR $_[0]; print $build_log gmtime . ":$_[0]" };
+$SIG{__DIE__}  = sub { print $build_log gmtime . ":$_[0]"; die $_[0]};
 
 unshift @INC, "$source_base/lib";
 require path;
@@ -179,7 +192,7 @@ sub process_file :Sealed {
 
     if ($dirname =~ m!\b\.page/$!) {
         my ($dest, $copied) = copy_if_newer $file, "$target_base/$file";
-        print "Copied to $dest.\n" if $copied;
+        syswrite_all "Copied to $dest.\n" if $copied;
         return;
     }
 
@@ -207,10 +220,16 @@ sub process_file :Sealed {
           $lang .= ".gz";
           $content = $compressed;
         }
+        my $dest = "$target_base/$target_file.$ext$lang";
         my $encoding = $$args{compress} ? "raw" : "encoding(UTF-8)";
-        open my $fh, ">:$encoding", "$target_base/$target_file.$ext$lang"
-          or die "Can't open $target_base/$target_file.$ext$lang: $!\n";
+        my $mtime;
+        $mtime = $_->mtime for map stat $_, "content/$path";
+        open my $fh, ">:$encoding", $dest
+          or die "Can't open $dest: $!\n";
         print $fh $content;
+        close $fh;
+        utime $mtime, $mtime, $dest if $mtime and $$args{compress};
+
         syswrite_all "Built to $target_base/$target_file.$ext$lang.\n";
         return @new_sources;
     }
@@ -283,9 +302,10 @@ sub syswrite_all {
     my $fh = shift // \*STDOUT;
     my $bytes;
     my $total = 0;
+    print $build_log $data if $fh == \*STDOUT;
     while (($bytes = syswrite($fh, substr($data, $total))) > 0) {
-        $total += $bytes;
-        return $total if $total == length $data;
+      $total += $bytes;
+      return $total if $total == length $data;
     }
     return $bytes;
 }

@@ -52,6 +52,7 @@ global.prettify         = require(EDITOR_MD + "/lib/prettify.js");
 global.katex            = require(EDITOR_MD + "/lib/katex.min.js");
 global.Raphael          = require(EDITOR_MD + "/lib/raphael.min.js");
 global.flowchart        = require(EDITOR_MD + "/lib/flowchart.min.js");
+global.macros_physics   = require(EDITOR_MD + "/lib/katex-physics.js");
 
 const HTML = `<!doctype html>
 <html>
@@ -115,7 +116,7 @@ if (cluster.isMaster) {
           taskList:        true,
           delay:              1
         };
-        if (mode !== "gfm" || markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
+          if (mode !== "gfm" || markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
           /* relatively rare (nontrivial) case:
            * instantiate an editor object and pray we wait
            * long enough for it to (async) render the complex
