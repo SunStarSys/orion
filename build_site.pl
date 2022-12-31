@@ -15,7 +15,6 @@ use IO::Select;
 use List::Util qw/shuffle/;
 use Socket;
 use File::stat;
-use File::Path 'mkpath';
 
 BEGIN {
   my $script_path = dirname($0);
@@ -59,7 +58,6 @@ $runners ||= 8; # 8 is arbitrary but educated guess
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET_BASE} = $target_base;
 
-mkpath "$target_base/.build-log";
 open my $build_log, ">>:encoding(UTF-8)", "$target_base/.build-log/$revision.log" or die "Can't open .build-log/$revision.log: $!";
 
 $|=1;
