@@ -24,6 +24,7 @@ const nproc                 = require('os').cpus().length;
 
 const wait_short_ms         = 2;  /* moderate case scenario (less rare) */
 const wait_long_ms          = 10; /* worst case scenario (very rare) */
+const TIMEOUT               = 500;
 
 require.extensions['.css']  = function (module, filename) {
   module.exports = fs.readFileSync(filename, 'utf8');
@@ -128,7 +129,7 @@ if (cluster.isMaster) {
           /* data-spec'd mode (likely a codemirror programming
            * language target) is less hassle than the full gfm case
            */
-              const to = setTimeout(() => {throw new Error("processing timed out")}, 3000);
+              const to = setTimeout(() => {throw new Error("processing timed out")}, TIMEOUT);
               const editor = editormd("editor", options, editormd);
               setTimeout(function () { clearTimeout(to);
 c.end(m ? editor.getHTML() : editor.getPreviewedHTML()) }, m ? wait_short_ms : wait_long_ms);
@@ -137,7 +138,7 @@ c.end(m ? editor.getHTML() : editor.getPreviewedHTML()) }, m ? wait_short_ms : w
            * quote blocks nor latex.
            */
               options.saveHTMLToTextarea = false;
-              const to = setTimeout(() => {throw new Error("processing timed out")}, 5000);
+              const to = setTimeout(() => {throw new Error("processing timed out")}, TIMEOUT);
               const div = editormd.markdownToHTML("editor", options);
               clearTimeout(to);
               c.end(div.html());
