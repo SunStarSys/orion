@@ -128,16 +128,20 @@ if (cluster.isMaster) {
           /* data-spec'd mode (likely a codemirror programming
            * language target) is less hassle than the full gfm case
            */
-            const editor = editormd("editor", options, editormd);
-            setTimeout(function () { c.end(m ? editor.getHTML() : editor.getPreviewedHTML()) }, m ? wait_short_ms : wait_long_ms);
-        } else {
+              const to = setTimeout(() => {throw new Error("processing timed out")}, 3000);
+              const editor = editormd("editor", options, editormd);
+              setTimeout(function () { clearTimeout(to);
+c.end(m ? editor.getHTML() : editor.getPreviewedHTML()) }, m ? wait_short_ms : wait_long_ms);
+          } else {
           /* best performance case (static method call): gfm w/o
            * quote blocks nor latex.
            */
-          options.saveHTMLToTextarea = false;
-          const div = editormd.markdownToHTML("editor", options);
-          c.end(div.html());
-        }
+              options.saveHTMLToTextarea = false;
+              const to = setTimeout(() => {throw new Error("processing timed out")}, 5000);
+              const div = editormd.markdownToHTML("editor", options);
+              clearTimeout(to);
+              c.end(div.html());
+          }
       });
     }
   );
