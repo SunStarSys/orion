@@ -387,8 +387,6 @@ sub walk_content_tree (&) {
   local $_; # filepath that $wanted sub should inspect, rooted in content/ dir
 
   find({ wanted => sub {
-           $File::Find::prune = 1, return if -d and m!\.page$!;
-           return unless -f;
            s!^\Q$cwd/content!!;
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");

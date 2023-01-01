@@ -484,7 +484,7 @@ sub snippet {
   my $file = "content$args{path}";
   read_text_file $file, \%args unless exists $args{headers} and exists $args{content};
   my $key = "snippetA";
-
+  no warnings 'uninitialized';
   $args{content} =~ s{\[snippet:([^\]]+)\]} # format is [snippet:arg1=val1:arg2=val2:...]
                      {
                          my $argspec = $1;
