@@ -129,7 +129,7 @@ Core Build Engine:
         content, ext, args = s(**args)
 ```
 
-Markdown-based mermaid+mindmap rendering tests:
+## Markdown-based mermaid+mindmap rendering tests: (GitHub fails to render mindmaps, Orion does not!)
 
 ```mermaid
 graph TD
