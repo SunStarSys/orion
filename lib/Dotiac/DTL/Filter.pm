@@ -19,11 +19,11 @@ use strict;
 use warnings;
 use DB_File;
 use POSIX qw/:fcntl_h/;
-
-
-
+use URI::Escape;
+use APR::Request qw/encode/;
+our $URIc = '^:/?=&;#A-Za-z0-9.~_-';        # complement of class of characters to uri_escape
 require Scalar::Util;
-our $VERSION = 0.8;
+our $VERSION = 0.9;
 
 sub add {
 	my $value=shift;
@@ -1230,7 +1230,7 @@ sub vcs_author {
     no warnings 'uninitialized';
     my ($comment) = (split /:/, $pw{$svnuser})[2] =~ /^([^<]+)/;
     my $name = substr($comment // "Unknown ", 0, -1);
-    my $urlencname = urlencode($value->set($name))->repr;
+    my $urlencname = encode($name);
     my $rv = $markdown_search ?qq(<a href="/dynamic/search/?regex=$svnuser=;lang=$lang;markdown_search=1">) : qq(<a href="/dynamic/search/?regex=%22$urlencname%22;lang=$lang;markdown_search=0">);
     $rv .= "$name</a>";
     $value->safe;
@@ -1381,15 +1381,16 @@ sub upper {
 sub urlencode {
 	my $val=shift;
 	my $value=$val->repr;
-	my $safe="/";
+	my $safe=$URIc;
 	if (@_) {
 		$safe=shift;
 		$safe=$safe->repr() if ref $safe; # For internal use
 	}
-	$safe="" unless $safe;
-	$safe=quotemeta($safe);
-	my $find=qr/([^\w$safe\.~-])/;
-	$value=~s/$find/uc sprintf("%%%02x",ord($1))/eg;
+#	$safe="" unless $safe;
+#	$safe=quotemeta($safe);
+#	my $find=qr/([^\w$safe\.~-])/;
+       $value =~ /(.*)/;
+	$value = uri_escape_utf8($1, $safe);
 	return $val->set($value);
 }
 

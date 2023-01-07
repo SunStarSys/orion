@@ -14,40 +14,58 @@ use base "sealed";
 sub _create_auth :Sealed {
   my $pool = pop;
   my Apache2::RequestRec $r = pop or return [];
-    $r = $r->main unless $r->is_initial_req;
-    my $authcb = sub {
-        my $cred = shift;
-        $cred->username($r->pnotes("svnuser"));
-        $cred->password($r->pnotes("svnpassword"));
-        $cred->may_save(0);
-    };
+  $r = $r->main unless $r->is_initial_req;
+  my $authcb = sub {
+    my $cred = shift;
+    $cred->username($r->pnotes("svnuser"));
+    $cred->password($r->pnotes("svnpassword"));
+    $cred->may_save(0);
+  };
 
-    return [
-        SVN::Client::get_ssl_server_trust_file_provider($pool),
-        SVN::Client::get_simple_prompt_provider($authcb, 1, $pool),
-    ];
+  return [
+    SVN::Client::get_ssl_server_trust_file_provider($pool),
+    SVN::Client::get_simple_prompt_provider($authcb, 1, $pool),
+  ];
 }
 
 sub SVN::Client::log_msg {
-    my $self = shift;
+  my $self = shift;
 
-    if (@_) {
-      $self->{'log_msg_callback'} = [$_[0], $self->{'ctx'}->log_msg_baton3($_[0])];
-    }
-    return $$self{'log_msg_callback'}[1];
+  if (@_) {
+    my $rv = shift;
+    $self->{'log_msg_callback'} = [\$rv, $self->{'ctx'}->log_msg_baton3($rv)];
+  }
+  return $$self{'log_msg_callback'}[-1];
+}
+
+sub SVN::Client::config {
+  my $self = shift;
+  if (@_) {
+    $self->{config} = $self->{ctx}->config(shift, $self->{pool});
+  }
+  return $self->{config};
+}
+
+sub SVN::Client::notify {
+  my $self = shift;
+  if (@_) {
+    my $rv = shift;
+    $self->{notify_callback} = [\$rv, $self->{ctx}->notify_baton($rv)];
+  }
+  return $$self{notify_callback}[-1];
 }
 
 sub new {
-    my ($class, $r) = @_;
-    shift; shift;
-    my $pool = $r ? SVN::Pool->_wrap(${$r->pool}) : SVN::Pool->new;
-    unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool, config => undef;
-    my $client = SVN::Client->new(@_) or die "Can't create SVN::Client: $!";
-    return bless {
-             r => $r,
-             client => $client,
-             pool => $pool,
-    }, $class;
+  my ($class, $r) = @_;
+  shift; shift;
+  my $pool = $r ? SVN::Pool->_wrap(${$r->pool}) : SVN::Pool->new;
+  unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool, config => {};
+  my $client = SVN::Client->new(@_) or die "Can't create SVN::Client: $!";
+  return bless {
+    r      => $r,
+    client => $client,
+    pool   => $pool,
+  }, $class;
 }
 
 sub r       {shift->{r}}
@@ -74,15 +92,13 @@ sub merge :Sealed {
     $SVN::Wc::Notify::State::conflicted     => \@conflict,
 );
 
-  my $notifier = sub {
+  $svn->notify(sub {
     my ($path, $action, undef, undef, $state) = @_;
     $path =~ s!^\Q$filename\E/?!!;
     push @{$dispatch{$state}}, $path and return 1 if exists $dispatch{$state};
     push @{$dispatch{$action}}, $path if exists $dispatch{$action};
-  };
+  });
   local $_;
-  my $ctx = $self->context;
-  $svn->notify($notifier);
 
   my $rv = "--- ";
 
@@ -97,9 +113,7 @@ sub merge :Sealed {
       0, # force
       0, # record-only
       $dry_run,
-      undef,
-      $ctx,
-      $self->pool
+      undef
     );
     $rv .= "Merging r$target_revision into '.':\n";
   }
@@ -115,9 +129,7 @@ sub merge :Sealed {
       0, # force
       0, #record-only
       $dry_run,
-      undef,
-      $ctx,
-      $self->pool
+      undef
     );
     $rv .= "Reverse-merging r" . (-$target_revision) . " into '.':\n";
   }
@@ -149,17 +161,15 @@ sub update :Sealed {
     $SVN::Wc::Notify::State::conflicted     => \@conflict,
   );
 
-  my $notifier = sub {
+  $svn->notify(sub {
     my ($path, $action, undef, undef, $state) = @_;
     $path =~ s!^\Q$filename\E/?!!;
     push @{$dispatch{$state}}, $path and return 1 if exists $dispatch{$state};
     push @{$dispatch{$action}}, $path if exists $dispatch{$action};
-  };
+  });
 
-  my $ctx = $self->context;
-  $svn->notify($notifier);
   $depth = $SVN::Depth::infinity; # hard-coded
-  my $revision = $svn->update3($filename, "HEAD", $depth, 1,  1, 0, $ctx, $self->pool);
+  my $revision = $svn->update3($filename, "HEAD", $depth, 1,  1, 0);
   my $rv = "--- Updated '.' to HEAD:\n";
   $rv .= "C   $_\n" for @conflict;
   $rv .= "U   $_\n" for @update;
@@ -208,28 +218,22 @@ sub update :Sealed {
 sub copy {
     my ($self, $source, $target) = @_;
     normalize_svn_path $_ for $source, $target;
-    my $pool = $self->pool;
-    my $ctx = $self->context;
     my $client = $self->client;
-    $client->copy($source, 'WORKING', $target, $ctx, $pool);
+    $client->copy($source, 'WORKING', $target);
 }
 
 sub move {
     my ($self, $source, $target, $force) = (@_, 1);
     normalize_svn_path $_ for $source, $target;
-    my $pool = $self->pool;
-    my $ctx = $self->context;
     my $client = $self->client;
-    $client->move($source, 'HEAD', $target, $force, $ctx, $pool);
+    $client->move($source, 'HEAD', $target, $force);
 }
 
 sub delete {
     my ($self, $filename, $force) = (@_, 1);
     normalize_svn_path $filename;
-    my $pool = $self->pool;
-    my $ctx = $self->context;
     my $client = $self->client;
-    $client->delete($filename, $force, $ctx, $pool);
+    $client->delete($filename, $force);
 }
 
 my @status;
@@ -256,7 +260,7 @@ sub status :Sealed {
     };
     my $pool = $self->pool;
 
-    $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef, $self->context, $pool);
+    $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef);
     return map @$_, @rv if wantarray;
     return $rv[0]->[1];
 }
@@ -266,18 +270,14 @@ sub info {
     my Apache2::RequestRec $r = $self->r;
     my SVN::Client $client = $self->client;
     my ($filename, $callback, $remote_revision) = @_;
-    my $pool = $self->pool;
-    my $ctx = $self->context;
     normalize_svn_path $filename;
-    $client->info($filename, undef, $remote_revision, $callback, 0, $ctx, $pool);
+    $client->info($filename, undef, $remote_revision, $callback, 0);
 }
 
 sub mkdir {
     my ($self, $url, $make_parents) = (@_, 1);
     $url =~/(.*)/;
-    my $pool = $self->pool;
-    my $ctx = $self->context;
-    $self->client->mkdir3($1, $make_parents, undef, $ctx, $pool);
+    $self->client->mkdir3($1, $make_parents, undef);
 }
 
 sub diff {
@@ -300,7 +300,7 @@ sub AUTOLOAD {
 
   if (defined(my $client_method = $_[0]->client->can($method_name))) {
     *$AUTOLOAD = sub {
-      my ($client, $r, $pool) = @{+shift}{qw/client r pool/};
+      my ($client, $r) = @{+shift}{qw/client r/};
       my $filename = $_[0];
       if (ref $filename) {
         $filename = $r->filename;
@@ -312,7 +312,7 @@ sub AUTOLOAD {
       my ($repos, $user, $lock) = $filename =~ m{^/x1/cms/wc(?:build)?/([^/]+)/([^-/]+)};
       ($repos, $user) = $_[2] =~ m{^/x1/cms/wc/([^/]+)/([^-/]+)} unless defined $repos and defined $user;
       $lock = get_lock("/x1/cms/locks/$repos-wc-$user") if defined $repos and defined $user;
-      $client_method->($client, @_, $pool);
+      $client_method->($client, @_); # SVN::Client::$client_method will push ctx and pool args.
     };
     goto &{*{$AUTOLOAD}{CODE}};
   }

@@ -28,6 +28,8 @@ use File::Basename;
 use File::Path;
 use IO::Compress::Gzip 'gzip';
 use LWP::UserAgent;
+use URI::Escape;
+our $URIc     = '^:/?=&;#A-Za-z0-9.~_-';        # complement of class of characters to uri_escape
 
 push our @TEMPLATE_DIRS, "templates";
 our $VERSION = "3.00";
@@ -166,7 +168,6 @@ EOT
   $args{headers}{keywords} = $keywords if defined $keywords;
   return Template($template)->render(\%args), html => \%args, @new_sources;
 }
-
 
 sub asymptote {
   my %args = @_;
@@ -359,7 +360,7 @@ sub sitemap {
       . ($dirname =~ m#/20\d{2}/(\d{2})/$#
                  ? $month{$lang}[$1] : ucfirst basename $dirname);
     }
-    $content .= "- [$title]($$_[0])\n";
+    $content .= "- [$title](" . uri_escape_utf8($$_[0], $URIc) . ")\n";
   }
 
   if ($args{nest}) {
@@ -367,11 +368,11 @@ sub sitemap {
               (                                      # \2, link
                   \[ [^\]]+ \]
                   \(
-                  (  [^\)]* / ) index\.html\b[\w.-]* # \3, (dir with trailing slash)
+                  (  [^\)]* / ) index\.html\b[\%\w.-]* # \3, (dir with trailing slash)
                   \)
               )
               (                                      # \4, subpaths
-                  (?:\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\w.-]*)[^\#?] .*)+
+                  (?:\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\%\w.-]*)[^\#?] .*)+
               )
        }{
          my ($prefix, $link, $subpaths) = ($1, $2, $4);
@@ -381,6 +382,18 @@ sub sitemap {
   }
 
   $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
+
+=pod
+
+  my $lang = $args{lang};
+  my $page_path = "content$args{path}";
+  my ($base) = parse_filename $page_path;
+  my $attachments_dir = dirname($page_path) . "/$base.page";
+  -d $attachments_dir or mkpath $attachments_dir;
+
+  open my $fh, ">:encoding(UTF-8)", "$attachments_dir/index.json$lang" or die "Can't open 'index.json$lang' :$!";
+
+=cut
 
   # the extra (3rd) return value is for sitemap support
   return Template($template)->render(\%args), html => \%args, @new_sources;
@@ -572,6 +585,7 @@ sub normalize_links {
                      }{
                        my ($title, $url, $suffix) =($1, $2, $3);
                        $url =~ s!/\./!/!g;
+                       $url =~ s/ /%20/g;
                        1 while $url =~ s#/[^/]+/\.\./#/#;
                        "[$title]($url$suffix)"
                      }gex;
@@ -583,6 +597,7 @@ sub normalize_links {
                      }{
                        my ($tag, $quote, $url, $suffix) = ($1, $2, $3, $4);
                        $url =~ s!/\./!/!g;
+                       $url =~ s/ /%20/g;
                        1 while $url =~ s#/[^/]+/\.\./#/#;
                        "$tag=$quote$url$suffix$quote"
                      }gex;
