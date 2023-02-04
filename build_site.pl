@@ -58,13 +58,17 @@ $runners ||= 8; # 8 is arbitrary but educated guess
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET_BASE} = $target_base;
 
+my ($repos, $website) = $source_base =~ m!/([^/]+)/([^/]+)/(?:trunk|branches)\b!;
+$ENV{REPOS} = $repos;
+$ENV{WEBSITE} = $website;
+
 open my $build_log, ">>:encoding(UTF-8)", "$target_base/.build-log/$revision.log" or die "Can't open .build-log/$revision.log: $!";
 
 $|=1;
 $|=1, select $_ for select $build_log;
 $|=1, select $_ for select \*STDERR;
 
-$SIG{__WARN__} = sub { print STDERR $_[0]; print $build_log gmtime . ":$_[0]" };
+$SIG{__WARN__} = sub { print $build_log gmtime . ":$_[0]"; warn $_[0]};
 $SIG{__DIE__}  = sub { print $build_log gmtime . ":$_[0]"; die $_[0]};
 
 unshift @INC, "$source_base/lib";
@@ -188,12 +192,6 @@ sub process_file :Sealed {
     my ($filename, $dirname, $extension) = parse_filename $file;
     s/^([^.]+)//, $extension = $1 for my $lang = $extension;
 
-    if ($dirname =~ m!\b\.page/$!) {
-        my ($dest, $copied) = copy_if_newer $file, "$target_base/$file";
-        syswrite_all "Copied to $dest.\n" if $copied;
-        return;
-    }
-
     my $target_file = $dirname . $filename;
     s/^content// for my $target_path = $target_file;
 
@@ -211,7 +209,7 @@ sub process_file :Sealed {
           eval $d->Dump;
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
-        my ($content, $ext, undef, @new_sources) = $s->(path => $path, lang => $lang, %$args);
+        my ($content, $ext, undef, @new_sources) = $s->(website => $ENV{WEBSITE}, path => $path, lang => $lang, %$args);
         if ($$args{compress}) {
           utf8::encode($content);
           gzip \($content, my $compressed);
