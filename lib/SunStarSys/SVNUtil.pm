@@ -162,9 +162,7 @@ sub svn_can_read {
   $filename = Cwd::cwd . "/$filename" unless index($filename, "/") == 0;
   return if $scr_cache{$filename} or not $filename =~ s#^/x1/cms/wcbuild/([^/]+)/##;
   my $url = "https://vcs.sunstarsys.com/repos/svn/$1/cms-sites/$filename";
-  my $pool = APR::Pool->new;
-  my $c = SVN::Client::create_context($pool);
-  $ctx->info($url, "HEAD", "HEAD", sub {shift}, 0, $c, $pool);
+  $ctx->info($url, "HEAD", "HEAD", sub {shift}, 0);
   ++$scr_cache{$filename};
 }
 

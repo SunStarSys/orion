@@ -49,7 +49,7 @@ sub new {
                     ++$ok if $args->{category_root} or $args->{archive_root};
                     last;
                   }
-                  die "Inadmissible ssi target: /$path" unless $ok;
+                  die "Inadmissible ssi target: /$path" unless $ok or not eval '@path::patterns';
                   my $dir = File::Basename::dirname "/$path";
                   read_text_file "content/$path", \ my %data;
                   $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|/|mailto://|\{)(.*?)\2#$1=$2$dir/$3$2#g;

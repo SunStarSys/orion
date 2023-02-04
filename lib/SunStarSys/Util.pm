@@ -241,7 +241,8 @@ sub purge_from_inc {
 
 sub get_lock {
     my $lockfile = shift;
-    open my $lockfh, "+>", $lockfile
+    $lockfile =~ m!^(/x1/cms/locks/[^/]+)$! or die "Invalid lock file: $lockfile";
+    open my $lockfh, "+>", $1
         or die "Can't open lockfile $lockfile: $!\n";
     flock $lockfh, LOCK_EX
         or die "Can't get exclusive lock on $lockfile: $!\n";
@@ -409,7 +410,7 @@ sub archived {
   my ($path) = (@_, $_);
   my $file = "content/$path";
   read_text_file $file, \ my %data;
-  return $data{headers}{archive};
+  return +($data{headers}{status} // "") eq "archived";
 }
 
 # invoke this inside a walk_content_tree {} block:
@@ -452,30 +453,26 @@ sub seed_file_acl {
   my ($path) = (@_, $_);
   read_text_file "content$path", \ my %d;
   no strict 'refs';
-  if (exists $d{headers}{acl}) {
-    my ($prior) = grep $_->{path} eq "content$path", @$acl;
-    if ($prior) {
-      return if $$prior{locked};
-      my $existing_rules = $$prior{rules};
-      $$prior{rules} = ref $d{headers}{acl}
-        ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /\s*[;,]\s*/, $d{headers}{acl}};
-      @{$$prior{rules}}{keys %$existing_rules} = values %$existing_rules
-        unless $$prior{unlocked};
-      $$prior{rules}{'@svnadmin'} = 'rw';
-    }
-    else {
-      push @$acl, {
-        path => "content$path",
-        unlocked => 1,
-        rules => ref $d{headers}{acl}
-          ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /\s*[;,]\s*/, $d{headers}{acl}}
-      };
-      $$acl[-1]{rules}{'@svnadmin'} = 'rw';
-    }
-    return 1;
+  my ($prior) = grep $acl->[$_]{path} eq "content$path", 0..$#$acl;
+  if (defined $prior) {
+    return unless $acl->[$prior]{unlocked};
+    splice @$acl, $prior, 1 and return unless $d{headers}{acl};
+    $acl->[$prior]{rules} = ref $d{headers}{acl}
+      ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /\s*[;,]\s*/, $d{headers}{acl}};
+    $acl->[$prior]{rules}{'@svnadmin'} = 'rw';
   }
-  return;
+  elsif (exists $d{headers}{acl}) {
+    push @$acl, {
+      path     => "content$path",
+      unlocked => 1,
+      rules    => ref $d{headers}{acl}
+        ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /\s*[;,]\s*/, $d{headers}{acl}}
+    };
+    $$acl[-1]{rules}{'@svnadmin'} = 'rw';
+  }
+  return 1;
 }
+
 1;
 
 =head1 LICENSE

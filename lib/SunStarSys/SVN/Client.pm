@@ -73,6 +73,14 @@ sub client  {shift->{client}}
 sub context {shift->{client}->{ctx}}
 sub pool    {shift->{pool}}
 
+sub add :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my ($filename, $recursive) = @_;
+  my SVN::Client $svn = $self->client;
+  normalize_svn_path $filename;
+  $svn->add4($filename, $recursive ? $SVN::depth::infinity : $SVN::depth::empty, 0, 0, 1);
+}
+
 sub merge :Sealed {
   my SunStarSys::SVN::Client $self = shift;
   my ($filename, $target_path, $target_revision, $dry_run) = @_;
@@ -143,7 +151,6 @@ sub merge :Sealed {
 
 }
 
-
 sub update :Sealed {
   my SunStarSys::SVN::Client $self = shift;
   my ($filename, $depth) = @_;
@@ -180,60 +187,25 @@ sub update :Sealed {
   return $rv;
 }
 
-=pod
-
-    my ($baton, $callbacks) = SVN::Core::auth_open_helper($self->_create_auth($r), $r->pool);
-    my $config = SVN::Core::config_get_config(undef, $r->pool);
-    my $repo_root;
-    eval {
-       my $cd_lock = SunStarSys::Orion::get_lock "$SunStarSys::Orion::BASE_DIR/locks/cwd-$$";
-       chdir $dir;
-
-
-
-       my $ra = SVN::Ra->new(url => $repo_root,
-                            auth => $baton,
-                          config => $config,
-                            pool => $r->pool,
-         auth_provider_callbacks => $callbacks);
-
-
-#          $ra->notify( sub {
-#          my ($path, $action) = @_;
-#          $path =~ s!^\Q$dir/!!;
-#          push @{$dispatch{$action}}, $path if exists $dispatch{$action};
-#       });
-
-       my ($reporter) = $ra->do_update(
-       $SVN::Delta::INVALID_REVISION, basename($filename), 1,
-            SVN::Delta::Editor->new(undef, $r->pool), $r->pool);
-       $reporter->set_path('', 0, 1, undef, $r->pool);
-       $reporter->finish_report($r->pool);
-   };
-
-    return add => \@add, delete => \@delete, restore => \@restore, update => \@update;
-
-=cut
-
 sub copy {
-    my ($self, $source, $target) = @_;
-    normalize_svn_path $_ for $source, $target;
-    my $client = $self->client;
-    $client->copy($source, 'WORKING', $target);
+  my ($self, $source, $target) = @_;
+  normalize_svn_path $_ for $source, $target;
+  my $client = $self->client;
+  $client->copy($source, 'WORKING', $target);
 }
 
 sub move {
-    my ($self, $source, $target, $force) = (@_, 1);
-    normalize_svn_path $_ for $source, $target;
-    my $client = $self->client;
-    $client->move($source, 'HEAD', $target, $force);
+  my ($self, $source, $target, $force) = (@_, 1);
+  normalize_svn_path $_ for $source, $target;
+  my $client = $self->client;
+  $client->move($source, undef, $target, $force);
 }
 
 sub delete {
-    my ($self, $filename, $force) = (@_, 1);
-    normalize_svn_path $filename;
-    my $client = $self->client;
-    $client->delete($filename, $force);
+  my ($self, $filename, $force) = (@_, 1);
+  normalize_svn_path $filename;
+  my $client = $self->client;
+  $client->delete($filename, $force);
 }
 
 my @status;
@@ -242,53 +214,85 @@ eval '$status[$SVN::Wc::Status::' . "$_]=qq/\u$_/"
            normal ignored missing replaced obstructed/;
 
 sub status :Sealed {
-    my SunStarSys::SVN::Client $self = shift;
-    my Apache2::RequestRec $r = $self->r;
-    my $client = $self->client;
-    my ($filename, $depth) = (@_, wantarray ? $SVN::Depth::immediates :$SVN::Depth::empty);
-    my $prefix = $filename;
-    $prefix =~ s![^/]+$!!;
-    normalize_svn_path $filename;
-    my @rv;
-    my $callback = sub :Sealed {
-        my $path = shift;
-	my _p_svn_wc_status2_t $status = shift or return 0;
-	$path =~ s!^\Q$prefix\E!!
-	    or $path = "./";
-	push @rv, [$path => $status[$_]] for $status->text_status;
-	return 0;
-    };
-    my $pool = $self->pool;
+  my SunStarSys::SVN::Client $self = shift;
+  my Apache2::RequestRec $r = $self->r;
+  my $client = $self->client;
+  my ($filename, $depth) = (@_, wantarray ? $SVN::Depth::immediates :$SVN::Depth::empty);
+  my $prefix = $filename;
+  $prefix =~ s![^/]+$!!;
+  normalize_svn_path $filename;
+  my @rv;
+  my $callback = sub :Sealed {
+    my $path = shift;
+    my _p_svn_wc_status2_t $status = shift or return 0;
+    $path =~ s!^\Q$prefix\E!!
+      or $path = "./";
+    push @rv, [$path => $status[$_]] for $status->text_status;
+    return 0;
+  };
+  my $pool = $self->pool;
 
-    $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef);
-    return map @$_, @rv if wantarray;
-    return $rv[0]->[1];
+  $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef);
+  return map @$_, @rv if wantarray;
+  return $rv[0]->[1];
 }
 
 sub info {
-    my SunStarSys::SVN::Client $self = shift;
-    my Apache2::RequestRec $r = $self->r;
-    my SVN::Client $client = $self->client;
-    my ($filename, $callback, $remote_revision) = @_;
-    normalize_svn_path $filename;
-    $client->info($filename, undef, $remote_revision, $callback, 0);
+  my SunStarSys::SVN::Client $self = shift;
+  my Apache2::RequestRec $r = $self->r;
+  my SVN::Client $client = $self->client;
+  my ($filename, $callback, $remote_revision) = @_;
+  normalize_svn_path $filename;
+  $client->info($filename, undef, $remote_revision, $callback, 0);
 }
 
 sub mkdir {
-    my ($self, $url, $make_parents) = (@_, 1);
-    $url =~/(.*)/;
-    $self->client->mkdir3($1, $make_parents, undef);
+  my ($self, $url, $make_parents) = (@_, 1);
+  $url =~/(.*)/;
+  $self->client->mkdir3($1, $make_parents, undef);
 }
 
 sub diff {
-    my ($self, $filename, $recursive) = (@_, 1);
-    my Apache2::RequestRec $r = $self->r;
-    normalize_svn_path $filename;
-    open my $dfh, "+>", undef;
-    open my $efh, "+>", undef;
-    $self->client->diff([], $filename, 'BASE', $filename, 'WORKING', $recursive, 0, 1, $dfh, $efh, $self->context, $self->pool);
-    seek $_, 0, SEEK_SET for $dfh, $efh;
-    return join "", <$dfh>, <$efh>;
+  my ($self, $filename, $recursive, $revision) = @_;
+  my $base_revision = $revision ? $revision - 1 : "BASE";
+  my Apache2::RequestRec $r = $self->r;
+  normalize_svn_path $filename;
+  open my $dfh, "+>", undef or die "DFH open failed: $!";
+  open my $efh, "+>", undef or die "EFH open failed: $!";
+
+  if ($revision) {
+    $self->info($filename, sub {$filename = $_[1]->URL});
+    s/-internal//, s/:4433// for $filename;
+  }
+
+  $self->client->diff([], $filename, $base_revision, $filename, $revision // 'WORKING', $recursive, 0, 1, $dfh, $efh);
+
+  seek $_, 0, SEEK_SET for $dfh, $efh;
+  my $rv = join "", <$efh>, <$dfh>;
+  utf8::decode($rv);
+  return $rv;
+}
+
+sub log {
+  my ($self, $filename, $revision, $limit) = @_;
+  my $svn = $self->client;
+
+  $self->info($filename, sub {$filename = $_[1]->URL});
+  s/-internal//, s/:4433// for $filename;
+  s!/cms-sites/.*$!! for my $prefix = $filename;
+
+  my @rv;
+  local $@;
+  $svn->log5(
+    $filename, $revision, ['HEAD', 1], $limit // 100, 1, 1, 1, ["svn:log"], sub {
+      my $log_entry = shift;
+      my ($author, $date);
+      eval{$self->info($prefix . (keys %{$log_entry->changed_paths2})[0], sub {$author = $_[1]->last_changed_author; $date = $_[1]->last_changed_date}, $log_entry->revision)};
+      my %cp2;
+      @cp2{keys %{$log_entry->changed_paths2}} = map +{action => $_->action, text_modified => $_->text_modified, props_modified => $_->props_modified}, values %{$log_entry->changed_paths2};
+      push @rv, [$log_entry->revision, \%cp2, (grep utf8::decode($_), values %{$log_entry->revprops})[0], $author, $date];
+    });
+  return \@rv;
 }
 
 our $AUTOLOAD;
@@ -299,18 +303,27 @@ sub AUTOLOAD {
   return if $method_name eq "DESTROY";
 
   if (defined(my $client_method = $_[0]->client->can($method_name))) {
-    *$AUTOLOAD = sub {
-      my ($client, $r) = @{+shift}{qw/client r/};
-      my $filename = $_[0];
+    *$AUTOLOAD = sub :Sealed {
+      my SunStarSys::SVN::Client $self = shift;
+      my Apache2::RequestRec $r = $self->{r};
+      my SVN::Client $client = $self->{client};
+      my $file_idx = $method_name =~ /prop_?get/ ? 1 : $method_name =~ /prop_?set/ ? 2 : 0;
+      my $filename = $_[$file_idx];
       if (ref $filename) {
+        normalize_svn_path @$filename if ref $filename eq "ARRAY";
         $filename = $r->filename;
       }
       else {
-        normalize_svn_path $filename;
-        splice @_, 0, 1, $filename;
+        if ($file_idx > 0 and $method_name =~ /rev/) {
+          $self->info($filename, sub {$filename = $_[1]->URL});
+          s/-internal//, s/:4433// for $filename;
+        }
+        else {
+          normalize_svn_path $filename;
+        }
+        splice @_, $file_idx, 1, $filename;
       }
       my ($repos, $user, $lock) = $filename =~ m{^/x1/cms/wc(?:build)?/([^/]+)/([^-/]+)};
-      ($repos, $user) = $_[2] =~ m{^/x1/cms/wc/([^/]+)/([^-/]+)} unless defined $repos and defined $user;
       $lock = get_lock("/x1/cms/locks/$repos-wc-$user") if defined $repos and defined $user;
       $client_method->($client, @_); # SVN::Client::$client_method will push ctx and pool args.
     };

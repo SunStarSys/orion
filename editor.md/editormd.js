@@ -1,10 +1,14 @@
 /*
  * Editor.md
+ * @Copyright 2023 SunStar Systems, Inc.
+ * All rights reserved.
+ *
+ * Proprietary Derived Work of ...
  *
  * @file        editormd.js
  * @version     v1.5.0
  * @description Open source online markdown editor.
- * @license     MIT License
+ * @license     MIT
  * @author      Pandao
  * {@link       https://github.com/pandao/editor.md}
  * @updateTime  2015-06-09
@@ -14,34 +18,34 @@
     "use strict";
 
 	// CommonJS/Node.js
-	if (typeof require === "function" && typeof exports === "object" && typeof module === "object")
+    if (typeof require === "function" && typeof exports === "object" && typeof module === "object")
     {
         module.exports = factory;
     }
-	else if (typeof define === "function")  // AMD/CMD/Sea.js
-	{
+    else if (typeof define === "function")  // AMD/CMD/Sea.js
+    {
         if (define.amd) // for Require.js
         {
-            /* Require.js define replace */
+            1;/* Require.js define replace */
         }
         else
         {
-		    define(["jquery"], factory);  // for Sea.js
+	    define(["jquery"], factory);  // for Sea.js
         }
-	}
-	else
-	{
+    }
+    else
+    {
         window.editormd = factory();
-	}
+    }
 
 }(function(w) {
     /* Require.js assignment replace */
     "use strict";
+
     var $ = w ? jQuery(w, 1) : jQuery;
     w = w || window;
     var document = w.document;
-
-    if (typeof (jQuery_flowchart) != "undefined") {
+    if (typeof (jQuery_flowchart) !== "undefined") {
 	// AWAITING jsdom SVGMatrix implementation
 	jQuery_flowchart($, flowchart(w, Raphael(w)));
     }
@@ -71,16 +75,16 @@
             "undo", "redo", "|",
             "bold", "del", "italic", "quote", "ucwords", "uppercase", "lowercase", "|",
             "h1", "h2", "h3", "h4", "h5", "h6", "|",
-            "list-ul", "list-ol", "hr", "|",
-            "link", "reference-link", "image", "code", "preformatted-text", "code-block", "table", "datetime", "emoji", "html-entities", "pagebreak", "|",
-            "goto-line", "watch", "preview", "fullscreen", "clear", "search", "|",
+            "list_ul", "list_ol", "hr", "|",
+            "link", "reference_link", "image", "comment", "code", "preformatted_text", "code_block", "table", "datetime", "emoji", "html_entities", "pagebreak", "|",
+            "goto_line", "watch", "preview", "fullscreen", "clear", "search", "|",
             "help", "info"
         ],
         simple : [
             "undo", "redo", "|",
             "bold", "del", "italic", "quote", "uppercase", "lowercase", "|",
             "h1", "h2", "h3", "h4", "h5", "h6", "|",
-            "list-ul", "list-ol", "hr", "|",
+            "list_ul", "list_ol", "hr", "|",
             "watch", "preview", "fullscreen", "|",
             "help", "info"
         ],
@@ -119,12 +123,12 @@
         tabSize              : 4,
 		indentUnit           : 4,
         lineNumbers          : true,
-		lineWrapping         : true,
-		autoCloseBrackets    : true,
-		showTrailingSpace    : true,
-		matchBrackets        : true,
-		indentWithTabs       : true,
-		styleSelectedText    : true,
+	lineWrapping         : true,
+	autoCloseBrackets    : true,
+	showTrailingSpace    : true,
+	matchBrackets        : true,
+	indentWithTabs       : true,
+	styleSelectedText    : true,
         matchWordHighlight   : true,           // options: true, false, "onselected"
         styleActiveLine      : true,           // Highlight the current line
         dialogLockScreen     : true,
@@ -188,8 +192,9 @@
             }
         },
         toolbarCustomIcons   : {               // using html tag create toolbar icon, unused default <a> tag.
-            lowercase        : "<a href=\"javascript:;\" title=\"Lowercase\" unselectable=\"on\"><i class=\"fa\" name=\"lowercase\" style=\"font-size:24px;margin-top: -10px;\">a</i></a>",
-            "ucwords"        : "<a href=\"javascript:;\" title=\"ucwords\" unselectable=\"on\"><i class=\"fa\" name=\"ucwords\" style=\"font-size:20px;margin-top: -3px;\">Aa</i></a>"
+            lowercase        : "<a href=\"javascript:;\" title=\"Lowercase\" unselectable=\"on\"><i name=\"lowercase\" style=\"font-size:24px;margin-top: -7px;\">a</i></a>",
+            "ucwords"        : "<a href=\"javascript:;\" title=\"ucwords\" unselectable=\"on\"><i name=\"ucwords\" style=\"font-size:20px;\">Aa</i></a>",
+            "uppercase"      : "<a href=\"javascript:;\" title=\"Uppercaase\" unselectable=\"on\"><i name=\"uppercase\" style=\"font-size:20px;\">A</i></a>",
         },
         toolbarIconsClass    : {
             undo             : "fa-undo",
@@ -198,28 +203,28 @@
             del              : "fa-strikethrough",
             italic           : "fa-italic",
             quote            : "fa-quote-left",
-            uppercase        : "fa-font",
             h1               : editormd.classPrefix + "bold",
             h2               : editormd.classPrefix + "bold",
             h3               : editormd.classPrefix + "bold",
             h4               : editormd.classPrefix + "bold",
             h5               : editormd.classPrefix + "bold",
             h6               : editormd.classPrefix + "bold",
-            "list-ul"        : "fa-list-ul",
-            "list-ol"        : "fa-list-ol",
+            "list_ul"        : "fa-list-ul",
+            "list_ol"        : "fa-list-ol",
             hr               : "fa-minus",
             link             : "fa-link",
-            "reference-link" : "fa-anchor",
+            "reference_link" : "fa-anchor",
             image            : "fa-picture-o",
+            comment          : "fa-quote-right",
             code             : "fa-code",
-            "preformatted-text" : "fa-file-code-o",
-            "code-block"     : "fa-file-code-o",
+            "preformatted_text" : "fa-file-code-o",
+            "code_block"     : "fa-file-code-o",
             table            : "fa-table",
             datetime         : "fa-clock-o",
             emoji            : "fa-smile-o",
-            "html-entities"  : "fa-copyright",
+            "html_entities"  : "fa-copyright",
             pagebreak        : "fa-newspaper-o",
-            "goto-line"      : "fa-terminal", // fa-crosshairs
+            "goto_line"      : "fa-terminal", // fa-crosshairs
             watch            : "fa-eye-slash",
             unwatch          : "fa-eye",
             preview          : "fa-desktop",
@@ -251,21 +256,21 @@
                 h4               : "标题4",
                 h5               : "标题5",
                 h6               : "标题6",
-                "list-ul"        : "无序列表",
-                "list-ol"        : "有序列表",
+                "list_ul"        : "无序列表",
+                "list_ol"        : "有序列表",
                 hr               : "横线",
                 link             : "链接",
-                "reference-link" : "引用链接",
+                "reference_link" : "引用链接",
                 image            : "添加图片",
                 code             : "行内代码",
-                "preformatted-text" : "预格式文本 / 代码块（缩进风格）",
-                "code-block"     : "代码块（多语言风格）",
+                "preformatted_text" : "预格式文本 / 代码块（缩进风格）",
+                "code_block"     : "代码块（多语言风格）",
                 table            : "添加表格",
                 datetime         : "日期时间",
                 emoji            : "Emoji表情",
-                "html-entities"  : "HTML实体字符",
+                "html_entities"  : "HTML实体字符",
                 pagebreak        : "插入分页符",
-                "goto-line"      : "跳转到行",
+                "goto_line"      : "跳转到行",
                 watch            : "关闭实时预览",
                 unwatch          : "开启实时预览",
                 preview          : "全窗口预览HTML（按 Shift + ESC还原）",
@@ -475,8 +480,8 @@
             {
                 if (typeof CodeMirror !== "undefined") {
                     this.editormd.$CodeMirror = CodeMirror(w);
-		    CodeMirrorModes(editormd.$CodeMirror, document);
-		    CodeMirrorAddOns(editormd.$CodeMirror, document);
+                    CodeMirrorAddOns(this.editormd.$CodeMirror, document);
+                    CodeMirrorModes(this.editormd.$CodeMirror, document);
                 }
 		else {
 		    abort();
@@ -522,11 +527,11 @@
             var _this        = this;
             var settings     = this.settings;
             var loadPath     = settings.path;
+
 	    if (!settings.autoLoadModules) {
 		return;
 	    }
             var loadFlowChartOrSequenceDiagram = function() {
-
                 if (_this.editormd.isIE8)
                 {
                     _this.loadedDisplay();
@@ -622,40 +627,37 @@
 		_this.editormd.$CodeMirror = CodeMirror;
 
 		editormd.loadScript(loadPath + "codemirror/modes.min", function() {
-
                     editormd.loadScript(loadPath + "codemirror/addon/hint/show-hint", function () {
 		        editormd.loadScript(loadPath + "codemirror/addons.min", function() {
 
 			    _this.setCodeMirror();
 			    _this.setToolbar();
 
-			    if (settings.mode !== "gfm" && settings.mode !== "markdown")
+			    if (settings.mode.indexOf("gfm") == -1 && settings.mode !== "markdown")
 			    {
 			        _this.loadedDisplay();
 
 			        return false;
 			    }
 
-                        });
-			editormd.loadScript(loadPath + "marked.min", function() {
+			    editormd.loadScript(loadPath + "marked.min", function() {
 
-			    editormd.$marked = marked;
+			        editormd.$marked = marked;
 
-			    if (settings.previewCodeHighlight)
-			    {
-				editormd.loadScript(loadPath + "prettify.min", function() {
-				    editormd.$prettify = prettyPrint;
+			        if (settings.previewCodeHighlight)
+			        {
+				    editormd.loadScript(loadPath + "prettify.min", function() {
+				        editormd.$prettify = prettyPrint;
+				        loadFlowChartOrSequenceDiagram();
+				    });
+			        }
+			        else
+			        {
 				    loadFlowChartOrSequenceDiagram();
-				});
-			    }
-			    else
-			    {
-				loadFlowChartOrSequenceDiagram();
-			    }
-			});
-
+			        }
+			    });
+                        });
 		    });
-
 		});
 	    });
 
@@ -747,12 +749,12 @@
             var settings         = this.settings;
             var editor           = this.editor;
 
-            function acl_complete(cm, options) {
-                return new Promise(function(accept) {
+            async function acl_complete(cm, options) {
+               return new Promise(function(accept) {
                     setTimeout(function() {
                         var cursor = cm.getCursor(), line=cm.getLine(cursor.line);
 
-                        if (typeof(comp) !== undefined && /^acl: |\@/i.test(line)) {
+                        if (typeof(comp) !== "undefined" && /^acl: |\@/i.test(line)) {
                             var start = cursor.ch, end = cursor.ch;
                             while (start > 0 && /[\w.@-]/.test(line.slice(start > 1 ? start-2: start-1,start))) --start;
                             while (end < line.length && /[\w.@-]/.test(line.slice(end-1,end+1))) ++end;
@@ -1586,8 +1588,10 @@
 
             if (settings.previewCodeHighlight)
             {
-                previewContainer.find("pre").addClass("prettyprint linenums");
-		this.editormd.$prettify();
+                //previewContainer.find("pre").addClass("prettyprint linenums");
+                if (this.editormd.$CodeMirror.colorize)
+                    this.editormd.$CodeMirror.colorize();
+		//this.editormd.$prettify();
             }
 
             return this;
@@ -2109,15 +2113,15 @@
             var cmValue          = cm.getValue();
             var previewContainer = this.previewContainer;
 
-            if (settings.mode !== "gfm" && settings.mode !== "markdown")
+            if (settings.mode.indexOf("gfm") == -1 && settings.mode !== "markdown")
             {
                 this.markdownTextarea.val(cmValue);
 		if (settings.saveHTMLToTextarea)
 		{
-		    $("#editor").append(`<pre id="htmlPre" class="prettyprint linenums"></pre>`);
-		    $("#htmlPre").text(cmValue);
+		    $("#editor").append(`<pre id="htmlPre"><code data-lang="` + settings.mode + `">` + cmValue.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\`/g, "&#39;") + `</code></pre>`);
 		    this.htmlTextarea = $("#htmlPre");
-		    this.editormd.$prettify();
+		    if (this.editormd.$CodeMirror.colorize) this.editormd.$CodeMirror.colorize();
+		    //this.editormd.$prettify();
 		}
                 return this;
             }
@@ -2496,7 +2500,7 @@
         watch : function(callback) {
             var settings        = this.settings;
 
-            if ($.inArray(settings.mode, ["gfm", "markdown"]) < 0)
+            if ($.inArray(settings.mode, ["gfm", "gfm+django","markdown"]) < 0)
             {
                 return this;
             }
@@ -2621,7 +2625,7 @@
             var codeMirror       = this.codeMirror;
             var previewContainer = this.previewContainer;
 
-            if ($.inArray(settings.mode, ["gfm", "markdown"]) < 0) {
+            if ($.inArray(settings.mode, ["gfm", "gfm+django", "markdown"]) < 0) {
                 return this;
             }
 
@@ -3154,7 +3158,7 @@
             }
         },
 
-        "list-ul" : function() {
+        list_ul : function() {
             var cm        = this.cm;
             var cursor    = cm.getCursor();
             var selection = cm.getSelection();
@@ -3176,7 +3180,7 @@
             }
         },
 
-        "list-ol" : function() {
+        list_ol : function() {
             var cm        = this.cm;
             var cursor    = cm.getCursor();
             var selection = cm.getSelection();
@@ -3228,8 +3232,12 @@
             this.executePlugin("linkDialog", "link-dialog/link-dialog");
         },
 
-        "reference-link" : function() {
+        reference_link : function() {
             this.executePlugin("referenceLinkDialog", "reference-link-dialog/reference-link-dialog");
+        },
+
+        comment : function() {
+            this.executePlugin("commentDialog", "link-dialog/comment-dialog");
         },
 
         pagebreak : function() {
@@ -3261,11 +3269,11 @@
             }
         },
 
-        "code-block" : function() {
+        code_block : function() {
             this.executePlugin("codeBlockDialog", "code-block-dialog/code-block-dialog");
         },
 
-        "preformatted-text" : function() {
+        preformatted_text : function() {
             this.executePlugin("preformattedTextDialog", "preformatted-text-dialog/preformatted-text-dialog");
         },
 
@@ -3287,11 +3295,11 @@
             this.executePlugin("emojiDialog", "emoji-dialog/emoji-dialog");
         },
 
-        "html-entities" : function() {
+        html_entities : function() {
             this.executePlugin("htmlEntitiesDialog", "html-entities-dialog/html-entities-dialog");
         },
 
-        "goto-line" : function() {
+        goto_line : function() {
             this.executePlugin("gotoLineDialog", "goto-line-dialog/goto-line-dialog");
         },
 
@@ -3351,7 +3359,7 @@
                 cm.setCursor(cursor.line, cursor.ch + 1);
             }
         },
-        "Ctrl-Alt-G"   : "goto-line",
+        "Ctrl-Alt-G"   : "goto_line",
         "Ctrl-H"       : "hr",
         "Ctrl-I"       : "italic",
         "Ctrl-K"       : "code",
@@ -3489,15 +3497,15 @@
     editormd.firstUpperCase = editormd.ucfirst = firstUpperCase;
 
     editormd.urls = {
-        atLinkBase : "https://github.com/"
+        atLinkBase : "/dynamic/search/?markdown_search=1;regex="
     };
 
     editormd.regexs = {
-        atLink        : /@([@\w.\/=-]+)/g,
+        atLink        : /@([@\w.\/=-]+(?!\S*::))/g,
         email         : /(\w+)@(\w+)\.(\w+)\.?(\w+)?/g,
         emailLink     : /(mailto:)?([\w.-]+)@([\w-]+)(?:\.([\w-]+))*/g,
-        emoji         : /:([\w\+-]+):/g,
-        emojiDatetime : /(\d{2}:\d{2}:\d{2})/g,
+        emoji         : /[^:]:([\w\+-]+):[^:]/g,
+        emojiDatetime : /(\d\d:\d\d:\d\d)/g,
         twemoji       : /:(tw-([\w]+)-?(\w+)?):/g,
         fontAwesome   : /:(fa-([\w]+)(-(\w+)){0,}):/g,
         editormdLogo  : /:(editormd-logo-?(\w+)?):/g,
@@ -3632,7 +3640,7 @@
                     });
 
                     text = text.replace(atLinkReg, function($a, $b) {
-                        if (typeof comp !== undefined && /=$/.test($b)) {
+                        if (typeof comp !== "undefined" && /=$/.test($b)) {
                             for (const e of comp) {
                                 if (e.text == $b) {
                                     var idx = e.displayText.indexOf(":");
@@ -3676,7 +3684,9 @@
                                 }
                             }
                         }
-                        return "<a href=\"" + editormd.urls.atLinkBase + "" + $b + "\" title=\"&#64;" + $b + "\" class=\"at-link\">" + $a + "</a>";
+                        else if (/=$/.test($b))
+                            return "<a href=\"" + editormd.urls.atLinkBase + "" + $b + "\" title=\"&#64;" + $b + "\" class=\"at-link\">" + $a + "</a>";
+                        else return "<a href=\"https://github.com/" + $b + "\" title=\"&64;" + $b + "\" class=\"at-link\">" + $a + "</a>";
                     }).replace(/_#_&#64;_#_/g, "@");
                 }
 

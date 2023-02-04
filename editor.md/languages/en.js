@@ -20,19 +20,20 @@
                 h4               : "Heading 4",
                 h5               : "Heading 5",
                 h6               : "Heading 6",
-                "list-ul"        : "Unordered list",
-                "list-ol"        : "Ordered list",
+                "list_ul"        : "Unordered list",
+                "list_ol"        : "Ordered list",
                 hr               : "Horizontal rule",
                 link             : "Link",
-                "reference-link" : "Reference link",
+                "reference_link" : "Reference link",
                 image            : "Image",
+                comment          : "Quote Selection for Comment",
                 code             : "Code inline",
-                "preformatted-text" : "Preformatted text / Code block (Tab indent)",
-                "code-block"     : "Code block (Multi-languages)",
+                "preformatted_text" : "Preformatted text / Code block (Tab indent)",
+                "code_block"     : "Code block (Multi-languages)",
                 table            : "Tables",
                 datetime         : "Datetime",
                 emoji            : "Emoji",
-                "html-entities"  : "HTML Entities",
+                "html_entities"  : "HTML Entities",
                 pagebreak        : "Page break",
                 watch            : "Unwatch",
                 unwatch          : "Watch",
@@ -76,12 +77,12 @@
                     formatNotAllowed : "Error: only allows to upload pictures file, upload allowed image file format:"
                 },
                 preformattedText : {
-                    title             : "Preformatted text / Codes", 
+                    title             : "Preformatted text / Codes",
                     emptyAlert        : "Error: Please fill in the Preformatted text or content of the codes.",
                     placeholder       : "coding now...."
                 },
                 codeBlock : {
-                    title             : "Code block",         
+                    title             : "Code block",
                     selectLabel       : "Languages: ",
                     selectDefaultText : "select a code language...",
                     otherLanguage     : "Other languages",
@@ -97,13 +98,13 @@
                 }
             }
         };
-        
+
         exports.defaults.lang = lang;
     };
-    
+
 	// CommonJS/Node.js
 	if (typeof require === "function" && typeof exports === "object" && typeof module === "object")
-    { 
+    {
         module.exports = factory;
     }
 	else if (typeof define === "function")  // AMD/CMD/Sea.js
@@ -120,10 +121,10 @@
                 factory(editormd);
             });
 		}
-	} 
+	}
 	else
 	{
         factory(window.editormd);
 	}
-    
+
 })();

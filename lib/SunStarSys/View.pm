@@ -29,6 +29,17 @@ use File::Path;
 use IO::Compress::Gzip 'gzip';
 use LWP::UserAgent;
 use URI::Escape;
+use SunStarSys::SVNUtil;
+use POSIX qw/:locale_h/;
+use locale;
+
+our %LANG = (
+  ".de" => "de_DE.UTF-8",
+  ".en" => "en_US.UTF-8",
+  ".es" => "es_ES.UTF-8",
+  ".fr" => "fr_FR.UTF-8",
+);
+
 our $URIc     = '^:/?=&;#A-Za-z0-9.~_-';        # complement of class of characters to uri_escape
 
 push our @TEMPLATE_DIRS, "templates";
@@ -53,24 +64,47 @@ sub single_narrative {
   $args{deps} //= {};
 
   read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
+  setlocale $_, $LANG{$args{lang}} for LC_CTYPE, LC_TIME;
 
   my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
-  $args{path} =~ s!\.[^.]+(?=[^/]+$)!\.html!;
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
 
+  my @closed = split /\s*[;,]\s*/, $args{headers}{closed} // "";
+  my @muted = split /\s*[;,]\s*/, $args{headers}{muted} // "";
+  my @important = split /\s*[;,]\s*/, $args{headers}{important} // "";
+
   my $page_path = $file;
-  $page_path =~ s!\.[^./]+$!.page!;
+  $page_path =~ s!\.[^/]+$!.page!;
+  my $root = basename $page_path;
   if (-d $page_path) {
-    for my $f (grep -f, glob "$page_path/*.{mdtext,md}") {
-      $f =~ m!/([^/]+)\.md(?:text)?$! or die "Bad filename: $f\n";
-      $args{$1} = {};
-      read_text_file $f, $args{$1};
-      $args{$1}->{conf} = $args{conf} if exists $args{conf};
-      $args{$1}->{deps} = $args{deps} if exists $args{deps};
-      $args{$1}->{content} = sort_tables($args{preprocess}
-                                  ? Template($args{$1}->{content})->render($args{$1})
-                                  : $args{$1}->{content});
+    for my $f (grep -f, glob "'$page_path/'*") {
+      if ($f =~ m!/([^/]+)\.md(?:text)?\Q$args{lang}\E$!) {
+        my $key = $1;
+        $args{$key} = {};
+        read_text_file $f, $args{$key};
+        $args{$key}->{key} = $key;
+        $args{$key}->{facts} = $args{facts} if exists $args{facts};
+        $args{$key}->{deps} = $args{deps} if exists $args{deps};
+        $args{$key}->{content} = sort_tables($args{preprocess}
+                                               ? Template($args{$key}->{content})->render($args{$key})
+                                               : $args{$key}->{content});
+        if (index($key, "comment") == 0) {
+          for my $c (@closed) {
+            ++$args{$key}{closed} and last if index($key, $c) == 0;
+          }
+          for my $m (@muted) {
+            ++$args{$key}{muted} and last if index($key, $m) == 0;
+          }
+          for my $i (@important) {
+            ++$args{$key}{important} and last if $key eq $i;
+          }
+          push @{$args{comments}}, $args{$key};
+        }
+      }
+      elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b)[^\/]*$/) {
+        push @{$args{attachments}}, "$root/" . basename $f;
+      }
     }
   }
 
@@ -88,15 +122,16 @@ sub single_narrative {
   my ($filename, $directory, $ext) = parse_filename $file;
   s/^[^.]+// for my $lang = $ext;
 
-  my $archive = delete $args{headers}{archive};
   my $headers = Dump $args{headers};
   my $categories = delete $args{headers}{categories};
   my $archive_headers = Dump $args{headers};
   my $keywords = $args{headers}{keywords};
+  my $status = $args{headers}{status} // "draft";
 
   if (exists $args{archive_root}
       and exists $args{headers}
-      and defined $archive
+      and defined $status
+      and lc($status) eq "archived"
       and $args{mtime}) {
 
     my ($mon, $year) = (gmtime $args{mtime})[4,5];
@@ -163,10 +198,11 @@ EOT
   }
 
   $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
-  $args{headers}{archive} = $archive if defined $archive;
   $args{headers}{categories} = $categories if defined $categories;
   $args{headers}{keywords} = $keywords if defined $keywords;
-  return Template($template)->render(\%args), html => \%args, @new_sources;
+  my @rv = (Template($template)->render(\%args), html => \%args, @new_sources);
+  setlocale $_, $LANG{".en"} for LC_CTYPE, LC_TIME;
+  return @rv;
 }
 
 sub asymptote {
@@ -206,7 +242,7 @@ sub asymptote {
         die "asy html rendering of '$prefix' failed (" . $res->status_line . "): " . $res->decoded_content;
       }
     }
-    my $rv = qq(\n<iframe id="$prefix" class="asymptote" src="$base.page/$prefix.html$lang" frameborder="0"></iframe>\n);
+    my $rv = qq(\n<iframe id="$prefix" loading="lazy" class="asymptote" src="$base.page/$prefix.html$lang" frameborder="0"></iframe>\n);
     ++$prefix;
     $rv;
   }msge;
@@ -505,8 +541,14 @@ sub snippet {
                          require SunStarSys::Value::Snippet; # see source for list of valid args
                          $args{$key} = SunStarSys::Value::Snippet->new(%a);
                          my $linenums = $a{numbers} ? "linenums" : "";
-                         my $filter = exists $a{lang} ?  "markdown" : "safe";
-                         my $rv = "<pre class='prettyprint $linenums prettyprinted'>{{ $key.fetch|$filter }}</pre>";
+                         my $filter = exists $a{lang} ? "markdown" : "safe";
+                         my $rv = <<EOT;
+
+\`\`\`$a{lang}
+{{ $key.fetch|safe }}
+\`\`\`
+
+EOT
                          if (defined(my $header = $args{snippet_header})) {
                            $header =~ s/\$snippet\b/$key/g;
                            $rv = "$header\n$rv";

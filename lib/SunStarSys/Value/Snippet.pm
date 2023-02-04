@@ -58,7 +58,6 @@ sub fetch {
                 [$self->{lines}->[0] .. ($self->{lines}->[1] // $content =~ y/\n//)];
     }
 
-    fixup_code($self->{prefix}, $self->{lang}, $content);
     $content =~ s/^(\s+):::/$1#!/ if $self->{numbers};
     return $content;
 }
