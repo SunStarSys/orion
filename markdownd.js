@@ -117,7 +117,7 @@ if (cluster.isMaster) {
           taskList:        true,
           delay:              1
         };
-          if (mode !== "gfm" || markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
+          if (mode.indexOf("gfm") != 0 || markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
           /* relatively rare (nontrivial) case:
            * instantiate an editor object and pray we wait
            * long enough for it to (async) render the complex
