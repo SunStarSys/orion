@@ -64,7 +64,7 @@ sub single_narrative {
   $args{deps} //= {};
 
   read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
-  setlocale $_, $LANG{$args{lang}} for LC_CTYPE, LC_TIME;
+  setlocale $_, $LANG{$args{lang}} for LC_ALL;
 
   my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
@@ -201,7 +201,7 @@ EOT
   $args{headers}{categories} = $categories if defined $categories;
   $args{headers}{keywords} = $keywords if defined $keywords;
   my @rv = (Template($template)->render(\%args), html => \%args, @new_sources);
-  setlocale $_, $LANG{".en"} for LC_CTYPE, LC_TIME;
+  setlocale $_, $LANG{".en"} for LC_ALL;
   return @rv;
 }
 
@@ -217,7 +217,7 @@ sub asymptote {
   $args{content} =~ s{^\`{3}asy(?:mptote)?\s+(.*?)^\`{3}$}{
     s/^\s+settings.*\n//msg for my $body = $1;
     my $ua = LWP::UserAgent->new;
-    my $cached=0;
+    my $cached = 0;
     -d $attachments_dir or mkpath $attachments_dir;
     if (-f "$attachments_dir/$prefix.asy$lang" and open my $fh, "<:encoding(UTF-8)", "$attachments_dir/$prefix.asy$lang") {
       read $fh, my $content, -s $fh;
@@ -375,6 +375,7 @@ my %month = (
 sub sitemap {
   my %args = @_;
   my $template = "content$args{path}";
+  setlocale $_, $LANG{$args{lang}} for LC_ALL;
   $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
   $args{deps} //= {};
   my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
@@ -432,7 +433,9 @@ sub sitemap {
 =cut
 
   # the extra (3rd) return value is for sitemap support
-  return Template($template)->render(\%args), html => \%args, @new_sources;
+  my @rv = (Template($template)->render(\%args), html => \%args, @new_sources);
+  setlocale $_, $LANG{".en"} for LC_ALL;
+  return @rv;
 }
 
 # internal utility sub for the wrapper views that follow (not overrideable)

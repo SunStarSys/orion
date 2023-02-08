@@ -17,6 +17,7 @@
 package Dotiac::DTL::Filter;
 use strict;
 use warnings;
+use utf8;
 use DB_File;
 use POSIX qw/:fcntl_h/;
 use URI::Escape;
@@ -1208,16 +1209,26 @@ sub dirname {
   return $value->set($dir eq "." ? "" : $dir);
 }
 
+our %LANG = (
+  ".de" => "de_DE.UTF-8",
+  ".en" => "en_US.UTF-8",
+  ".fr" => "fr_FR.UTF-8",
+  ".es" => "es_ES.UTF-8",
+);
+
 sub parse_filename {
+  no locale;
   require SunStarSys::Util;
   my $value = shift;
-  my $raw = @_ ? shift->repr : "0..3";
-  my (@f) = (SunStarSys::Util::parse_filename($value->repr))[1,0,2];
+  my $raw = @_ ? shift->repr : "0..";
+  my @f = map /^(.*)$/, (SunStarSys::Util::parse_filename($value->repr))[1,0,2];
   splice @f, 2, 1, ".$f[2]" =~ /(\.[\w-]+)/g;
   $raw .= $#f if $raw =~ /\.{2}$/;
-  $raw =~ /^([\d.,-]+)$/ or return $value;
-  no warnings 'uninitialized';
-  return $value->set(CORE::join "", @f[eval "$1"]);
+  if ($raw =~ /^([\d.,-]+)$/) {
+    no warnings 'uninitialized';
+    $value->set(CORE::join "", @f[eval "$1"]);
+  }
+  return $value;
 }
 
 sub basename {
@@ -1228,13 +1239,6 @@ sub basename {
   $base =~ s/\..*$// if defined $raw and $raw == 0;
   return $value->set($base);
 }
-
-our %LANG = (
-  ".de" => "de_DE.UTF-8",
-  ".en" => "en_US.UTF-8",
-  ".fr" => "fr_FR.UTF-8",
-  ".es" => "es_ES.UTF-8",
-);
 
 sub vcs_date {
   my $value = shift;

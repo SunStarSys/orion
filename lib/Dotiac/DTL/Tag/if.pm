@@ -3,11 +3,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#if.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#if.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -17,6 +17,7 @@ package Dotiac::DTL::Tag::if;
 use base qw/Dotiac::DTL::Tag/;
 use strict;
 use warnings;
+no warnings 'recursion';
 
 our $VERSION = 0.8;
 
@@ -98,7 +99,7 @@ sub print {
 		$self->{true}->print(@_);
 		$self->{n}->print(@_);
 	}
-	
+
 }
 sub string {
 	my $self=shift;
@@ -124,7 +125,7 @@ sub string {
 		}
 		return $self->{p}.$self->{true}->string(@_).$self->{n}->string(@_);
 	}
-	
+
 }
 sub perl {
 	my $self=shift;
@@ -253,11 +254,11 @@ You can link conditions with either "and" or "or", but not both (there is a prob
 	{% endif %}
 
 You can negate a variable in any case with a "not" before it:
-	
+
 	{% if not var %}
 		....
 	{% endif %}
-	
+
 	{% if not var1 and var2 and not var3 %}
 		...
 	{% endif %}
@@ -267,7 +268,7 @@ You can negate a variable in any case with a "not" before it:
 
 =head2 False values
 
-False is: 
+False is:
 
 	0 # The number 0
 	0.00 # The number 0.0
@@ -302,4 +303,3 @@ Marc-Sebastian Lucksch
 perl@marc-s.de
 
 =cut
-

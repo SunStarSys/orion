@@ -22,8 +22,8 @@ const net                   = require('net');
 const cluster               = require('cluster');
 const nproc                 = require('os').cpus().length;
 
-const wait_short_ms         = 2;  /* moderate case scenario (less rare) */
-const wait_long_ms          = 10; /* worst case scenario (very rare) */
+const wait_short_ms         = 1;  /* moderate case scenario (less rare) */
+const wait_long_ms          = 5; /* worst case scenario (very rare) */
 const TIMEOUT               = 500;
 
 require.extensions['.css']  = function (module, filename) {
