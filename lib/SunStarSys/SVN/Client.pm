@@ -10,6 +10,7 @@ use SunStarSys::Util qw/normalize_svn_path get_lock/;
 use File::Basename qw/dirname basename/;
 use Fcntl qw/SEEK_SET/;
 use base "sealed";
+no warnings 'redefine';
 
 sub _create_auth :Sealed {
   my $pool = pop;
@@ -216,7 +217,7 @@ eval '$status[$SVN::Wc::Status::' . "$_]=qq/\u$_/"
 sub status :Sealed {
   my SunStarSys::SVN::Client $self = shift;
   my Apache2::RequestRec $r = $self->r;
-  my $client = $self->client;
+  my SVN::Client $client = $self->client;
   my ($filename, $depth) = (@_, wantarray ? $SVN::Depth::immediates :$SVN::Depth::empty);
   my $prefix = $filename;
   $prefix =~ s![^/]+$!!;
@@ -237,7 +238,7 @@ sub status :Sealed {
   return $rv[0]->[1];
 }
 
-sub info {
+sub info :Sealed {
   my SunStarSys::SVN::Client $self = shift;
   my Apache2::RequestRec $r = $self->r;
   my SVN::Client $client = $self->client;

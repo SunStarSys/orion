@@ -6,7 +6,7 @@
  * jQuery can be contextualized if you ask it nicely (key here is jsdom).
  * this runs forever, so daemonize it if needed.
  *
- * NPM Prerequisites: jsdom, navigator, and jquery.
+ * NPM Prerequisites: jsdom, navigator, eve, and jquery.
  * Env Vars: EDITOR_MD, MARKDOWN_PORT
  * Example:
  *
