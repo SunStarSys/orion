@@ -6,7 +6,7 @@
  * jQuery can be contextualized if you ask it nicely (key here is jsdom).
  * this runs forever, so daemonize it if needed.
  *
- * NPM Prerequisites: jsdom, navigator, eve, and jquery.
+ * NPM Prerequisites: jsdom, navigator, and jquery.
  * Env Vars: EDITOR_MD, MARKDOWN_PORT
  * Example:
  *
@@ -22,9 +22,9 @@ const net                   = require('net');
 const cluster               = require('cluster');
 const nproc                 = require('os').cpus().length;
 
-const wait_short_ms         = 1;  /* moderate case scenario (less rare) */
-const wait_long_ms          = 5; /* worst case scenario (very rare) */
-const TIMEOUT               = 500;
+const wait_short_ms         = 2;  /* moderate case scenario (less rare) */
+const wait_long_ms          = 10;  /* worst case scenario (very rare) */
+const TIMEOUT               = 5000;
 
 require.extensions['.css']  = function (module, filename) {
   module.exports = fs.readFileSync(filename, 'utf8');
@@ -54,6 +54,8 @@ global.katex            = require(EDITOR_MD + "/lib/katex.min.js");
 global.Raphael          = require(EDITOR_MD + "/lib/raphael.min.js");
 global.flowchart        = require(EDITOR_MD + "/lib/flowchart.min.js");
 global.macros_physics   = require(EDITOR_MD + "/lib/katex-physics.js");
+global.WEBSITE          = process.env.WEBSITE;
+global.REPOS            = process.env.REPOS;
 
 const HTML = `<!doctype html>
 <html>
@@ -115,9 +117,10 @@ if (cluster.isMaster) {
           saveHTMLToTextarea: true,
           htmlDecode:      true,
           taskList:        true,
+          emoji:           true,
           delay:              1
         };
-          if (mode.indexOf("gfm") != 0 || markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
+          if (mode.indexOf("gfm") == -1 || markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
           /* relatively rare (nontrivial) case:
            * instantiate an editor object and pray we wait
            * long enough for it to (async) render the complex
@@ -129,16 +132,16 @@ if (cluster.isMaster) {
           /* data-spec'd mode (likely a codemirror programming
            * language target) is less hassle than the full gfm case
            */
-              const to = setTimeout(() => {throw new Error("processing timed out")}, TIMEOUT);
+              const to = setTimeout(() => {c.end();throw new Error("processing timed out")}, TIMEOUT);
               const editor = editormd("editor", options, editormd);
               setTimeout(function () { clearTimeout(to);
-c.end(m ? editor.getHTML() : editor.getPreviewedHTML()) }, m ? wait_short_ms : wait_long_ms);
+                                       c.end(m ? editor.getHTML() : editor.getPreviewedHTML()) }, m ? wait_short_ms : wait_long_ms);
           } else {
           /* best performance case (static method call): gfm w/o
            * quote blocks nor latex.
            */
               options.saveHTMLToTextarea = false;
-              const to = setTimeout(() => {throw new Error("processing timed out")}, TIMEOUT);
+              const to = setTimeout(() => {c.end();throw new Error("processing timed out")}, TIMEOUT);
               const div = editormd.markdownToHTML("editor", options);
               clearTimeout(to);
               c.end(div.html());

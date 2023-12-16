@@ -18,7 +18,7 @@ if [[ "${NO_DOCKER:-}" != 1 ]] && command -v docker >/dev/null 2>&1; then
 fi
 (
   trap time EXIT
-  node markdownd.js
+  WEBSITE=www REPOS=www node markdownd.js
 ) &
 if [[ -d trunk/content ]]; then
   svn cleanup trunk || :
