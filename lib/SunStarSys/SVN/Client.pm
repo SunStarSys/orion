@@ -10,6 +10,7 @@ use SunStarSys::Util qw/normalize_svn_path get_lock/;
 use File::Basename qw/dirname basename/;
 use Fcntl qw/SEEK_SET/;
 use base "sealed";
+
 no warnings 'redefine';
 
 sub _create_auth :Sealed {
@@ -59,7 +60,8 @@ sub SVN::Client::notify {
 sub new {
   my ($class, $r) = @_;
   shift; shift;
-  my $pool = $r ? SVN::Pool->_wrap(${$r->pool}) : SVN::Pool->new;
+  local $_ = $r ? $r->pool : $SVN::Core::gpool;
+  my $pool = $r ? bless $_, "_p_apr_pool_t" : $_;
   unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool, config => {};
   my $client = SVN::Client->new(@_) or die "Can't create SVN::Client: $!";
   return bless {
@@ -261,38 +263,39 @@ sub diff {
   open my $dfh, "+>", undef or die "DFH open failed: $!";
   open my $efh, "+>", undef or die "EFH open failed: $!";
 
+  my $relative_path = $filename;
   if ($revision) {
     $self->info($filename, sub {$filename = $_[1]->URL});
     s/-internal//, s/:4433// for $filename;
   }
-
-  $self->client->diff([], $filename, $base_revision, $filename, $revision // 'WORKING', $recursive, 0, 1, $dfh, $efh);
-
+  local $@;
+  eval { $self->client->diff5([], $filename, $base_revision, $filename, $revision // 'WORKING', undef, $recursive ? $SVN::Depth::infinity : $SVN::Depth::immediates, 0, 1, 1, 0, 1, "en_US.UTF-8", $dfh, $efh, []) };
+  warn $@ if $@;
   seek $_, 0, SEEK_SET for $dfh, $efh;
   my $rv = join "", <$efh>, <$dfh>;
   utf8::decode($rv);
+  $rv =~ s!([ab]/)cms-sites/!$1!g;
   return $rv;
 }
 
 sub log {
-  my ($self, $filename, $revision, $limit) = @_;
+  my ($self, $filename, $prevision, $frevision, $limit) = @_;
   my $svn = $self->client;
-
+  $limit //= 1 if defined $prevision and $prevision ne "HEAD";
+  $prevision //= 'HEAD';
   $self->info($filename, sub {$filename = $_[1]->URL});
   s/-internal//, s/:4433// for $filename;
   s!/cms-sites/.*$!! for my $prefix = $filename;
-
   my @rv;
+  my @props = qw/svn:log svn:author svn:date/;
   local $@;
-  $svn->log5(
-    $filename, $revision, ['HEAD', 1], $limit // 100, 1, 1, 1, ["svn:log"], sub {
-      my $log_entry = shift;
-      my ($author, $date);
-      eval{$self->info($prefix . (keys %{$log_entry->changed_paths2})[0], sub {$author = $_[1]->last_changed_author; $date = $_[1]->last_changed_date}, $log_entry->revision)};
+  eval {$svn->log5(
+    $filename, undef, [$prevision, $frevision // 1], $limit // 100, 1, 0, 1, \@props, sub :Sealed {
+      my _p_svn_log_entry_t $log_entry = shift;
       my %cp2;
       @cp2{keys %{$log_entry->changed_paths2}} = map +{action => $_->action, text_modified => $_->text_modified, props_modified => $_->props_modified}, values %{$log_entry->changed_paths2};
-      push @rv, [$log_entry->revision, \%cp2, (grep utf8::decode($_), values %{$log_entry->revprops})[0], $author, $date];
-    });
+      push @rv, [$log_entry->revision, \%cp2, grep utf8::decode($_), @{$log_entry->revprops}{@props}];
+    })};
   return \@rv;
 }
 

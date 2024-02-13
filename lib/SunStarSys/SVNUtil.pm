@@ -114,7 +114,8 @@ sub svn_status {
 
 sub svn_commit {
   my $ctx = shift->new;
-  $ctx->log_msg(sub { ${$_[0]} = "Automated commit-back" });
+  my $s = sub { ${$_[0]} = "Automated commit-back" };
+  $ctx->log_msg($s);
   $ctx->commit(@_);
 }
 

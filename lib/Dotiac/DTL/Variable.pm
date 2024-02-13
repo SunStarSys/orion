@@ -4,11 +4,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#Variable.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#Variable.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -17,6 +17,7 @@
 package Dotiac::DTL::Variable;
 use strict;
 use warnings;
+no warnings 'recursion';
 use base qw/Dotiac::DTL::Tag/;
 
 our $VERSION = 0.8;
@@ -79,7 +80,7 @@ sub perl {
 		print $fh (Data::Dumper->Dump([$self->{filters}],["\$filters$id"]));
 	}
 	return $self->{n}->perl($fh,$id+1,@_);
-	
+
 }
 sub perlprint {
 	my $self=shift;
@@ -159,7 +160,7 @@ Dotiac::DTL::Variable - Stores a Django template variable tag.
 
 Template file:
 
-	Some text.... 
+	Some text....
 	{{ variable }}
 	Some other Text. {{ variable|lower }} Some more text.
 	Even more Text.{{ "Quoted text"|lower }} End of Text.
@@ -188,8 +189,8 @@ of the variable. Here shown with the tag cycle (L<Dotiac::DTL::Tag::cycle>):
 The variable can not contain spaces, colons or other special chars, unless those are in quotes (single or double)
 They can never contain (for now) :  %} and }}, depending on wether they are in a tag or standalone.
 
-The module itself has no real use, it's just used by the Dotiac::DTL 
-parser to store free standing variables. Variables in specific tags are 
+The module itself has no real use, it's just used by the Dotiac::DTL
+parser to store free standing variables. Variables in specific tags are
 stored in those.
 
 =head1 BUGS

@@ -25,7 +25,6 @@ use APR::Request qw/encode/;
 our $URIc = '^:/?=&;#A-Za-z0-9.~_-';        # complement of class of characters to uri_escape
 require Scalar::Util;
 our $VERSION = 1.0;
-use locale;
 use POSIX qw/:locale_h strftime/;
 use Time::timegm 'timegm';
 
@@ -318,7 +317,7 @@ sub default_if_none {
 }
 
 sub dictsort {
-	my $value=shift;
+  my $value=shift;
 	return $value unless $value->array();
 	my $by=shift;
 	unless ($by) {
@@ -356,8 +355,26 @@ sub dictsort {
 
 }
 
+
+sub split {
+  my $value = shift;
+  my $pattern = shift;
+  $value->set([split $pattern->repr(), $value->repr()]);
+  return $value;
+}
+
+sub admit {
+  my $value = shift;
+  my $class = shift;
+  my $val = $value->repr();
+  my $cla = "[^" . $class->repr() . "]+";
+  $cla = qr/$cla/, $val =~ s/$cla//g if length($cla) > 3;
+  $value->set($val);
+  return $value;
+}
+
 sub dictsortreversed {
-	my $value=shift;
+  my $value=shift;
 	return $value unless $value->array();
 	my $by=shift;
 	unless ($by) {
@@ -1125,11 +1142,22 @@ sub timeuntil {
 
 }
 
+our %LANG = (
+  ".de" => "de_DE.UTF-8",
+  ".en" => "en_US.UTF-8",
+  ".fr" => "fr_FR.UTF-8",
+  ".es" => "es_ES.UTF-8",
+  "de" => "de_DE.UTF-8",
+  "en" => "en_US.UTF-8",
+  "fr" => "fr_FR.UTF-8",
+  "es" => "es_ES.UTF-8",
+);
+
 sub title {
-	my $val=shift;
-	my $value=$val->repr();
-	$value=~s/(\w+)/ucfirst($1)/eg;
-	return $val->set($value);
+  my $val=shift;
+  my $value=$val->repr();
+  $value=~s/(\w+)/\u$1/g;
+  return $val->set($value);
 }
 
 sub truncate {
@@ -1188,7 +1216,7 @@ sub append {
 
 sub lede {
   my $value=shift;
-  $value->safe;
+  $value->safe(1);
   my $content = $value->repr;
   $content =~ /\Q{# lede #}\E(.*?)\Q{# lede #}\E/s;
   return $value->set(ucfirst $1);
@@ -1209,15 +1237,8 @@ sub dirname {
   return $value->set($dir eq "." ? "" : $dir);
 }
 
-our %LANG = (
-  ".de" => "de_DE.UTF-8",
-  ".en" => "en_US.UTF-8",
-  ".fr" => "fr_FR.UTF-8",
-  ".es" => "es_ES.UTF-8",
-);
 
 sub parse_filename {
-  no locale;
   require SunStarSys::Util;
   my $value = shift;
   my $raw = @_ ? shift->repr : "0..";
@@ -1241,6 +1262,7 @@ sub basename {
 }
 
 sub vcs_date {
+  use locale ':time';
   my $value = shift;
   my $content = $value->repr;
   my $lang = @_ ? shift->repr : ".en";
@@ -1250,7 +1272,7 @@ sub vcs_date {
   $args[0] -= 1900;
   $args[1] -= 1;
   my $locale = setlocale LC_TIME, $LANG{$lang};
-  my $rv = strftime '%a, %d %b %Y', gmtime timegm reverse @args[0..5];
+  my ($rv) = grep utf8::decode($_), strftime '%a, %d %b %Y', gmtime timegm reverse @args[0..5];
   setlocale LC_TIME, $locale;
   return $value->set($rv);
 }
@@ -1285,8 +1307,21 @@ sub vcs_author {
     $data //= "";
     my $name = substr($comment // "Unknown ", 0, -1);
     my $urlencname = encode($name);
-    $lang = ".$lang" unless $lang =~ /^\./;
-    my $rv = $markdown_search ? qq(<a href="https://$ENV{WEBSITE}/dynamic/search/?regex=$svnuser=;lang=$lang;markdown_search=1">) : qq(<a href="/dynamic/search/?regex=%22$urlencname%22;lang=$lang;markdown_search=0">);
+    my $path;
+    if (index($lang, "/") == 0) {
+      $path = $lang;
+      $lang = "";
+    }
+    elsif (index($lang, ".") != 0) {
+      $lang = "lang=.$lang;";
+      $path = "/";
+    }
+    else {
+      $lang = "lang=$lang;";
+      $path = "/";
+    }
+
+    my $rv = $markdown_search ? qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=$svnuser=;${lang}markdown_search=1">) : qq(<a href="/dynamic/search$path?regex=%22$urlencname%22;${lang}markdown_search=0">);
     $rv .= qq(<img src="data:$data"></img> $name</a>);
     return Dotiac::DTL::Value->safe($rv);
   }
@@ -1300,6 +1335,13 @@ sub strip_prefix {
   $prefix = "/content/" unless defined $prefix and CORE::length($prefix) > 1;
   $content =~ s!\S+\Q$prefix\E!!g;
   return $value->set($content);
+}
+
+sub starts_with {
+  my $value = shift;
+  my $content = $value->repr;
+  my $prefix = @_ ? shift->repr : "/";
+  return $value->set(scalar($content =~ /^\Q$prefix\E/));
 }
 
 sub truncatewords {

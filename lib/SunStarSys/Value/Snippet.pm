@@ -2,6 +2,7 @@ package SunStarSys::Value::Snippet;
 use LWP::UserAgent;
 use URI;
 use SunStarSys::Util qw/fixup_code/;
+use APR::Request 'encode';
 use strict;
 use warnings;
 
@@ -25,7 +26,7 @@ sub new {
     return bless {
         uri     => $uri,
         path    => $args{path},
-        token   => $args{token},
+        token  => $args{token},
         lang    => $args{lang},
         prefix  => $args{prefix},
         type    => $args{type},
@@ -65,8 +66,17 @@ sub fetch {
 sub pretty_uri {
     my $self = shift;
     my $uri = $self->{uri};
+    my $token = encode($self->{token}//"");
     $uri =~ s!repos/svn!viewvc! if $self->{type} eq "svn";
-    $uri =~ s!/raw/!/blob/! and $self->{lines} and $uri .= "#L" . join "-L", @{$self->{lines}} if $self->{type} eq "github";
+    if ($self->{type} eq "github") {
+      $uri =~ s!/raw/!/blob/!;
+      if ($self->{lines}) {
+        $uri .= "#L" . join "-L", @{$self->{lines}};
+      }
+      elsif ($token) {
+        #$uri .= "#:~:text=$token,,$token";
+      }
+    }
     return $uri;
 }
 

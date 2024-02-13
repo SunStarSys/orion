@@ -12,12 +12,11 @@ use utf8;
 use strict;
 use warnings;
 
-
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path sanitize_relative_path parse_filename
                     walk_content_tree archived seed_file_deps seed_file_acl Load Dump/;
 
-our $VERSION = "3.0";
+our $VERSION = "3.1";
 
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
@@ -78,11 +77,11 @@ sub read_text_file {
     if ($headers) {
       if ($. == 1) {
         s/^$BOM//;
-        if (/^---\s+$/) {
+        if (/^---\s*$/) {
           my $yaml = "";
           while (<$fh>) {
             utf8::decode $_ if ref $file;
-            last if /^---\s+$/;
+            last if /^---\s*$/;
             $yaml .= $_;
           }
           $hdr = Load($yaml);
@@ -191,37 +190,37 @@ sub copy_if_newer {
 # ie not have any subpackages within its namespace.
 
 sub obliterate_package {
-    my $pkg = shift;
+  my $pkg = shift;
 
-    # expand to full symbol table name if needed
+  # expand to full symbol table name if needed
 
-    unless ($pkg =~ /^main::.*::$/) {
-        $pkg = "main$pkg"       if      $pkg =~ /^::/;
-        $pkg = "main::$pkg"     unless  $pkg =~ /^main::/;
-        $pkg .= '::'            unless  $pkg =~ /::$/;
-    }
-
-    no strict 'refs';
-
-    my($stem, $leaf) = $pkg =~ m/^(.*::)(\w+::)$/ or die "Bad fqpn '$pkg'.\n";;
-    my $stem_symtab = *{$stem}{HASH};
-    return unless defined $stem_symtab and exists $stem_symtab->{$leaf};
-
-    # free all the symbols and types in the package
-    my $leaf_symtab = *{$stem_symtab->{$leaf}}{HASH};
-    foreach my $name (keys %$leaf_symtab) {
-      my $fullname = $pkg . $name;
-      undef $$fullname;
-      undef @$fullname;
-      undef %$fullname;
-      undef &$fullname unless $pkg eq "main::path::";
-      undef *$fullname;
-    }
-    # delete the symbol table
-
-    %$leaf_symtab = ();
-    delete $stem_symtab->{$leaf};
+  unless ($pkg =~ /^main::.*::$/) {
+    $pkg = "main$pkg"       if      $pkg =~ /^::/;
+    $pkg = "main::$pkg"     unless  $pkg =~ /^main::/;
+    $pkg .= '::'            unless  $pkg =~ /::$/;
   }
+
+  no strict 'refs';
+
+  my($stem, $leaf) = $pkg =~ m/^(.*::)(\w+::)$/ or die "Bad fqpn '$pkg'.\n";;
+  my $stem_symtab = *{$stem}{HASH};
+  return unless defined $stem_symtab and exists $stem_symtab->{$leaf};
+
+  # free all the symbols and types in the package
+  my $leaf_symtab = *{$stem_symtab->{$leaf}}{HASH};
+  foreach my $name (keys %$leaf_symtab) {
+    my $fullname = $pkg . $name;
+    undef $$fullname;
+    undef @$fullname;
+    undef %$fullname;
+    undef &$fullname unless $pkg eq "main::path::";
+    undef *$fullname;
+  }
+  # delete the symbol table
+
+  %$leaf_symtab = ();
+  delete $stem_symtab->{$leaf};
+}
 
 sub unload_package {
   my $package = shift;
@@ -232,11 +231,11 @@ sub unload_package {
 }
 
 sub purge_from_inc {
-    for my $d (@_) {
-        for my $id (grep $INC[$_] eq $d, reverse 0..$#INC) {
-            splice @INC, $id, 1;
-        }
+  for my $d (@_) {
+    for my $id (grep $INC[$_] eq $d, reverse 0..$#INC) {
+      splice @INC, $id, 1;
     }
+  }
 }
 
 sub get_lock {
@@ -298,64 +297,65 @@ sub shuffle {
 # arbitrary number of tables supported, but only one col per table may be sorted
 
 sub sort_tables {
-    my @orig = split /\n/, shift, -1;
-    my @out;
-    local $_;
-    while (defined($_ = shift @orig))  {
-        push @out, $_;
-        /^(\|[ :vn^-]+)+\|$/ or next;
-        my($data, $col, $direction, $cur, $numeric);
-        $cur = 0;
-        while (/\|([ :vn^-]+)/g) {
-            $data = $1;
-            if ($data =~ tr/v/v/) {
-                $col = $cur;
-                $direction = -1;
-                last;
-            }
-            elsif ($data =~ tr/^/^/) {
-                $col = $cur;
-                $direction = 1;
-                last;
-            }
-            $cur++;
-        }
-	$out[-1] =~ tr/vn^//d;
-        $numeric = 1 if $data =~ tr/n/n/;
-        unless (defined $col) {
-            push @out, shift @orig while @orig and $orig[0] =~ /^\|/;
-            next;
-        }
-        my @rows;
-        push @rows, [split /\s*\|\s*/, shift(@orig), -1]
-            while @orig and $orig[0] =~ /^\|/;
-        shift @$_, pop @$_ for @rows; # dump empty entries at ends
-        @rows = $numeric
-            ? sort { $a->[$col] <=> $b->[$col] } @rows
-            : sort { $a->[$col] cmp $b->[$col] } @rows;
-        @rows = reverse @rows if $direction == -1;
-        push @out, map "| " . join(" | ", @$_) . " |", @rows;
+  use locale;
+  my @orig = split /\n/, shift, -1;
+  my @out;
+  local $_;
+  while (defined($_ = shift @orig))  {
+    push @out, $_;
+    /^(\|[ :vn^-]+)+\|$/ or next;
+    my($data, $col, $direction, $cur, $numeric);
+    $cur = 0;
+    while (/\|([ :vn^-]+)/g) {
+      $data = $1;
+      if ($data =~ tr/v/v/) {
+        $col = $cur;
+        $direction = -1;
+        last;
+      }
+      elsif ($data =~ tr/^/^/) {
+        $col = $cur;
+        $direction = 1;
+        last;
+      }
+      $cur++;
     }
+    $out[-1] =~ tr/vn^//d;
+    $numeric = 1 if $data =~ tr/n/n/;
+    unless (defined $col) {
+      push @out, shift @orig while @orig and $orig[0] =~ /^\|/;
+      next;
+    }
+    my @rows;
+    push @rows, [split /\s*\|\s*/, shift(@orig), -1]
+      while @orig and $orig[0] =~ /^\|/;
+    shift @$_, pop @$_ for @rows; # dump empty entries at ends
+    @rows = $numeric
+      ? sort { $a->[$col] <=> $b->[$col] } @rows
+      : sort { $a->[$col] cmp $b->[$col] } @rows;
+    @rows = reverse @rows if $direction == -1;
+    push @out, map "| " . join(" | ", @$_) . " |", @rows;
+  }
 
-    return join "\n", @out;
+  return join "\n", @out;
 }
 
 sub parse_filename {
-    my ($f) = (@_, $_);
-    my ($filename, $dirname, $ext) = fileparse $f, qr!\.[^/]+$!;
-    $ext = "." unless length $ext;
-    return $filename, $dirname, substr $ext, 1;
+  my ($f) = (@_, $_);
+  my ($filename, $dirname, $ext) = fileparse $f, qr!\.[^/]+$!;
+  $ext = "." unless length $ext;
+  return $filename, $dirname, substr $ext, 1;
 }
 
 sub fixup_code {
-    my $prefix = shift;
-    my $type   = shift;
+  my $prefix = shift;
+  my $type   = shift;
 
-    for (@_) {
-        s/^\Q$prefix//mg if defined $prefix;
-        $_ = "$type\x00$_"
-            if defined $type;
-    }
+  for (@_) {
+    s/^\Q$prefix//mg if defined $prefix;
+    $_ = "$type\x00$_"
+      if defined $type;
+  }
 }
 
 my $dep_string = 'no strict "refs"; *path::dependencies{HASH}';
@@ -458,7 +458,7 @@ sub seed_file_acl {
     return unless $acl->[$prior]{unlocked};
     splice @$acl, $prior, 1 and return unless $d{headers}{acl};
     $acl->[$prior]{rules} = ref $d{headers}{acl}
-      ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /\s*[;,]\s*/, $d{headers}{acl}};
+      ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /[,;]?\s+/, $d{headers}{acl}};
     $acl->[$prior]{rules}{'@svnadmin'} = 'rw';
   }
   elsif (exists $d{headers}{acl}) {
@@ -466,7 +466,7 @@ sub seed_file_acl {
       path     => "content$path",
       unlocked => 1,
       rules    => ref $d{headers}{acl}
-        ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /\s*[;,]\s*/, $d{headers}{acl}}
+        ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /[;,]?\s+/, $d{headers}{acl}}
     };
     $$acl[-1]{rules}{'@svnadmin'} = 'rw';
   }

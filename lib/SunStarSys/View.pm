@@ -22,7 +22,8 @@ use strict;
 use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
-use SunStarSys::Util qw/read_text_file sort_tables parse_filename Dump/;
+use Dotiac::DTL::Addon::json;
+use SunStarSys::Util qw/read_text_file sort_tables parse_filename sanitize_relative_path Dump Load/;
 use Data::Dumper ();
 use File::Basename;
 use File::Path;
@@ -65,6 +66,7 @@ sub single_narrative {
 
   read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
   setlocale $_, $LANG{$args{lang}} for LC_ALL;
+  $template = $args{headers}{template} if exists $args{headers}{template};
 
   my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
@@ -101,6 +103,12 @@ sub single_narrative {
           }
           push @{$args{comments}}, $args{$key};
         }
+      }
+      elsif ($f =~ m!/([^/]+)\.(?:ya?ml|json)\Q$args{lang}\E$!) {
+        my $key = $1;
+        $args{$key} = {};
+        read_text_file $f, $args{$key};
+        $args{$key}{content} = Load $args{$key}{content};
       }
       elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b)[^\/]*$/) {
         push @{$args{attachments}}, "$root/" . basename $f;
@@ -389,18 +397,23 @@ sub sitemap {
                  ? $month{$lang}[$1] : ucfirst basename $dirname);
   }
 
-  for (grep shift @$_, sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[\w.-]*$!/! for my $path = $_->[0]; [$path, @$_]} @{$args{deps}}) {
+  for (grep shift @$_, sort {$a->[0] cmp $b->[0]} map {s!/index\.html\b[^/]*$!/! for my $path = $_->[0]; [$path, @$_]} @{$args{deps}}) {
+    no locale;
     my $title = $$_[1]{headers}{title};
+    my ($lede) = ($$_[1]{content} // "") =~ /\Q{# lede #}\E(.*?)\Q{# lede #}\E/;
+    $lede //= "";
+    $lede = " &mdash; $lede..." if $lede;
     my ($filename, $dirname) = parse_filename $$_[0];
     if ($$_[0] =~ m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
       $title = $title{+($1 || "index")}{$lang}
       . ($dirname =~ m#/20\d{2}/(\d{2})/$#
                  ? $month{$lang}[$1] : ucfirst basename $dirname);
     }
-    $content .= "- [$title](" . uri_escape_utf8($$_[0], $URIc) . ")\n";
+    $content .= "- [$title](" . uri_escape_utf8($$_[0], $URIc) . ")$lede\n\n";
   }
 
   if ($args{nest}) {
+    no locale;
     1 while $content =~ s{^(\s*-\s)                  # \1, prefix
               (                                      # \2, link
                   \[ [^\]]+ \]
@@ -409,11 +422,11 @@ sub sitemap {
                   \)
               )
               (                                      # \4, subpaths
-                  (?:\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\%\w.-]*)[^\#?] .*)+
+                  (?:\n\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\%\w.-]*)[^\#?] .*)+
               )
        }{
          my ($prefix, $link, $subpaths) = ($1, $2, $4);
-         $subpaths =~ s/\n/\n    /g;
+         $subpaths =~ s/\n\n/\n\n    /g;
          "$prefix$link$subpaths"
        }xme;
   }
