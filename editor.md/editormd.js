@@ -542,18 +542,17 @@
                 if (settings.mermaid)
                 {
                     _this.editormd.loadCSS(loadPath + "../css/mermaid.min", function () {
-                        _this.editormd.loadScript(loadPath + "mermaid.min", function () {
-                            _this.editormd.loadScript(loadPath + "mermaid-mindmap.min", function () {
+                        _this.editormd.loadScript(loadPath + "mermaid.min", async function () {
+                            //_this.editormd.loadScript(loadPath + "mermaid-mindmap.min", function () {
                                 _this.editormd.$mermaid = mermaid;
-                                mermaid.registerExternalDiagrams([window["mermaid-mindmap"]], {lazyLoad: false});
-                                mermaid.initialize({theme:"dark"});
+                                //mermaid.registerExternalDiagrams([window["mermaid-mindmap"]], {lazyLoad: false});
+                            _this.editormd.$mermaid.initialize({ startOnLoad: false, theme: "dark" });
                                 var idx = 0;
                                 for (const e of _this.previewContainer.find(".mermaid").toArray()) {
-                                    _this.editormd.$mermaid.render("mermaid-" + ++idx, $(e).text(), function(graph) {
-                                        e.outerHTML = graph;
-                                    });
+                                    const {svg} = await _this.editormd.$mermaid.render("mermaid-" + ++idx, $(e).text());
+                                    e.outerHTML = svg;
                                 }
-                            });
+                            //});
                         });
                     });
                 }
@@ -757,37 +756,35 @@
                         if (typeof(comp) !== "undefined" && /^acl: |\@/i.test(line)) {
                             var start = cursor.ch, end = cursor.ch;
                             while (start > 0 && /[\w.@-]/.test(line.slice(start > 1 ? start-2: start-1,start))) --start;
-                            while (end < line.length && /[\w.@-]/.test(line.slice(end-1,end+1))) ++end;
-                            var shortened = 0;
-                            while (line.slice(start, end).indexOf("@@") >= 0) { start++; shortened++;}
-                            if (!shortened)
-                                while (!/^acl: /i.test(line) && line.slice(start, end).indexOf("@") == 0)
-                                    ++start;
+                            while (end > 0 && end < line.length && /[\w.@-]/.test(line.slice(end-1,end+1))) ++end;
+                            while (line.slice(start, end).indexOf("@@") >= 0) start++;
+                            while (!/^acl: /i.test(line) && start < end && line.slice(start, end).indexOf("@") == 0)
+                                ++start;
                             var word = line.slice(start, end).toLowerCase();
                             var match = [];
                             for (var i = 0; i < comp.length; i++) {
-                                if (comp[i].displayText.toLowerCase().indexOf(word) >= 0)
+                                if (start === end || comp[i].displayText.toLowerCase().indexOf(word) >= 0)
                                     match.push(comp[i]);
                                 else if (word.indexOf("@") == 0)
                                     if (comp[i].groups)
                                         for (const e of comp[i].groups)
-                                            if (e.displayText.toLowerCase().indexOf(word) >= 0)
+                                            if (start === end || e.displayText.toLowerCase().indexOf(word) >= 0)
                                                 match.push(e);
                                 else if (comp[i].groups)
                                     for (const e of comp[i].groups)
                                         for (const m of e.members)
-                                            if (m.displayText.toLowerCase().indexOf(word) >= 0)
+                                            if (start === end || m.displayText.toLowerCase().indexOf(word) >= 0)
                                                 match.push(m);
                                 else if (comp[i].members)
                                     for (const m of comp[i].members)
-                                        if (m.displayText.toLowerCase().indexOf(word) >= 0)
+                                        if (start === end || m.displayText.toLowerCase().indexOf(word) >= 0)
                                             match.push(m);
                             }
                             if (match.length > 0) {
-                                while (line.slice(start-1, end).indexOf("@") == 0) { --start; ++shortened }
+                                if (line.slice(start-1, end).indexOf("@") == 0) --start;
                                 var data = {
                                     list: match,
-                                    from: CodeMirror.Pos(cursor.line, (!/^acl: /i.test(line) && shortened) ? start+1 : start),
+                                    from: CodeMirror.Pos(cursor.line, start),
                                     to: CodeMirror.Pos(cursor.line, end)
                                 }
                                 return accept(data);
@@ -1613,7 +1610,7 @@
 
             this.previewContainer.find("." + editormd.classNames.tex).each(function(){
                 var tex  = $(this);
-                editormd.$katex.render(tex.text(), tex[0], {display: true, macros: macros_physics});
+                editormd.$katex.render(tex.text(), tex[0], {display: true, macros: macros_physics, throwOnError: false});
 
                 tex.find(".katex").css("font-size", "1.6em");
             });
@@ -1628,7 +1625,7 @@
          * @returns {editormd}             返回editormd的实例对象
          */
 
-        flowChartAndSequenceDiagramRender : function() {
+        flowChartAndSequenceDiagramRender : async function() {
             var $this            = this;
             var settings         = this.settings;
             var previewContainer = this.previewContainer;
@@ -1646,11 +1643,11 @@
                 previewContainer.find(".flowchart").flowChart();
             }
             if (settings.mermaid && editormd.$mermaid) {
+                editormd.$mermaid.initialize({ startOnLoad: false, theme: "dark" });
                 var idx = 0;
                 for (const e of previewContainer.find(".mermaid").toArray()) {
-                    editormd.$mermaid.render("mermaid-" + ++idx, $(e).text(), function(graph) {
-                        e.outerHTML = graph;
-                    });
+                     const {svg} = await editormd.$mermaid.render("mermaid-" + ++idx, $(e).text());
+                     e.outerHTML = svg;
                 }
             }
             if (settings.graphviz && editormd.$d3) {
@@ -2500,7 +2497,7 @@
         watch : function(callback) {
             var settings        = this.settings;
 
-            if ($.inArray(settings.mode, ["gfm", "gfm+django","markdown"]) < 0)
+            if ($.inArray(settings.mode, ["gfm", "gfm+django+stex","markdown"]) < 0)
             {
                 return this;
             }
@@ -2625,7 +2622,7 @@
             var codeMirror       = this.codeMirror;
             var previewContainer = this.previewContainer;
 
-            if ($.inArray(settings.mode, ["gfm", "gfm+django", "markdown"]) < 0) {
+            if ($.inArray(settings.mode, ["gfm", "gfm+django+stex", "markdown"]) < 0) {
                 return this;
             }
 
@@ -3504,7 +3501,7 @@
         atLink        : /@([@\w.\/=-]+(?!\S*::))/g,
         email         : /(\w+)@(\w+)\.(\w+)\.?(\w+)?/g,
         emailLink     : /(mailto:)?([\w.-]+)@([\w-]+)(?:\.([\w-]+))*/g,
-        emoji         : /[^:]:([\w\+-]+):[^:]/g,
+        emoji         : /(?<!:):([\w\+-]+):(?!:)/g,
         emojiDatetime : /(\d\d:\d\d:\d\d)/g,
         twemoji       : /:(tw-([\w]+)-?(\w+)?):/g,
         fontAwesome   : /:(fa-([\w]+)(-(\w+)){0,}):/g,
@@ -3590,7 +3587,7 @@
                         {
                             var faName = faMatchs[fa].replace(/:/g, "");
 
-                            return "<i class=\"fa " + faName + " fa-emoji\" title=\"" + faName.replace("fa-", "") + "\"></i>";
+                            return "<i class=\"fa " + faName + "\" title=\"" + faName.replace("fa-", "") + "\"></i>";
                         }
                     }
                     else
@@ -3646,14 +3643,14 @@
                                     var idx = e.displayText.indexOf(":");
                                     var end = e.displayText.length;
                                     if (idx >= 0 && end >= 0)
-                                        return "<a class=\"at-link\" href=\"mailto://" + escape(e.displayText.slice(idx+1, end)).replace("@", "&#64;") + "\">" + e.displayText.slice(idx+1, end).replace("@", "&#64;").replace("<", "&lt;").replace(">", "&gt;") + "</a>";
-                                    if (/^@/.test($b)) {
+                                        return "<a class=\"at-link\" href=\"mailto://" + escape(e.displayText.slice(idx+1, end).replace(/<img [^>]+>/, "")).replace("%26gt%3B", "&gt;").replace("%26lt%3B", "&lt;").replace("@", "&#64;") + "\">" +  e.displayText.slice(idx+1, end).replace("@", "&#64;").replace(/<(?!img)/g, "&lt;").replace(/(?<!")>/g, "&gt;") + "</a>";
+                                    if (/^@/.test($b)) {q
                                         var friends = [];
                                         for (const u of e.members) {
                                             idx = u.displayText.indexOf(":");
                                             end = u.displayText.length;
                                             if (idx >= 0 && end >= 0)
-                                                friends.push("<a class=\"at-link\" href=\"mailto://" + escape(u.displayText.slice(idx+1, end)).replace("@", "&#64;") + "\">" + u.displayText.slice(idx+1, end).replace("@", "&#64;").replace("<", "&lt;").replace(">", "&gt;") + "</a>");
+                                                friends.push("<a class=\"at-link\" href=\"mailto://" + escape(u.displayText.slice(idx+1, end).replace(/<img [^>]+>/, "")).replace("%26gt%3B", "&gt;").replace("%26lt%3B", "&lt;").replace("@", "&#64;") + "\">" + u.displayText.slice(idx+1, end).replace("@", "&#64;").replace(/<(?!img)/g, "&lt;").replace(/(?<!")>/g, "&gt;") + "</a>");
                                         }
                                         return friends.join(", ");
                                     }
@@ -3667,7 +3664,7 @@
                                                     var idx = h.displayText.indexOf(":");
                                                     var end = h.displayText.length;
                                                     if (idx >= 0 && end >= 0)
-                                                        friends.push("<a class=\"at-link\" href=\"mailto://" + escape(h.displayText.slice(idx+1, end)).replace("@", "&#64;") + "\">" + h.displayText.slice(idx+1, end).replace("@", "&#64;").replace("<", "&lt;").replace(">", "&gt;") + "</a>");
+                                                        friends.push("<a class=\"at-link\" href=\"mailto://" + escape(h.displayText.slice(idx+1, end).replace(/<img [^>]+>/, "")).replace("%26gt%3B", "&gt;").replace("%26lt%3B", "&lt;").replace("@", "&#64;") + "\">" + h.displayText.slice(idx+1, end).replace("@", "&#64;").replace(/<(?!img)/g, "&lt;").replace(/(?<!")>/g, "&gt;") + "</a>");
                                                 }
                                                 return friends.join(", ");
                                             }
@@ -3677,7 +3674,7 @@
                                                     var idx = h.displayText.indexOf(":");
                                                     var end = h.displayText.length;
                                                     if (idx >= 0 && end >= 0)
-                                                        return "<a class=\"at-link\" href=\"mailto://" + escape(h.displayText.slice(idx+1, end)).replace("@", "&#64;") + "\">" + h.displayText.slice(idx+1, end).replace("@", "&#64;").replace("<", "&lt;").replace(">", "&gt;") + "</a>";
+                                                        return "<a class=\"at-link\" href=\"mailto://" + escape(h.displayText.slice(idx+1, end).replace(/<img [^>]+>/, "")).replace("%26gt%3B", "&gt;").replace("%26lt%3B", "&lt;").replace("@", "&#64;") + "\">" + h.displayText.slice(idx+1, end).replace("@", "&#64;").replace(/<(?!img)/, "&lt;").replace(/(?<!")>/g, "&gt;") + "</a>";
                                                 }
                                             }
                                     }
@@ -4226,7 +4223,7 @@
             var katexHandle = function() {
                 div.find("." + editormd.classNames.tex).each(function(){
                     var tex  = $(this);
-                    katex.render(tex.html().replace(/&lt;/g, "<").replace(/&gt;/g, ">"), tex[0], {display:true, macros:macros_physics});
+                    katex.render(tex.text(), tex[0], {display:true, macros:macros_physics, throwOnError: false});
                     tex.find(".katex").css("font-size", "1.6em");
                 });
             };
@@ -4355,7 +4352,7 @@
         var script    = null;
         script        = document.createElement("script");
         script.id     = fileName.replace(/[\./]+/g, "-");
-        script.type   = "text/javascript";
+        script.type   = fileName.match("mermaid") ? "module" : "text/javascript";
         script.src    = fileName + ".js";
 
         if (editormd.isIE8)
