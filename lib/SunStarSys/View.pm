@@ -279,13 +279,14 @@ sub news_page {
   if (-d $page_path) {
     for my $f (grep -f, glob "$page_path/*.{mdtext,md}") {
       $f =~ m!/([^/]+)\.md(?:text)?$! or die "Bad filename: $f\n";
-      $args{$1} = {};
+      my $key = $1;
+      $args{$key} = {};
       read_text_file $f, $args{$1};
-      $args{$1}->{conf} = $args{conf} if exists $args{conf};
-      $args{$1}->{deps} = $args{deps} if exists $args{deps};
-      $args{$1}->{content} = sort_tables($args{preprocess}
-                                   ? Template($args{$1}->{content})->render($args{$1})
-                                   : $args{$1}->{content});
+      $args{$key}->{conf} = $args{conf} if exists $args{conf};
+      $args{$key}->{deps} = $args{deps} if exists $args{deps};
+      $args{$key}->{content} = sort_tables($args{preprocess}
+                                   ? Template($args{$key}->{content})->render($args{$key})
+                                   : $args{$key}->{content});
     }
   }
 
@@ -463,10 +464,57 @@ sub next_view {
 
 sub ssi {
   my %args = @_;
-  my $file = "content/$args{path}";
+  my $file = "content$args{path}";
   read_text_file $file, \%args unless defined $args{headers} and defined $args{content};
 
-  1 while $args{content} =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Template($1)->render({})/ge;
+  my @closed = split /\s*[;,]\s*/, $args{headers}{closed} // "";
+  my @muted = split /\s*[;,]\s*/, $args{headers}{muted} // "";
+  my @important = split /\s*[;,]\s*/, $args{headers}{important} // "";
+
+  1 while $args{content} =~ s{(\{%\s*ssi\s+\`([^\`]+)\`\s*%\})}{
+    my $match = $1;
+    my $target = $2;
+    my $page_path = "content$target";
+    $page_path =~ s!\.[^/]+$!.page!;
+    my $root = basename $page_path;
+    if (-d $page_path) {
+      for my $f (grep -f, glob "'$page_path/'*") {
+        if ($f =~ m!/([^/]+)\.md(?:text)?\Q$args{lang}\E$!) {
+          my $key = $1;
+          $args{$key} = {};
+          read_text_file $f, $args{$key};
+          $args{$key}->{key} = $key;
+          $args{$key}->{facts} = $args{facts} if exists $args{facts};
+          $args{$key}->{deps} = $args{deps} if exists $args{deps};
+          $args{$key}->{content} = sort_tables($args{preprocess}
+                                                 ? Template($args{$key}->{content})->render($args{$key})
+                                                 : $args{$key}->{content});
+          if (index($key, "comment") == 0) {
+            for my $c (@closed) {
+              ++$args{$key}{closed} and last if index($key, $c) == 0;
+            }
+            for my $m (@muted) {
+              ++$args{$key}{muted} and last if index($key, $m) == 0;
+            }
+            for my $i (@important) {
+              ++$args{$key}{important} and last if $key eq $i;
+            }
+            push @{$args{comments}}, $args{$key};
+          }
+        }
+        elsif ($f =~ m!/([^/]+)\.(?:ya?ml|json)\Q$args{lang}\E$!) {
+          my $key = $1;
+          $args{$key} = {};
+          read_text_file $f, $args{$key};
+          $args{$key}{content} = Load $args{$key}{content};
+        }
+        elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b)[^\/]*$/) {
+          push @{$args{attachments}}, "$root/" . basename $f;
+        }
+      }
+    }
+    Template($match)->render({})
+  }ge;
   my $view = next_view \%args;
   return view->can($view)->(%args);
 }
