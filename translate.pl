@@ -34,8 +34,7 @@ $s_args{content} =~ s{^(\`{3}[\w-]+\n.*?\n\`{3})$}{
   push @code_blocks, $1;
   "<!-- # -->"
 }gmse;
-
-$s_args{content} =~ s{(\${2}.*?\${2})$}{
+$s_args{content} =~ s{(\${2}.*?\${2})}{
   push @katex_strings, $1;
   "<!-- ## -->"
 }ge;
