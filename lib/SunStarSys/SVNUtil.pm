@@ -61,7 +61,7 @@ sub svn_up {
         $revision = $ctx->update($svn_base, $revision, 1);
     }
 
-    print "Updated $svn_base to revision $revision.\n";
+    syswrite STDOUT, "Updated $svn_base to revision $revision.\n";
     return add => \@add, delete => \@delete, restore => \@restore, update => \@update,
            revision => $revision;
 }
@@ -131,18 +131,18 @@ sub svn_cleanup {
 
 sub svn_add {
     my $ctx = shift->new;
-    print "Adding $_.\n" and $ctx->add($_, 1) for @_;
+    syswrite STDOUT, "Adding $_.\n" and $ctx->add($_, 1) for @_;
 }
 
 sub svn_rm {
     my $ctx = shift->new;
-    print "Removing $_.\n" and $ctx->delete($_, 1) for @_;
+    syswrite STDOUT, "Removing $_.\n" and $ctx->delete($_, 1) for @_;
 }
 
 sub svn_ps {
     my $ctx = shift->new;
     my ($target, $propname, $propval) = @_;
-    print "Setting '$propname' on $target.\n"
+    syswrite STDOUT, "Setting '$propname' on $target.\n"
         and $ctx->propset($propname, $propval, $target, 0);
 }
 

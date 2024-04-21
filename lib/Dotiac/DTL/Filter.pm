@@ -27,6 +27,8 @@ require Scalar::Util;
 our $VERSION = 1.0;
 use POSIX qw/:locale_h strftime/;
 use Time::timegm 'timegm';
+use List::Util ();
+use locale ':time';
 
 sub add {
 	my $value=shift;
@@ -73,6 +75,15 @@ sub cut {
 	$val=~s/[$t]//g;
 	$value->set($val);
 	return $value;
+}
+
+sub cuts {
+  my $value=shift;
+  my $val=$value->repr();
+  my $t=shift;
+  $t=$t->repr();
+  $val=~s/\Q$t\E//g;
+  $value->set($val);
 }
 
 #locale stuff
@@ -786,6 +797,12 @@ sub pprint {
 	return Dotiac::DTL::Value->new(Data::Dumper->Dump([@_]));
 }
 
+sub shuffle {
+  my $value = shift;
+  my @rv = List::Util::shuffle @{$value->content};
+  return $value->set(\@rv);
+}
+
 sub random {
 	my $value=shift;
 	if ($value->object) {
@@ -831,6 +848,19 @@ sub removetags {
 		my @t=split /\s+/,$tags;
 		my $t=CORE::join("|",map {quotemeta $_} @t);
 		$value=~s/<\/?(?:$t)(?:\/?>|\s[^>]+>)//g;
+	}
+	return $val->set($value);
+}
+
+sub removeattrs {
+	my $val=shift;
+	my $value=$val->repr();
+	my $tags=shift;
+	$tags=$tags->repr;
+	if ($tags) {
+		my @t=split /\s+/,$tags;
+		my $t=CORE::join("|",@t);
+		$value=~s/(?<=<[^>]{1,250})(?:$t)\s*=\s*(['"])(?:\\.|.)*\1//g;
 	}
 	return $val->set($value);
 }
@@ -1222,6 +1252,14 @@ sub lede {
   return $value->set(ucfirst $1);
 }
 
+sub img {
+  my $value=shift;
+  $value->safe(1);
+  my $content = $value->repr;
+  $content =~ /(<img [^>]+>|\!\[[^\]]+]\([^\)]+\))/;
+  return $value->set($1);
+}
+
 sub ssi {
   my $value=shift;
   $value->safe;
@@ -1237,6 +1275,97 @@ sub dirname {
   return $value->set($dir eq "." ? "" : $dir);
 }
 
+sub _mdsed {
+  my ($x,$y) = @_;
+  for ($x) {
+    s!<(script|style) .*?</\1>!!msg;
+    s!^\[TOC\]$!\\tableofcontents!msg;
+    s/<\/?[^>]+>//g;
+    s/&mdash;/--/g;
+    s/\*\*(.*?)\*\*/\\textbf\{$1\}/g;
+    s/\*([\w.?!\s-]+)\*/\\textit\{$1\}/g;
+    s/%/\\%/g;
+    s/^\#\#(\#*)\s+([^\n]+)/"\\" . ($1 && "sub" ) . "section\{$2\}"/msge;
+    s/\[(\w+)\]\(#\1\)/\\cite\{$1\}/g;
+    s/\{#.*?#\}//g;
+    s/\!\[([^\]]+)\]\(([^)]+)\)//g;
+    s/\[([^\]]+)\]\(([^)]+)\)/\\href\{$2\}\{$1\}/g;
+    s/\$\$/\$/g;
+    s/^\n\n\s+/\n\n/g;
+    s/\n\n\s+$/\n\n/g;
+  }
+  for ($y) {
+    tr/\n//s;
+  }
+  return $x.$y;
+}
+
+sub _texsed {
+  my ($x,$y) = @_;
+  for ($x) {
+    s!^\\tableofcontents![TOC]!msg;
+    s/--/&mdash;/g;
+    s/\\textbf\{([^}]+)\}/**$1**/g;
+    s/\\textit\{([^}]+)\}/*$1*/g;
+    s/\\%/%/g;
+    s/^\\(sub)?section\{([^}]+)\}/"##" . ($1 && "#" ) . " $2"/msge;
+    s/\\cite\{([^}]+)\}/\[($1)\]\(#$1)/g;
+    s/\\href\{([^\}]+)\}\{([^\]]+)\}/[$2]($1)/g;
+    s/\$(.*?)\$/\$\$$1\$\$/g;
+    s/^\n\n\s+/\n\n/g;
+    s/\n\n\s+$/\n\n/g;
+  }
+  for ($y) {
+    tr/\n//s;
+  }
+  return $x.$y;
+}
+
+my %mathbb = (
+  'Z'            => 'Z',
+  'R'            => 'R',
+  'Reals'        => 'R',
+  'N'            => 'N',
+  'Z'            => 'Z',
+  'Complex'      => 'C'
+);
+
+my $bbre = eval("qr/" . CORE::join("|", keys %mathbb) . "/");
+my $bbre_rev = eval("qr/" .CORE::join("|", values %mathbb) . "/");
+
+sub md2tex {
+  my $value = shift;
+  my $content = $value->repr;
+  for ($content) {
+    s/\\($bbre)\b/\\mathbb\{$mathbb{$1}\}/g;
+    s/\\frak\b/\\mathfrak/g;
+    s/^\`\`\`(?:latex|math)(.*?)^\`\`\`/\\begin\{equation\}$1\\end\{equation\}/msg;
+    s/^\`\`\`(?:asy|asymptote)(.*?)^\`\`\`/\\begin\{asy\}[viewportwidth=\\linewidth]\nsettings.prc=true;$1\\end\{asy\}/msg;
+    s/(.*?)(\\begin\{(equation|asy)\}.*?\\end\{\3\}|$)/_mdsed $1, $2/sge;
+  }
+
+  $value->safe(1);
+  return $value->set($content);
+
+}
+
+sub tex2md {
+  my $value = shift;
+  my $content = $value->repr;
+
+  for ($content) {
+    s/\\mathbb\{($bbre_rev)\}/$1 eq "C" ? "\\Complex" : "\\$1"/ge;
+    s/\\mathfrak\b/\\frak/g;
+    s/\\begin\{equation\}(.*?)\\end\{equation\}/\`\`\`math$1\`\`\`/msg;
+    s/\\begin\{asy\}(.*?)\\end\{asy\}/\`\`\`asy$1\`\`\`/msg;
+    s/(.*?\n)(\`\`\`(?:math|asy).*?\`\`\`\n|$)/_texsed $1, $2/sge;
+    s/^.*\\begin\{document\}\n//, s/\\end\{document\}.*$//;
+    s/\\label\{.*?\}//g;
+  }
+
+  $value->safe(1);
+  return $value->set($content);
+}
 
 sub parse_filename {
   require SunStarSys::Util;
@@ -1261,8 +1390,16 @@ sub basename {
   return $value->set($base);
 }
 
+
+sub utf8decode {
+  my $value = shift;
+  my $content = $value->repr;
+  utf8::decode $content;
+  $value->set($content);
+  return $value;
+}
+
 sub vcs_date {
-  use locale ':time';
   my $value = shift;
   my $content = $value->repr;
   my $lang = @_ ? shift->repr : ".en";
@@ -1272,7 +1409,7 @@ sub vcs_date {
   $args[0] -= 1900;
   $args[1] -= 1;
   my $locale = setlocale LC_TIME, $LANG{$lang};
-  my ($rv) = grep utf8::decode($_), strftime '%a, %d %b %Y', gmtime timegm reverse @args[0..5];
+  my ($rv) = grep {utf8::decode($_); 1} strftime '%a, %d %b %Y', gmtime timegm reverse @args[0..5];
   setlocale LC_TIME, $locale;
   return $value->set($rv);
 }
@@ -1322,7 +1459,7 @@ sub vcs_author {
     }
 
     my $rv = $markdown_search ? qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=$svnuser=;${lang}markdown_search=1">) : qq(<a href="/dynamic/search$path?regex=%22$urlencname%22;${lang}markdown_search=0">);
-    $rv .= qq(<img src="data:$data"></img> $name</a>);
+    $rv .= qq(<img src="data:$data"> $name</a>);
     return Dotiac::DTL::Value->safe($rv);
   }
   return $value->set(undef);

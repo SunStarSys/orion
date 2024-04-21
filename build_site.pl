@@ -15,6 +15,7 @@ use IO::Select;
 use List::Util qw/shuffle/;
 use Socket;
 use File::stat;
+use Time::HiRes qw/gettimeofday tv_interval/;
 
 BEGIN {
   my $script_path = dirname($0);
@@ -34,8 +35,9 @@ use SunStarSys::View;
 use Data::Dumper ();
 use SunStarSys::ASF;
 use IO::Compress::Gzip qw/gzip/;
-use sealed v4.1.8;
+use Fcntl;
 use base 'sealed';
+#use sealed 'deparse';
 sub syswrite_all;
 
 my ($revision, $target_base, $source_base, $dirq, $runners, $offline, @errors);
@@ -62,14 +64,21 @@ my ($repos, $website) = $source_base =~ m!/([^/]+)/([^/]+)/(?:trunk|branches)\b!
 $ENV{REPOS} = $repos;
 $ENV{WEBSITE} = $website;
 
-open my $build_log, ">>:encoding(UTF-8)", "$target_base/.build-log/$revision.log" or die "Can't open .build-log/$revision.log: $!";
+open my $build_log, ">>:raw", "$target_base/.build-log/$revision.log" or die "Can't open .build-log/$revision.log: $!";
 
-$|=1;
-$|=1, select $_ for select $build_log;
-$|=1, select $_ for select \*STDERR;
+# fire and forget (blocking semantics are bad when users can disconnect the fifo we write to
+for (\*STDOUT, \*STDERR, $build_log) {
+  my $n = fileno $_;
+  open $_, ">>&$n:raw" unless $_ == $build_log;
+  my $flags = 0;
+  $flags = fcntl $_, F_GETFL, $flags;
+  $flags |= O_NONBLOCK;
+  fcntl $_, F_SETFL, $flags;# or die "Can't set O_NONBLOCK on fd $n: $!";
+  $|=1;
+}
 
-$SIG{__WARN__} = sub { print $build_log gmtime . ":$_[0]"; warn $_[0]};
-$SIG{__DIE__}  = sub { print $build_log gmtime . ":$_[0]"; die $_[0]};
+$SIG{__WARN__} = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_"; warn $_};
+$SIG{__DIE__}  = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_"; die $_};
 
 unshift @INC, "$source_base/lib";
 require path;
@@ -82,6 +91,7 @@ require view;
 
 my $pattern_string = 'no strict "refs"; *path::patterns{ARRAY}';
 my $patterns = eval $pattern_string;
+my %seen;
 
 sub main :Sealed {
   my $saw_error = 0;
@@ -91,7 +101,7 @@ sub main :Sealed {
   my @fd2rid;
   $fd2rid[fileno $runners[$_]->{socket}] = $_ for 0..$#runners;
   my @new_sources;
-  my @dirqueue = $dirq // ("cgi-bin", "content");
+  my @dirqueue = $dirq // ("cgi-bin", "templates", "content");
   my IO::Select $sockets = "IO::Select";
   $sockets = $sockets->new;
   $sockets->add(map $_->{socket}, @runners);
@@ -132,7 +142,7 @@ sub main :Sealed {
       $saw_error++;
       next;
     }
-    push @dirqueue, grep length && $_ ne "working...", map /^new: (.+)$/ ? (push @new_sources, $1 and ()) : $_, split /\n/;
+    push @dirqueue, grep length && $_ ne "working...", map /^new: (.+)$/ ? (push @new_sources, grep !$seen{$_}++, $1 and ()) : $_, split /\n/;
     $runners[$fd2rid[fileno $p]]->{wait} = /(?:^$)\Z/m;
   }
 
@@ -143,7 +153,7 @@ sub main :Sealed {
     syswrite_all "Rebuilding site...\n";
     syswrite_all $_, "[flush]\n" for $sockets->can_write(0);
     @new_sources = ();
-    @dirqueue = $dirq // ("cgi-bin", "content");
+    @dirqueue = $dirq // ("cgi-bin", "templates", "content");
     goto LOOP;
   }
 
@@ -170,7 +180,7 @@ sub process_dir {
                 next;
             }
             if (syswrite_all($wtr, "$_\n") <= 0) {
-                die "syswrite_all failed: $!";
+                warn "syswrite_all failed: $!";
             }
             next;
         }
@@ -196,7 +206,7 @@ sub process_file :Sealed {
     s/^content// for my $target_path = $target_file;
 
     my $path = $file;
-    $path =~ s!^content!!;
+    $path =~ s!^content!! or goto COPY;
 
     for my $p (@$patterns) {
         my ($re, $method, $args) = @$p;
@@ -209,27 +219,33 @@ sub process_file :Sealed {
           eval $d->Dump;
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
-        my ($content, $ext, undef, @new_sources) = $s->(website => $ENV{WEBSITE}, path => $path, lang => $lang, %$args);
+        my $start_call = [gettimeofday];
+        my ($content, $ext, undef, @new_sources) = $s->(website => $ENV{WEBSITE}, repos => $ENV{REPOS}, path => $path, lang => $lang, %$args);
+        my $elapsed = tv_interval($start_call);
         if ($$args{compress}) {
-          utf8::encode($content);
-          gzip \($content, my $compressed);
           $lang .= ".gz";
-          $content = $compressed;
+          if (defined $content) {
+            utf8::encode($content) if utf8::is_utf8 $content;
+            gzip \($content, my $compressed);
+            $content = $compressed;
+          }
         }
-        my $dest = "$target_base/$target_file.$ext$lang";
-        my $encoding = $$args{compress} ? "raw" : "encoding(UTF-8)";
-        my $mtime;
-        $mtime = $_->mtime for map stat $_, "content/$path";
-        open my $fh, ">:$encoding", $dest
-          or die "Can't open $dest: $!\n";
-        print $fh $content;
-        close $fh;
-        utime $mtime, $mtime, $dest if $mtime and $$args{compress};
-
-        syswrite_all "Built to $target_base/$target_file.$ext$lang.\n";
+        if (defined $content) {
+          my $dest = "$target_base/$target_file.$ext$lang";
+          my $encoding = $$args{encoding} // ($$args{compress} ? "raw" : "encoding(UTF-8)");
+          my $mtime;
+          $mtime = $_->mtime for map stat $_, "content/$path";
+          open my $fh, ">:$encoding", $dest
+            or die "Can't open $dest: $!\n";
+          print $fh $content;
+          close $fh;
+          utime $mtime, $mtime, $dest if $mtime;
+        }
+        syswrite_all "Built to $target_base/$target_file.$ext$lang in ${elapsed}s.\n";
         return @new_sources;
     }
 
+  COPY:
     my ($dest, $copied) = copy_if_newer $file, "$target_base/$file";
     syswrite_all "Copied to $dest.\n" if $copied;
 
@@ -261,7 +277,7 @@ sub fork_runner :Sealed {
 
         # notify parent we are beginning work
         if (syswrite_all($parent, "working...\n") <= 0) {
-            die "syswrite_all failed: $!";
+            warn "syswrite_all failed: $!";
         }
 
         local $_ = '';
@@ -285,7 +301,7 @@ sub fork_runner :Sealed {
 
         # notify parent we are waiting for more input
         if (syswrite_all($parent, "\n") <= 0) {
-            die "syswrite_all failed: $!";
+            warn "syswrite_all failed: $!";
         }
     }
     warn "File $_->[0] had processing errors: $_->[1]" for @errors;
@@ -298,7 +314,10 @@ sub syswrite_all {
     my $fh = shift // \*STDOUT;
     my $bytes;
     my $total = 0;
-    print $build_log $data if $fh == \*STDOUT;
+    if ($fh == \*STDOUT) {
+      my ($x) = map {my $x = $_; utf8::encode $x if utf8::is_utf8 $x; $x} $data;
+      syswrite $build_log, $x;
+    }
     while (($bytes = syswrite($fh, substr($data, $total))) > 0) {
       $total += $bytes;
       return $total if $total == length $data;

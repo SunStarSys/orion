@@ -3,11 +3,11 @@
 #Copyright (c) 2009 Marc-Seabstian "Maluku" Lucksch
 #Version 0.8
 ####################
-#This file is part of the Dotiac::DTL project. 
+#This file is part of the Dotiac::DTL project.
 #http://search.cpan.org/perldoc?Dotiac::DTL
 #
-#block.pm is published under the terms of the MIT license, which basically 
-#means "Do with it whatever you want". For more information, see the 
+#block.pm is published under the terms of the MIT license, which basically
+#means "Do with it whatever you want". For more information, see the
 #license.txt file that should be enclosed with libsofu distributions. A copy of
 #the license is (at the time of writing) also available at
 #http://www.opensource.org/licenses/mit-license.php .
@@ -18,6 +18,7 @@ package Dotiac::DTL::Tag::block;
 use base qw/Dotiac::DTL::Tag/;
 use strict;
 use warnings;
+no warnings 'recursion';
 
 our $VERSION = 0.8;
 
@@ -57,12 +58,12 @@ sub string {
 	if ($Dotiac::DTL::blocks{$self->{name}}) {
 		#use Carp;
 		#confess "No Var" unless $vars;
-		
+
 		return $self->{p}.${$Dotiac::DTL::blocks{$self->{name}}->[0]}->({%{$vars},"block.super",$self->{content}},@_).$self->{n}->string($vars,@_) if ref $Dotiac::DTL::blocks{$self->{name}}->[0] eq "REF";
 		return $self->{p}.$Dotiac::DTL::blocks{$self->{name}}->[0]->string({%{$vars},"block.super",$self->{content}},@_).$self->{n}->string($vars,@_);
 	}
 	return $self->{p}.$self->{content}->string($vars,@_).$self->{n}->string($vars,@_);
-	
+
 }
 sub perlcount {
 	my $self=shift;
@@ -117,7 +118,7 @@ sub perlstring {
 	my $id=shift;
 	my $level=shift;
 	$self->SUPER::perlstring($fh,$id,$level,@_);
-	use Carp; confess unless $level;	
+	use Carp; confess unless $level;
 	print $fh "\t" x $level,"if (\$Dotiac::DTL::blocks{\$name$id}) {\n";
 	#print $fh "\t" x $level,"\t\$r.=\${\$Dotiac::DTL::blocks{\$name$id}}->({\%{\$vars},\"block.super\",\$ssub$id},\$escape,\@_);\n"; #Might a perlstring routine....
 	print $fh "\t" x $level,"\t\$r.=\${\$Dotiac::DTL::blocks{\$name$id}->[0]}->({\%{\$vars},\"block.super\",\$ssub$id},\$escape,\@_) if ref \$Dotiac::DTL::blocks{\$name$id}->[0] eq 'REF';\n"; #Might a perlstring routine....
@@ -184,7 +185,7 @@ Other template file: (aboutus2.html)
 
 The "block" tag defines a named block, which can be overwritten or overwrites it.
 
-It is normaly used together with {% extends %}. It defines a block in one template and 
+It is normaly used together with {% extends %}. It defines a block in one template and
 then overwrites the defined block from another template. This is called "template inheritance".
 There are some great examples on the original Djagno homepage: L<http://docs.djangoproject.com/en/dev/topics/templates/#template-inheritance>
 

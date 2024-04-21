@@ -18,7 +18,10 @@ package Dotiac::DTL::Value;
 use strict;
 use warnings;
 use Scalar::Util ();
+use utf8;
 use base 'sealed';
+use sealed;
+
 our $VERSION = 0.8;
 
 sub new {
@@ -37,7 +40,7 @@ sub new {
 
 sub safe :Sealed {
 	my $self=shift;
-        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
+        my Dotiac::DTL::Value $dtlv;
 	return $dtlv->new(shift(@_),1) unless ref $self;
 	if (@_ and $_[0]) {
 		$self->[1]=1;
@@ -47,7 +50,7 @@ sub safe :Sealed {
 
 sub escape :Sealed {
 	my $self=shift;
-        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
+        my Dotiac::DTL::Value $dtlv;
 	return $dtlv->new(shift(@_),0) unless ref $self;
 	if (@_ and $_[0]) {
 		$self->[1]=0;
@@ -316,6 +319,7 @@ sub stringnodefault {
 sub set {
 	my $self=shift;
 	my $data=shift;
+        utf8::decode $data unless ref $data or not defined $data or utf8::is_utf8 $data;
 	$self->[0]=$data;
 	my $r=Scalar::Util::reftype($data);
 	$r="" unless $r;

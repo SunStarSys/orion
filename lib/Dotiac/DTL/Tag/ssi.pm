@@ -52,6 +52,7 @@ sub new {
                   die "Inadmissible ssi target: /$path" unless $ok or not eval '@path::patterns';
                   my $dir = File::Basename::dirname "/$path";
                   read_text_file "content/$path", \ my %data;
+                  warn "content/$path: $!" unless defined $data{content};
                   $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|/|mailto://|\{)(.*?)\2#$1=$2$dir/$3$2#g;
                   $data{content} =~ s#(\[[^\]]*\])\((?!https?://|/|\{|mailto://)([^\)]+)\)#$1($dir/$2)#g;
                   $self->{content}=Dotiac::DTL::Tag->new($data{content});

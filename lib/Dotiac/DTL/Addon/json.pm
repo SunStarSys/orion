@@ -24,8 +24,6 @@ require Cpanel::JSON::XS;
 require Dotiac::DTL::Filter;
 require Dotiac::DTL::Value;
 
-
-
 our $VERSION=0.1;
 
 our $json=Cpanel::JSON::XS->new();
@@ -37,16 +35,19 @@ $json->allow_unknown(1);
 
 
 my $oldjson;
+my $oldjson_raw;
 my $oldjson_ascii;
 my $oldjson_pretty;
 my $oldjson_ascii_pretty;
 
 sub import {
 	$oldjson = *{Dotiac::DTL::Filter::json};
+	$oldjson_raw = *{Dotiac::DTL::Filter::json_raw};
 	$oldjson_ascii = *{Dotiac::DTL::Filter::json_ascii};
 	$oldjson_pretty = *{Dotiac::DTL::Filter::json_pretty};
 	$oldjson_ascii_pretty = *{Dotiac::DTL::Filter::json_ascii_pretty};
 	*{Dotiac::DTL::Filter::json}=\&json;
+	*{Dotiac::DTL::Filter::json_raw}=\&json_raw;
 	*{Dotiac::DTL::Filter::json_ascii}=\&json_ascii;
 	*{Dotiac::DTL::Filter::json_pretty}=\&json_pretty;
 	*{Dotiac::DTL::Filter::json_ascii_pretty}=\&json_ascii_pretty;
@@ -63,6 +64,13 @@ sub json {
 	my $value=shift;
 	$Dotiac::DTL::Addon::json::json->pretty(0);
 	$Dotiac::DTL::Addon::json::json->utf8(1);
+	return $value->set($json->encode($value->content));
+}
+
+sub json_raw {
+	my $value=shift;
+	$Dotiac::DTL::Addon::json::json->pretty(0);
+	$Dotiac::DTL::Addon::json::json->utf8(0);
 	return $value->set($json->encode($value->content));
 }
 

@@ -8,6 +8,7 @@ use IO::Compress::Gzip 'gzip';
 use Cwd;
 use File::stat;
 use Fcntl ":flock";
+use Time::HiRes qw/gettimeofday tv_interval/;
 use utf8;
 use strict;
 use warnings;
@@ -27,9 +28,10 @@ our $RTF_RING_SIZE_MAX = 10_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;
+  utf8::decode $file;
   $out->{mtime} = $_->mtime for map File::stat::populate(CORE::stat(_)), grep -f, $file;
   $out->{mtime} //= -1;
-  return unless -T _ or ref $file;
+  warn "$file not a text file nor a reference" and return unless -T _ or ref $file;
   my $cache = $rtf_ring_hdr->{cache}{$file};
 
   if (defined $cache and $cache->{mtime} == $out->{mtime}) {
@@ -37,6 +39,7 @@ sub read_text_file {
     @{$out->{headers}}{keys %{$cache->{headers}}} = values %{$cache->{headers}};
 
     if (defined $content_lines and $content_lines < $cache->{lines}) {
+      no warnings 'uninitialized';
       $out->{content} = join "\n", (split "\n", $cache->{content})
         [0..($content_lines-1)], "" if $content_lines > 0;
       $out->{content} = "" if $content_lines == 0;
@@ -60,8 +63,7 @@ sub read_text_file {
     return $cache->{lines};
   }
 
-  $file =~ /(.*)/;
-  $file = $1 unless ref $file;
+  $file =~ /^(.*)$/, $file = $1, utf8::encode $file unless ref $file;
   my $encoding = ref $file ? "raw" : "encoding(UTF-8)";
   open my $fh, "<:$encoding", $file or die "Can't open file $file: $!\n";
 
@@ -84,7 +86,9 @@ sub read_text_file {
             last if /^---\s*$/;
             $yaml .= $_;
           }
+          utf8::encode $yaml;
           $hdr = Load($yaml);
+          utf8::decode $_ for map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %$hdr;
           $headers = 0, next LOOP;
         }
       }
@@ -174,9 +178,9 @@ sub copy_if_newer {
     my $copied = 0;
     my $compress = 0;
     $dest .= ".gz" and $compress++ if -T $src and $dest =~ m#/content/#;
-    copy $src, $dest and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
+    utf8::downgrade $_ for my ($s, $d) = ($src, $dest);
+    copy $s, $d and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
     if ($compress and $copied) {
-      utf8::encode my $d = $dest;
       gzip $d, "$d.tmp";
       rename "$d.tmp", $d;
     }
@@ -274,14 +278,15 @@ sub sanitize_relative_path {
 #ttc
 
 sub normalize_svn_path {
-    for (@_) {
-        $_ //= "";
-        tr!/!/!s;
-        s!/$!!;
-        s!^(https?):/!$1://!;
-        s!/\./!/!g;
-        1 while s!/[^/]+/\.\.(/|$)!$1!;
-    }
+  for (@_) {
+    $_ //= "";
+    tr!/!/!s;
+    s!/$!!;
+    s!^(https?):/!$1://!;
+    s!/\./!/!g;
+    1 while s!/[^/]+/\.\.(/|$)!$1!;
+    utf8::downgrade $_;
+  }
 }
 
 sub shuffle {
@@ -372,12 +377,12 @@ sub walk_content_tree (&) {
   if (eval '$path::use_cache') {
     if (-f "$ENV{TARGET_BASE}/.deps") {
       # use the cached .deps file if the incremental build system deems it appropriate
-      open my $deps, "<:encoding(UTF-8)", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
+      open my $deps, "<:raw", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
       eval '*path::dependencies = Load join "", <$deps>';
       $dependencies = eval $dep_string;
     }
     if (-f "$ENV{TARGET_BASE}/.acl") {
-      open my $fh, "<:encoding(UTF-8)", "$ENV{TARGET_BASE}/.acl" or die "Can't open .acl for reading: $!";
+      open my $fh, "<:raw", "$ENV{TARGET_BASE}/.acl" or die "Can't open .acl for reading: $!";
       eval '*path::acl = Load join "", <$fh>';
       $acl = eval $acl_string;
     }
@@ -386,22 +391,23 @@ sub walk_content_tree (&) {
 
   my $cwd = cwd;
   local $_; # filepath that $wanted sub should inspect, rooted in content/ dir
-
+  my $start_time = [gettimeofday];
   find({ wanted => sub {
            s!^\Q$cwd/content!!;
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
-
+  my $elapsed = tv_interval $start_time;
+  warn "Walked content tree in ${elapsed}s.\n";
   return 1;
 }
 
 END {
   if ($dependencies) {
-    open my $deps, ">:encoding(UTF-8)", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
+    open my $deps, ">:raw", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
     print $deps Dump $dependencies;
   }
   if ($acl) {
-    open my $fh, ">:encoding(UTF-8)", "$ENV{TARGET_BASE}/.acl" or die "Can't open '.acl' for writing: $!";
+    open my $fh, ">:raw", "$ENV{TARGET_BASE}/.acl" or die "Can't open '.acl' for writing: $!";
     print $fh Dump $acl;
   }
 }
@@ -418,16 +424,19 @@ sub archived {
 
 sub seed_file_deps {
   my ($path) = (@_, $_);
+  utf8::encode $path if utf8::is_utf8 $path;
   my $dir = dirname($path);
   read_text_file "content$path", \ my %d;
   no strict 'refs';
   return if archived $path;
+  my ($base, undef, $ext) = parse_filename $path;
+  delete $$dependencies{$path} if $ext =~ /^\.md/;
   my %seen;
   @{$$dependencies{$path}} = grep !$seen{$_}++, @{$$dependencies{$path} // []},
     grep {
       s/^content// and $_ ne $path and not archived
     }
-    map glob("content$_"), map index($_, "/") == 0  ? $_ : "'$dir'/$_",
+    map glob("content$_"), map {my $x = $_; utf8::encode $x if utf8::is_utf8 $x; index($x, "/") == 0  ? $x : "'$dir'/$x"}
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies} // "";
 
   no warnings 'uninitialized';
@@ -440,11 +449,10 @@ sub seed_file_deps {
       push @{$$dependencies{$path}}, $src unless archived $src or $seen{$src}++;
     }
   }
-  my ($base, undef, $ext) = parse_filename $path;
   my $attachments_dir = "content$dir/$base.page";
   if (-d $attachments_dir) {
     s/^[^\.]*// for my $lang = $ext;
-    push @{$$dependencies{$path}}, grep s/^content// && !$seen{$_}++, glob("'$attachments_dir'/*$lang");
+    push @{$$dependencies{$path}}, map {utf8::downgrade $_; $_} grep s/^content// && !$seen{$_}++, glob("'$attachments_dir'/*$lang");
   }
   delete $$dependencies{$path} unless @{$$dependencies{$path}};
 }

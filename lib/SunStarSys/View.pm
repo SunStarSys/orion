@@ -1,3 +1,4 @@
+package view;
 package SunStarSys::View;
 
 # abstract base class for default view methods
@@ -23,7 +24,7 @@ use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use Dotiac::DTL::Addon::json;
-use SunStarSys::Util qw/read_text_file sort_tables parse_filename sanitize_relative_path Dump Load/;
+use SunStarSys::Util qw/read_text_file sort_tables parse_filename sanitize_relative_path Dump Load touch/;
 use Data::Dumper ();
 use File::Basename;
 use File::Path;
@@ -33,13 +34,24 @@ use URI::Escape;
 use SunStarSys::SVNUtil;
 use POSIX qw/:locale_h/;
 use locale;
+use File::stat;
+use List::Util qw/max/;
+use File::Copy;
+use Data::Dumper;
+use base 'sealed';
+use sealed;
 
 our %LANG = (
   ".de" => "de_DE.UTF-8",
   ".en" => "en_US.UTF-8",
   ".es" => "es_ES.UTF-8",
   ".fr" => "fr_FR.UTF-8",
+  ""    => "en_US.UTF-8",
 );
+
+$ENV{PATH} = "/usr/local/bin:/usr/local/texlive/2023/bin/x86_64-solaris:/usr/bin:/bin";
+$ENV{LANG} = "en_US.UTF-8";
+$ENV{DISPLAY} = ":0";
 
 our $URIc     = '^:/?=&;#A-Za-z0-9.~_-';        # complement of class of characters to uri_escape
 
@@ -57,7 +69,7 @@ our $VERSION = "3.00";
 #
 #
 
-sub single_narrative {
+sub single_narrative :Sealed {
   my %args = @_;
   my $path = $args{path};
   my $file = "content$args{path}";
@@ -68,13 +80,16 @@ sub single_narrative {
   setlocale $_, $LANG{$args{lang}} for LC_ALL;
   $template = $args{headers}{template} if exists $args{headers}{template};
 
-  my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
+  my view $view;
+  my @new_sources = $view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
+  $args{breadcrumbs} = $view->can("breadcrumbs")->($args{path});
 
-  $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
+  utf8::decode $args{path};
 
   my @closed = split /\s*[;,]\s*/, $args{headers}{closed} // "";
   my @muted = split /\s*[;,]\s*/, $args{headers}{muted} // "";
   my @important = split /\s*[;,]\s*/, $args{headers}{important} // "";
+
 
   my $page_path = $file;
   $page_path =~ s!\.[^/]+$!.page!;
@@ -108,6 +123,7 @@ sub single_narrative {
         my $key = $1;
         $args{$key} = {};
         read_text_file $f, $args{$key};
+        utf8::encode $args{$key}{content};
         $args{$key}{content} = Load $args{$key}{content};
       }
       elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b)[^\/]*$/) {
@@ -129,12 +145,22 @@ sub single_narrative {
 
   my ($filename, $directory, $ext) = parse_filename $file;
   s/^[^.]+// for my $lang = $ext;
+  my $args_headers;
+  my Data::Dumper $d;
+  $d = $d->new([$args{headers}], ['$args_headers']);
+  $d->Deepcopy(1);
+  $d->Purity(1);
+  eval $d->Dump;
 
-  my $headers = Dump $args{headers};
-  my $categories = delete $args{headers}{categories};
-  my $archive_headers = Dump $args{headers};
+  utf8::downgrade $_ for grep defined, map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %$args_headers;
+
+  my $headers = Dump $args_headers;
+  my $categories = delete $$args_headers{categories};
+  my $status = delete $$args_headers{status} // "draft";
+  my $archive_headers = Dump $args_headers;
   my $keywords = $args{headers}{keywords};
-  my $status = $args{headers}{status} // "draft";
+
+  utf8::decode $_ for grep defined, $archive_headers, $headers, $categories, $status, $keywords;
 
   if (exists $args{archive_root}
       and exists $args{headers}
@@ -161,7 +187,7 @@ $archive_headers
 EOT
       push @new_sources, $f;
     }
-    for my $f (grep {not -f} "$archive_dir/index.html$lang", dirname($archive_dir)."/index.html$lang") {
+    for my $f (grep {utf8::encode($_), not -f} "$archive_dir/index.html$lang", dirname($archive_dir)."/index.html$lang") {
       open my $fh, ">:encoding(UTF-8)", $f
         or die "Can't open archive to $f: $!\n";
       my $type = $f eq "$archive_dir/index.html$lang" ? "year" : "month";
@@ -182,19 +208,24 @@ EOT
     my $category_root = "content$args{category_root}";
 
     for my $cat (@{$categories}) {
-      unless (-f (my $f = "$category_root/$cat/$filename.$ext")) {
-        mkpath "$category_root/$cat";
+      my $f = "$category_root/$cat/$filename.$ext";
+      utf8::encode $f;
+      unless (-f $f) {
+        local $_ = "$category_root/$cat";
+        mkpath $_;
+        utf8::encode $_;
         open my $fh, ">:encoding(UTF-8)", $f
           or die "Can't categorize $path to $f: $!\n";
         print $fh <<EOT;
 $headers
 ---
+
 {% ssi \`$path\` %}
 EOT
         push @new_sources, $f;
       }
 
-      for my $f (grep {not -f} "$category_root/$cat/index.html$lang") {
+      for my $f (grep {utf8::encode($_); not -f} "$category_root/$cat/index.html$lang") {
         open my $fh, ">:encoding(UTF-8)", $f
           or die "Can't categorize $f: $!\n";
         print $fh <<EOT;
@@ -205,9 +236,10 @@ EOT
     }
   }
 
-  $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
   $args{headers}{categories} = $categories if defined $categories;
-  $args{headers}{keywords} = $keywords if defined $keywords;
+  $args{headers}{keywords}   = $keywords   if defined $keywords;
+
+  $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
   my @rv = (Template($template)->render(\%args), html => \%args, @new_sources);
   setlocale $_, $LANG{".en"} for LC_ALL;
   return @rv;
@@ -224,31 +256,23 @@ sub asymptote {
   my @sources;
   $args{content} =~ s{^\`{3}asy(?:mptote)?\s+(.*?)^\`{3}$}{
     s/^\s+settings.*\n//msg for my $body = $1;
-    my $ua = LWP::UserAgent->new;
     my $cached = 0;
-    -d $attachments_dir or mkpath $attachments_dir;
-    if (-f "$attachments_dir/$prefix.asy$lang" and open my $fh, "<:encoding(UTF-8)", "$attachments_dir/$prefix.asy$lang") {
+    -d $attachments_dir or do { local $_ = $attachments_dir; utf8::encode $_; mkpath $_ };
+    my $file = "$attachments_dir/$prefix";
+    if (-f "$file.asy$lang" and open my $fh, "<:encoding(UTF-8)", "$file.asy$lang") {
       read $fh, my $content, -s $fh;
       if ($content eq $body) {
         ++$cached;
       }
     }
     unless ($cached) {
-      open my $fh, ">:encoding(UTF-8)", "$attachments_dir/$prefix.asy$lang" or die $!;
+      open my $fh, ">:encoding(UTF-8)", "$file.asy$lang" or die "Can't open '$file.asy$lang' for writing: $!";
       print $fh $body;
-      push @sources, "$attachments_dir/$prefix.asy";
-      my $res = LWP::UserAgent->new->post('http://192.168.254.1:8080/', Content => $body);
-      if ($res->is_success) {
-        -d $attachments_dir or mkpath $attachments_dir;
-        my $file = "$attachments_dir/$prefix.html$lang";
-        if (open my $fh, ">:encoding(UTF-8)", $file) {
-          print $fh $res->decoded_content;
-          push @sources, $file;
-        }
-      }
-      else {
-        die "asy html rendering of '$prefix' failed (" . $res->status_line . "): " . $res->decoded_content;
-      }
+      close $fh;
+      #push @sources, "$file.asy$lang";
+      system "time asy -f html -o '$file' '$file.asy$lang'" and die "asy html rendering of '$prefix' failed: $?";
+      rename "$file.html", "$file.html$lang";
+      #push @sources, "$file.html$lang";
     }
     my $rv = qq(\n<iframe id="$prefix" loading="lazy" class="asymptote" src="$base.page/$prefix.html$lang" frameborder="0"></iframe>\n);
     ++$prefix;
@@ -257,7 +281,6 @@ sub asymptote {
   my $view = next_view(\%args);
   return view->can($view)->(%args), @sources;
 }
-
 
 # Typical multi-narrative page view.  Has the same behavior as the above for foo.page/bar.mdtext
 # files, parsing them into a bar variable for the template.
@@ -309,7 +332,7 @@ sub fetch_deps {
   for (@{$$dependencies{$path}}) {
     my $file = $_;
     next if exists $data->{$file};
-    my ($filename, $dirname, $extension) = parse_filename;
+    my ($filename, $dirname, $extension) = parse_filename $file;
     s/^[^.]+// for my $lang = $extension;
     for my $p (@$patterns) {
       my ($re, $method, $args) = @$p;
@@ -321,7 +344,7 @@ sub fetch_deps {
       }
       if ($quick == 1 or $quick == 2) {
         $file = "$dirname$filename.html$lang";
-        $file .= ".gz" if $$args{compress};
+        #$file .= ".gz" if $$args{compress};
         $data->{$file} = { path => $file, lang => $lang, %$args };
         # just read the headers for $quick == 1
         read_text_file "content$_", $data->{$file}, $quick == 1 ? 0 : undef;
@@ -332,7 +355,7 @@ sub fetch_deps {
         # quick_deps set to 2 to avoid infinite recursion on cyclic dependency graph
         my (undef, $ext, $vars, @ns) = $s->(path => $file, lang => $lang, %$args, quick_deps => 2);
         $file = "$dirname$filename.$ext$lang";
-        $file .= ".gz" if $$args{compress};
+        #$file .= ".gz" if $$args{compress};
         $data->{$file} = $vars;
         push @new_sources, @ns;
       }
@@ -342,6 +365,7 @@ sub fetch_deps {
   }
   my @d;
   while (my ($k, $v) = each %$data) {
+    utf8::decode $k;
     push @d, [$k, $v] unless $k =~ m#\.page/#; # skip attachments
   }
   no warnings 'uninitialized'; # peculiar: should only happen with quick_deps>2
@@ -390,6 +414,7 @@ sub sitemap {
   my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
   my $content = "";
+  utf8::decode $args{path};
   my ($filename, $dirname, $extension) = parse_filename $args{path};
   s/^[^.]+\.// for my $lang = $extension;
   if ($args{path} =~ m!/(index|sitemap)\b[^/]*$!) {
@@ -403,7 +428,7 @@ sub sitemap {
     my $title = $$_[1]{headers}{title};
     my ($lede) = ($$_[1]{content} // "") =~ /\Q{# lede #}\E(.*?)\Q{# lede #}\E/;
     $lede //= "";
-    $lede = " &mdash; $lede..." if $lede;
+    $lede =~ y/\n/ /, $lede = " &mdash; $lede..." if $lede;
     my ($filename, $dirname) = parse_filename $$_[0];
     if ($$_[0] =~ m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
       $title = $title{+($1 || "index")}{$lang}
@@ -420,7 +445,7 @@ sub sitemap {
                   \[ [^\]]+ \]
                   \(
                   (  [^\)]* / ) index\.html\b[\%\w.-]* # \3, (dir with trailing slash)
-                  \)
+                  \)[^\n]*
               )
               (                                      # \4, subpaths
                   (?:\n\n\1\[ [^\]]+ \]\( \3 (?!index\.html\b[\%\w.-]*)[^\#?] .*)+
@@ -434,18 +459,6 @@ sub sitemap {
 
   $args{content} = $args{preprocess} ? Template($content)->render(\%args) : $content;
 
-=pod
-
-  my $lang = $args{lang};
-  my $page_path = "content$args{path}";
-  my ($base) = parse_filename $page_path;
-  my $attachments_dir = dirname($page_path) . "/$base.page";
-  -d $attachments_dir or mkpath $attachments_dir;
-
-  open my $fh, ">:encoding(UTF-8)", "$attachments_dir/index.json$lang" or die "Can't open 'index.json$lang' :$!";
-
-=cut
-
   # the extra (3rd) return value is for sitemap support
   my @rv = (Template($template)->render(\%args), html => \%args, @new_sources);
   setlocale $_, $LANG{".en"} for LC_ALL;
@@ -458,6 +471,90 @@ sub next_view {
   my $args = pop;
   $args->{view} = [@{$args->{view}}] if ref $args->{view}; # copy it since we're changing it
   return ref $args->{view} && @{$args->{view}} ? shift @{$args->{view}} : delete $args->{view};
+}
+
+sub skip {
+  my %args = @_;
+  my ($prefix, $dir, $ext) = parse_filename "content$args{path}";
+  $args{ext} //= "tex";
+  s/^([^.]*)//, $ext = $1 for my $lang = $ext;
+
+  if ($ext eq "bib") {
+    # generate yaml bibliography database
+    read_text_file "content$args{path}", \%args;
+    my $attachments_dir = "$dir$prefix.page";
+    -d $attachments_dir or do { local $_ = $attachments_dir; utf8::encode $_; mkpath $_ };
+    my @entries;
+    for ($args{content}) {
+      while (/^@(\w+)\{(\w+),\n(.*?)\n\}/msg) {
+        my ($type, $id, $innards, %attrs) = ($1, $2, $3);
+        $attrs{$1} = $2 while $innards =~ /(\w+)\s*=\s*\{(.*?)\}/g;
+        $attrs{id} = $id;
+        $attrs{type} = $type;
+        push @entries, \%attrs;
+      }
+    }
+    open my $fh, ">:raw", my $fname = "$attachments_dir/bibliography.yml$lang" or die "Can't open bibliography.yml$lang in $attachments_dir: $!";
+    print $fh "---\ntitle: Bibliography\nstatus: generated\ndependencies: ../$prefix.$ext$lang\n";
+    print $fh Dump \@entries;
+  }
+
+  return undef, skip => \%args;
+}
+
+sub yml2ext {
+  my %args = @_;
+  my $path = "content$args{path}";
+  my $filter = $args{filter} // "json_raw";
+  read_text_file $path, \%args unless exists $args{content} and defined $args{headers};
+  my $template = $args{template} // '{{content|' . $filter . '|safe}}';
+  utf8::encode $args{content};
+  $args{content} = Load $args{content};
+  return Template($template)->render(\%args), $args{ext} // "json", \%args;
+}
+
+
+# build pdfs from latex
+
+sub latexmk {
+  my %args = @_;
+  my $file = "content$args{path}";
+  my ($base, $dir, $ext) = parse_filename $file;
+  s/^([^.]*)//, $ext = $1 for my $lang = $ext;
+  read_text_file $file, \%args unless exists $args{content} and defined $args{headers};
+  my $cache_file = "$ENV{TARGET_BASE}/$dir$base.$ext$lang";
+  my $cached = 0;
+  my $generator = $args{generator} // "xelatex";
+  my $bib_mtime = max 0, map {(-f $_) ? File::stat::populate(CORE::stat(_))->mtime : ()} $args{content} =~ /^\\addbibresource\{(.*?)\}/mg;
+
+  if (-f $cache_file and open my $fh, "<:encoding(UTF-8)", $cache_file) {
+    read $fh, my $content, -s $fh;
+    if ($content eq $args{content} and $args{mtime} >= $bib_mtime) {
+      ++$cached;
+    }
+    elsif (-f "$ENV{TARGET_BASE}/$dir$base.bbl$lang" and $bib_mtime < File::stat::populate(CORE::stat(_))->mtime) {
+      copy "$ENV{TARGET_BASE}/$dir$base.bbl$lang", "/tmp/$base.$ext.bbl";
+    }
+  }
+
+  if (not $cached and -f $file and my $status = system "latexmk -pdfxe -pdfxelatex=$generator -auxdir=/tmp '$file'") {
+    unlink </tmp/$base.$ext*>, <*.{out,tex,pre,aux,ps,pdf,prc,log}>;
+    die "latexmk -$args{format} rendering of '$file' failed: ". ($status>>8);
+  }
+  syswrite STDOUT, "Copied to $cache_file.\n"; # internal copy, deletions need this notice to track it
+  ($cached or move "/tmp/$base.$ext.bbl", "$ENV{TARGET_BASE}/$dir$base.bbl$lang") and
+    syswrite STDOUT, "Copied to $ENV{TARGET_BASE}/$dir/$base.bbl$lang.\n"; # another internal copy
+
+  return undef, $args{format} => \%args if $cached;
+
+  touch $file;
+
+  move "$base.$ext.$args{format}", "$ENV{TARGET_BASE}/$dir$base.$args{format}$lang";
+  unlink </tmp/$base.$ext*>, <*.{out,tex,pre,aux,ps,pdf,prc,log}>;
+  open my $fh, ">:encoding(UTF-8)", $cache_file or die "Can't write to '$cache_file': $!";
+  print $fh $args{content};
+  close $fh;
+  return undef, $args{format} => \%args;
 }
 
 # recursively evaluates ssi tags in content
@@ -475,6 +572,8 @@ sub ssi {
     my $match = $1;
     my $target = $2;
     my $page_path = "content$target";
+    read_text_file $page_path, \my %a;
+    $args{headers} = $a{headers};
     $page_path =~ s!\.[^/]+$!.page!;
     my $root = basename $page_path;
     if (-d $page_path) {
@@ -506,6 +605,7 @@ sub ssi {
           my $key = $1;
           $args{$key} = {};
           read_text_file $f, $args{$key};
+          utf8::encode $args{$key}{content};
           $args{$key}{content} = Load $args{$key}{content};
         }
         elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b)[^\/]*$/) {
@@ -533,7 +633,9 @@ sub offline {
 # just provides dirs).  overridable internal sub
 
 sub breadcrumbs {
-  my @path = split m!/!, shift;
+  my $src = shift;
+  utf8::decode $src;
+  my @path = split m!/!, $src;
   pop @path;
   my @rv;
   my $abspath = "";

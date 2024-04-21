@@ -22,9 +22,9 @@ const net                   = require('net');
 const cluster               = require('cluster');
 const nproc                 = require('os').cpus().length;
 
-const wait_short_ms         = 2;  /* moderate case scenario (less rare) */
-const wait_long_ms          = 10;  /* worst case scenario (very rare) */
-const TIMEOUT               = 5000;
+const wait_short_ms         = 10;  /* moderate case scenario (less rare) */
+const wait_long_ms          = 50;  /* worst case scenario (very rare) */
+const TIMEOUT               = 20000;
 
 require.extensions['.css']  = function (module, filename) {
   module.exports = fs.readFileSync(filename, 'utf8');
@@ -53,6 +53,7 @@ global.prettify         = require(EDITOR_MD + "/lib/prettify.js");
 global.katex            = require(EDITOR_MD + "/lib/katex.min.js");
 global.Raphael          = require(EDITOR_MD + "/lib/raphael.min.js");
 global.flowchart        = require(EDITOR_MD + "/lib/flowchart.min.js");
+global.mhchem           = require(EDITOR_MD + "/lib/mhchem.js");
 global.macros_physics   = require(EDITOR_MD + "/lib/katex-physics.js");
 global.WEBSITE          = process.env.WEBSITE;
 global.REPOS            = process.env.REPOS;
@@ -98,7 +99,7 @@ if (cluster.isMaster) {
         if (!markdown) { return c.end("\n"); }
         markdown = markdown.toString();
         /* look for nul character in first 3-11 chars */
-        const m  = markdown.match(/^(.{2,10})\x00(.+)$/s);
+        const m  = markdown.match(/^(.{2,20})\x00(.+)$/s);
         if (m) {
           /* data-spec'd mode */
           mode     = m[1];
@@ -120,7 +121,7 @@ if (cluster.isMaster) {
           emoji:           true,
           delay:              1
         };
-          if (mode.indexOf("gfm") == -1 || markdown.indexOf('```') >= 0 || markdown.indexOf('$$') >= 0) {
+          if (mode.indexOf("gfm") == -1) {
           /* relatively rare (nontrivial) case:
            * instantiate an editor object and pray we wait
            * long enough for it to (async) render the complex

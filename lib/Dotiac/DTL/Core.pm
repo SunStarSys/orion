@@ -28,6 +28,7 @@ use File::Spec ();
 use File::Basename ();
 use SunStarSys::Util qw/sanitize_relative_path/;
 use base 'sealed';
+use sealed;
 
 {
 package Dotiac::DTL;
@@ -287,9 +288,9 @@ sub get_variables {
 	return @a;
 }
 
-sub Escape {
+sub Escape :Sealed {
 	my $var=shift;
-        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
+        my Dotiac::DTL::Value $dtlv;
 	return $dtlv->escape($var)->string() if $_[0];
 	return $var;
 }
@@ -309,7 +310,7 @@ sub apply_filters :Sealed {
 	my $value=shift;
 	my $vars=shift;
 	my $escape=shift;
-        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
+        my Dotiac::DTL::Value $dtlv;
 	#$escape=0 if $STRING_IS_LITERAL; #TODO
 	#$VARIABLE_IS_SAFE=!$escape;
 	unless (Scalar::Util::blessed($value) and $value->isa("Dotiac::DTL::Value")) {
@@ -414,17 +415,17 @@ sub devar_repr {
 
 }
 
+use Carp;
 sub devar_var :Sealed {
+        my Dotiac::DTL::Value $dtlv;
 	my $name=shift;
-	my $n=$name;
-        my Dotiac::DTL::Value $dtlv = "Dotiac::DTL::Value";
         return $dtlv->safe(undef) unless defined $name;
-	my $param=shift;
+	my $n=$name;
+        my $param=shift;
 	my $f=substr $name,0,1;
 	my $l=substr $name,-1,1;
 	my $escape=shift;
 	#TODO
-	use Carp;
 	confess $param unless ref $param;
 	confess $escape unless defined $escape;
 	#confess @_ unless @_;

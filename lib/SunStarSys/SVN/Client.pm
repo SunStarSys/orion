@@ -12,6 +12,25 @@ use Fcntl qw/SEEK_SET/;
 use base "sealed";
 
 no warnings 'redefine';
+#__PACKAGE__ declarations for sealed method lookups
+sub _create_auth;
+sub new;
+sub add;
+sub merge;
+sub update;
+sub copy;
+sub move;
+sub delete;
+sub status;
+sub info;
+sub diff;
+sub log;
+
+# accessors
+sub r       {shift->{r}}
+sub client  {shift->{client}}
+sub context {shift->{client}->{ctx}}
+sub pool    {shift->{pool}}
 
 sub _create_auth :Sealed {
   my $pool = pop;
@@ -57,24 +76,20 @@ sub SVN::Client::notify {
   return $$self{notify_callback}[-1];
 }
 
-sub new {
-  my ($class, $r) = @_;
-  shift; shift;
+sub new :Sealed {
+  my SVN::Client $client = "SVN::Client";
+  my SunStarSys::SVN::Client $class = shift;
+  my Apache2::RequestRec $r = shift;
   local $_ = $r ? $r->pool : $SVN::Core::gpool;
   my $pool = $r ? bless $_, "_p_apr_pool_t" : $_;
   unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool, config => {};
-  my $client = SVN::Client->new(@_) or die "Can't create SVN::Client: $!";
+  $client = $client->new(@_) or die "Can't create SVN::Client: $!";
   return bless {
     r      => $r,
     client => $client,
     pool   => $pool,
   }, $class;
 }
-
-sub r       {shift->{r}}
-sub client  {shift->{client}}
-sub context {shift->{client}->{ctx}}
-sub pool    {shift->{pool}}
 
 sub add :Sealed {
   my SunStarSys::SVN::Client $self = shift;
@@ -190,24 +205,27 @@ sub update :Sealed {
   return $rv;
 }
 
-sub copy {
-  my ($self, $source, $target) = @_;
+sub copy :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my ($source, $target) = @_;
   normalize_svn_path $_ for $source, $target;
-  my $client = $self->client;
+  my SVN::Client $client = $self->client;
   $client->copy($source, 'WORKING', $target);
 }
 
-sub move {
-  my ($self, $source, $target, $force) = (@_, 1);
+sub move :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my ($source, $target, $force) = (@_, 1);
   normalize_svn_path $_ for $source, $target;
-  my $client = $self->client;
+  my SVN::Client $client = $self->client;
   $client->move($source, undef, $target, $force);
 }
 
-sub delete {
-  my ($self, $filename, $force) = (@_, 1);
+sub delete :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my ($filename, $force) = (@_, 1);
   normalize_svn_path $filename;
-  my $client = $self->client;
+  my SVN::Client $client = $self->client;
   $client->delete($filename, $force);
 }
 
@@ -249,14 +267,18 @@ sub info :Sealed {
   $client->info($filename, undef, $remote_revision, $callback, 0);
 }
 
-sub mkdir {
-  my ($self, $url, $make_parents) = (@_, 1);
+sub mkdir :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my SVN::Client $client = $self->client;
+  my ($url, $make_parents) = (@_, 1);
   $url =~/(.*)/;
-  $self->client->mkdir3($1, $make_parents, undef);
+  $client->mkdir3($1, $make_parents, undef);
 }
 
-sub diff {
-  my ($self, $filename, $recursive, $revision) = @_;
+sub diff :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my SVN::Client $client = $self->client;
+  my ($filename, $recursive, $revision) = @_;
   my $base_revision = $revision ? $revision - 1 : "BASE";
   my Apache2::RequestRec $r = $self->r;
   normalize_svn_path $filename;
@@ -269,18 +291,18 @@ sub diff {
     s/-internal//, s/:4433// for $filename;
   }
   local $@;
-  eval { $self->client->diff5([], $filename, $base_revision, $filename, $revision // 'WORKING', undef, $recursive ? $SVN::Depth::infinity : $SVN::Depth::immediates, 0, 1, 1, 0, 1, "en_US.UTF-8", $dfh, $efh, []) };
+  eval { $client->diff5([], $filename, $base_revision, $filename, $revision // 'WORKING', undef, $recursive ? $SVN::Depth::infinity : $SVN::Depth::immediates, 0, 1, 1, 0, 1, "en_US.UTF-8", $dfh, $efh, []) };
   warn $@ if $@;
   seek $_, 0, SEEK_SET for $dfh, $efh;
   my $rv = join "", <$efh>, <$dfh>;
   utf8::decode($rv);
-  $rv =~ s!([ab]/)cms-sites/!$1!g;
   return $rv;
 }
 
-sub log {
-  my ($self, $filename, $prevision, $frevision, $limit) = @_;
-  my $svn = $self->client;
+sub log :Sealed {
+  my SunStarSys::SVN::Client $self = shift;
+  my ($filename, $prevision, $frevision, $limit) = @_;
+  my SVN::Client $svn = $self->client;
   $limit //= 1 if defined $prevision and $prevision ne "HEAD";
   $prevision //= 'HEAD';
   $self->info($filename, sub {$filename = $_[1]->URL});
@@ -339,4 +361,5 @@ sub AUTOLOAD {
 eval {__PACKAGE__->new->log_msg(sub {})};
 eval {__PACKAGE__->new->commit};
 eval {__PACKAGE__->new->cleanup(__FILE__)};
+eval {__PACKAGE__->new->propget(__FILE__)};
 1;
