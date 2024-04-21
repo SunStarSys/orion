@@ -113,5 +113,6 @@ sub translate {
     $_
   } map $_->{"translated-text"}, sort {$a->{key} <=> $b->{key}} map @{$_->{data}->{documents}},
   Load scalar qx(oci ai language batch-language-translation --target-language-code $t_lang --documents file://.translate.json);
+  die "oci ai language ... failed: $?" if $?;
   goto LOOP;
 }
