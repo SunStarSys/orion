@@ -68,6 +68,7 @@ $t_args{content} =~ s{<!--  -->}{shift @headings}ge;
 
 ## oci rendering fixups
 $t_args{content} =~ s/"([^"]+)"\(/[$1](/g;
+$t_args{content} =~ s/\)\n\n/).\n\n/g;
 
 if (exists $s_args{headers}{dependencies}) {
   s/\.$s_lang/.$t_lang/g, utf8::encode $_ for $t_args{headers}{dependencies} = $s_args{headers}{dependencies};
