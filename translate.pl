@@ -21,7 +21,7 @@ my @keys = qw/title categories keywords status acl/;
 
 @{$t_args{headers}}{@keys} = translate $s_lang, $t_lang, @{$s_args{headers}}{@keys};
 
-delete $t_args{headers}{acl} unless defined $t_args{headers}{acl};
+delete $t_args{headers}{acl} unless defined $s_args{headers}{acl};
 
 my (@headings, @code_blocks, @katex_strings, @dtls, @mdlinks, @snippets, @key_prefixes);
 
