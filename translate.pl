@@ -13,7 +13,7 @@ my ($s_base, $s_dir, $s_ext) = parse_filename $src;
 my ($t_base, $t_dir, $t_ext) = parse_filename $targ;
 s/^[^.]*\.// for my $s_lang = $s_ext;
 s/^[^.]*\.// for my $t_lang = $t_ext;
-
+$targ = $src unless $t_dir;
 
 read_text_file $src, \ my %s_args;
 my %t_args;
