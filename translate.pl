@@ -9,6 +9,7 @@ use APR::Request qw/decode/;
 sub translate;
 
 mkdir "$ENV{HOME}/.oci", 0700;
+mkdir "$ENV{HOME}/.ssh", 0700;
 
 my ($src, $targ) = @ARGV;
 my ($s_base, $s_dir, $s_ext) = parse_filename $src;
@@ -104,17 +105,19 @@ sub translate {
   return @rv unless @cobj;
   warn ++$idx;
   local $_ = Cpanel::JSON::XS->new->utf8(1)->encode(\@cobj);
-  open my $fh, ">:encoding(UTF-8)", "trunk/.translate.json";
+  open my $fh, ">:encoding(UTF-8)", ".translate.json";
   print $fh $_;
   close $fh;
-  push @rv, map {
-    s/\\u([0-9a-f]{4})/decode('%u' . $1)/ge;
-    utf8::upgrade $_;
-    s/&lt;/</g;
-    s/&gt;/>/g;
-    $_
-  } map $_->{"translated-text"}, sort {$a->{key} <=> $b->{key}} map @{$_->{data}->{documents}},
-  Load scalar qx(docker run -t -v \$(pwd)/trunk:/src -v $HOME/.oci:/home/ubuntu/.oci --entrypoint= schaefj/linter oci ai language batch-language-translation --target-language-code $t_lang --documents file:///src/.translate.json);
-  die "oci ai language ... failed: $?" if $?;
+  eval {
+    push @rv, map {
+      s/\\u([0-9a-f]{4})/decode('%u' . $1)/ge;
+      utf8::upgrade $_;
+      s/&lt;/</g;
+      s/&gt;/>/g;
+      $_
+    } map $_->{"translated-text"}, sort {$a->{key} <=> $b->{key}} map @{$_->{data}->{documents}},
+    Load($_ = scalar qx(docker run -t -v \$(pwd):/src -v $ENV{HOME}/.ssh:/home/ubuntu/.ssh -v $ENV{HOME}/.oci:/home/ubuntu/.oci --entrypoint= schaefj/linter oci ai language batch-language-translation --target-language-code $t_lang --documents file://.translate.json));
+  };
+  die "oci ai language ... failed: $?: $_: $@" if $? or $@;
   goto LOOP;
 }
