@@ -38,6 +38,14 @@ Compare with (content-trimmed-down) 60x slower JBake build port at <https://buil
 
 - docker
 
+## USAGE
+
+```shell
+export SVN_URL="..."
+% ./test.sh
+% ./test.sh clean
+```
+
 ### (IoC) Build API
 
 Core Build Engine:
