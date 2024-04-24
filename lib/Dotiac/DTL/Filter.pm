@@ -29,6 +29,7 @@ use POSIX qw/:locale_h strftime/;
 use Time::timegm 'timegm';
 use List::Util ();
 use locale ':time';
+no warnings 'experimental';
 
 sub add {
 	my $value=shift;
@@ -1247,17 +1248,17 @@ sub append {
 sub lede {
   my $value=shift;
   $value->safe(1);
-  my $content = $value->repr;
-  $content =~ /\Q{# lede #}\E(.*?)\Q{# lede #}\E/s;
-  return $value->set(ucfirst $1);
+  my $rv = "";
+  $rv = $1 if $value->repr =~ /\Q{# lede #}\E(.*?)\Q{# lede #}\E/s;
+  return $value->set(ucfirst $rv);
 }
 
 sub img {
   my $value=shift;
   $value->safe(1);
-  my $content = $value->repr;
-  $content =~ /(<img [^>]+>|\!\[[^\]]+]\([^\)]+\))/;
-  return $value->set($1);
+  my $rv = "&nbsp;";
+  $rv = $1 if $value->repr =~ /(<img [^>]+>|\!\[[^\]]+]\([^\)]+\))/;
+  return $value->set($rv);
 }
 
 sub ssi {
@@ -1468,9 +1469,14 @@ sub vcs_author {
 sub strip_prefix {
   my $value = shift;
   my $content = $value->repr;
-  my $prefix = @_ && shift->repr;
-  $prefix = "/content/" unless defined $prefix and CORE::length($prefix) > 1;
-  $content =~ s!\S+\Q$prefix\E!!g;
+  my $prefix = @_ > 0 && shift->repr;
+  if (CORE::length $prefix) {
+    $prefix = qr/^\S*?\Q$prefix\E/;
+  }
+  else {
+    $prefix = qr!\S+/content\b!;
+  }
+  $content =~ s!$prefix!!g;
   return $value->set($content);
 }
 
