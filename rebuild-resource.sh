@@ -1,6 +1,6 @@
 #!/bin/bash
 
-svn up www
+svn up trunk
 
 for r in "$@";
 do
@@ -10,4 +10,4 @@ do
   svn add $r
 done
 
-svn commit -m "triggered rebuild: $@" www
+svn commit -m "triggered rebuild" "$@"
