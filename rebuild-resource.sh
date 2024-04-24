@@ -1,5 +1,7 @@
 #!/bin/bash
 
+svn up www
+
 for r in "$@";
 do
   cp $r $r.tmp
