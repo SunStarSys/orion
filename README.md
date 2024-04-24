@@ -4,7 +4,7 @@
 
 - docker
 
-## TO BUILD THE www.iconclasts.blog SITE to ./www
+## TO BUILD THE www.iconoclasts.blog SITE to ./www
 
 ```shell
    % ./test.sh clean
