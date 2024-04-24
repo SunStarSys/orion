@@ -8,6 +8,8 @@ use APR::Request qw/decode/;
 
 sub translate;
 
+mkdir "$ENV{HOME}/.oci", 0700;
+
 my ($src, $targ) = @ARGV;
 my ($s_base, $s_dir, $s_ext) = parse_filename $src;
 my ($t_base, $t_dir, $t_ext) = parse_filename $targ;
@@ -102,7 +104,7 @@ sub translate {
   return @rv unless @cobj;
   warn ++$idx;
   local $_ = Cpanel::JSON::XS->new->utf8(1)->encode(\@cobj);
-  open my $fh, ">:encoding(UTF-8)", ".translate.json";
+  open my $fh, ">:encoding(UTF-8)", "trunk/.translate.json";
   print $fh $_;
   close $fh;
   push @rv, map {
@@ -112,7 +114,7 @@ sub translate {
     s/&gt;/>/g;
     $_
   } map $_->{"translated-text"}, sort {$a->{key} <=> $b->{key}} map @{$_->{data}->{documents}},
-  Load scalar qx(oci ai language batch-language-translation --target-language-code $t_lang --documents file://.translate.json);
+  Load scalar qx(docker run -t -v \$(pwd)/trunk:/src -v $HOME/.oci:/home/ubuntu/.oci --entrypoint= schaefj/linter oci ai language batch-language-translation --target-language-code $t_lang --documents file:///src/.translate.json);
   die "oci ai language ... failed: $?" if $?;
   goto LOOP;
 }

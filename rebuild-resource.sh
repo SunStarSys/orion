@@ -1,10 +1,10 @@
 #!/bin/bash
 mkdir -p ~/.subversion
-$PREFIX="docker run -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion --entrypoint= schaefj/linter"
+PREFIX="docker run -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion --entrypoint= schaefj/linter"
 
-$PREFIX svn up src
+$PREFIX svn up trunk
 
-for r in "${@/trunk/src}";
+for r in "$@";
 do
   cp $r $r.tmp
   $PREFIX svn rm $r
@@ -12,4 +12,4 @@ do
   $PREFIX svn add $r
 done
 
-$PREFIX svn commit -m "triggered rebuild" "${@/trunk/src}"
+$PREFIX svn commit -m "triggered rebuild" "$@"
