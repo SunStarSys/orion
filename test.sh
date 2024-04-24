@@ -14,7 +14,7 @@ for d in trunk www; do
   fi
 done
 if [[ "${NO_DOCKER:-}" != 1 ]] && command -v docker >/dev/null 2>&1; then
-  exec docker run -t -v $(pwd):/src -e SVN_URL="$SVN_URL" --entrypoint= schaefj/linter zsh -c ". ~/.asdf/asdf.sh && zsh test.sh"
+  exec docker run -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion -e SVN_URL="$SVN_URL" --entrypoint= schaefj/linter zsh -c ". ~/.asdf/asdf.sh && zsh test.sh"
 fi
 (
   trap time EXIT
