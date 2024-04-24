@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 # USAGE: $0 [clean]
-: "${SVN_URL:=https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.sunstarsys.com}"
+: "${SVN_URL:=https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.iconoclasts.blog}"
 set -e
 set -x
 if [[ "${1:-}" == clean ]]; then
