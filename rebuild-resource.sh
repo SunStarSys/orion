@@ -1,13 +1,15 @@
 #!/bin/bash
 
-svn up trunk
+$PREXIX="docker run -t -v $(pwd):/src --entrypoint= schaefj/linter"
 
-for r in "$@";
+$PREFIX svn up src
+
+for r in "${@/trunk/src}";
 do
   cp $r $r.tmp
-  svn rm $r
+  $PREFIX svn rm $r
   mv $r.tmp $r;
-  svn add $r
+  $PREFIX svn add $r
 done
 
-svn commit -m "triggered rebuild" "$@"
+$PREFIX svn commit -m "triggered rebuild" "${@/trunk/src}"
