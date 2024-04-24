@@ -1,5 +1,5 @@
 #!/bin/bash
-
+mkdir -p ~/.subversion
 $PREFIX="docker run -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion --entrypoint= schaefj/linter"
 
 $PREFIX svn up src
