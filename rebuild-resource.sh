@@ -1,6 +1,6 @@
 #!/bin/bash
 
-$PREXIX="docker run -t -v $(pwd):/src --entrypoint= schaefj/linter"
+$PREFIX="docker run -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion --entrypoint= schaefj/linter"
 
 $PREFIX svn up src
 
