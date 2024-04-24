@@ -1,49 +1,28 @@
 # SunStar Systems' Orion&trade; Enterprise Wiki (SSG Build Toolchain)
 
-## TO BUILD THE OpenOffice.Org SITE to ./www (at ~500 MB/s, or 500 μs/file, **with compression**, on modern hardware)
+## Prerequisites
+
+- docker
+
+## TO BUILD THE www.iconclasts.blog SITE to ./www
 
 ```shell
-   % SVN_URL=https://svn.apache.org/repos/asf/openoffice/ooo-site ./test.sh
+   % ./test.sh clean
 ```
 
-First time thru this will run forever, because the source tree in trunk needs
-this patch:
-
-```diff
-Index: trunk/lib/view.pm
-===================================================================
---- trunk/lib/view.pm (revision 1905280)
-+++ trunk/lib/view.pm (working copy)
-@@ -154,7 +154,7 @@
-     my %args = @_;
-     open my $fh, "content$args{path}" or die "Can't open $args{path}:$!";
-     read $fh, my $content, -s $fh;
--    return $content, html => %args;
-+    return $content, html => \%args;
- }
-
- sub breadcrumbs {
-```
-
-Compare with (content-trimmed-down) 60x slower JBake build port at <https://builds.apache.org/job/OpenOffice>.
-
-### TO generate the link topology graph (SVGZ) for OpenOffice.Org, run
+### TO generate the link topology graph (SVGZ), run
 
 ```shell
     % ./links2dotcfg.pl '^$' index ""
 ```
 ## Buildable text content should be UTF-8
 
-## Prerequisites
-
-- docker
-
 ## USAGE
 
 ```shell
 export SVN_URL="..."
-% ./test.sh
 % ./test.sh clean
+% ./test.sh
 ```
 
 ### (IoC) Build API
@@ -89,9 +68,6 @@ Core Build Engine:
            - view.pm
        - templates/
 ```
-
-1. Launch the markdownd.js server in the background.
-1. Run build_site.pl --source-base /path/to/sources/trunk --target-base /wherever/you/want
 
 ### Site Build Developer API
 
