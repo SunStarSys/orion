@@ -85,7 +85,7 @@ if (exists $s_args{headers}{dependencies}) {
 open my $fh, ">:utf8", $targ or die "open '$targ' failed: $!";
 if (keys %{$t_args{headers}}) {
 
-  utf8::encode $_ for map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %{$t_args{headers}};
+  utf8::encode $_ for grep defined, map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %{$t_args{headers}};
   my $headers = Dump $t_args{headers};
   utf8::decode $headers;
   print $fh "$headers---\n\n";
