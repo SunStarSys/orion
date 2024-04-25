@@ -32,7 +32,7 @@ $s_args{content} =~ s{^(#+ )}{
   push @headings, $1;
   "<!--  -->"
 }ge;
-$s_args{content} =~ s{^(\`{3}[\w-]+\n.*?\n\`{3})$}{
+$s_args{content} =~ s{(^\`{3}[\w-]+\n.*?\n\`{3}$|<script .*?</script>)}{
   push @code_blocks, $1;
   "<!-- # -->"
 }gmse;
