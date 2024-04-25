@@ -20,13 +20,13 @@ $targ = $src unless length "$t_dir$t_base";
 
 read_text_file $src, \ my %s_args;
 my %t_args;
-my @keys = qw/title categories keywords status acl/;
+my @keys = qw/title categories keywords published archived status acl/;
 
 @{$t_args{headers}}{@keys} = translate $s_lang, $t_lang, @{$s_args{headers}}{@keys};
 
 delete $t_args{headers}{acl} unless defined $s_args{headers}{acl};
 
-my (@headings, @code_blocks, @katex_strings, @dtls, @mdlinks, @snippets, @key_prefixes);
+my (@headings, @code_blocks, @katex_strings, @dtls, @mdlinks, @snippets, @key_prefixes, @entities);
 
 $s_args{content} =~ s{^(#+ )}{
   push @headings, $1;
@@ -59,8 +59,13 @@ if ($s_ext =~ /^ya?ml\b/) {
     "<!-- ###### -->"
   }gmse;
 }
+$s_args{content} =~ s{(\&\S+;)}{
+  push @entities, $1;
+  "<!-- ####### -->"
+}ge;
 
 $t_args{content} = join "\n\n", translate $s_lang, $t_lang, split /\n\n/, $s_args{content};
+$t_args{content} =~ s{<!-- ####### -->}{shift @entities}ge;
 $t_args{content} =~ s{<!-- ###### -->}{shift @key_prefixes}ge;
 $t_args{content} =~ s{<!-- ##### -->}{shift @snippets}ge;
 $t_args{content} =~ s{<!-- #### -->}{shift @mdlinks}ge;
