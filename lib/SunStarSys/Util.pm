@@ -88,7 +88,7 @@ sub read_text_file {
           }
           utf8::encode $yaml;
           $hdr = Load($yaml);
-          utf8::decode $_ for map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %$hdr;
+          utf8::decode $_ for grep defined, map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %$hdr;
           $headers = 0, next LOOP;
         }
       }

@@ -926,7 +926,6 @@ sub slugify {
 }
 
 
-
 #This follows perls sprintf rules for now, which are about the same, but there is no "r"
 
 sub stringformat {

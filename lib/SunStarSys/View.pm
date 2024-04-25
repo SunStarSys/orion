@@ -82,14 +82,13 @@ sub single_narrative :Sealed {
 
   my view $view;
   my @new_sources = $view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
-  $args{breadcrumbs} = $view->can("breadcrumbs")->($args{path});
+  $args{breadcrumbs} = $view->can("breadcrumbs")->($args{path}, $args{lang});
 
   utf8::decode $args{path};
 
   my @closed = split /\s*[;,]\s*/, $args{headers}{closed} // "";
   my @muted = split /\s*[;,]\s*/, $args{headers}{muted} // "";
   my @important = split /\s*[;,]\s*/, $args{headers}{important} // "";
-
 
   my $page_path = $file;
   $page_path =~ s!\.[^/]+$!.page!;
@@ -198,8 +197,9 @@ EOT
     }
   }
 
-  $categories = [sort split /[;,]\s*/, $categories] if defined($categories) and not ref $categories;
+  $categories = [sort $categories =~ /(\b[\w\s-]+\b)/g] if defined($categories) and not ref $categories;
   $keywords = [sort split /[;,]\s*/, $keywords] if defined($keywords) and not ref $keywords;
+  undef $categories if $filename eq "index"; #index files are forbidden from categorization (conflicts w/ below index.html$lang setup)
 
   if (exists $args{category_root}
       and exists $args{headers}
@@ -212,8 +212,8 @@ EOT
       utf8::encode $f;
       unless (-f $f) {
         local $_ = "$category_root/$cat";
-        mkpath $_;
         utf8::encode $_;
+        mkpath $_;
         open my $fh, ">:encoding(UTF-8)", $f
           or die "Can't categorize $path to $f: $!\n";
         print $fh <<EOT;
@@ -293,7 +293,7 @@ sub news_page {
   my %args = @_;
   my $page_path = "content$args{path}";
   my $template = $args{content} // $page_path;
-  $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
+  $args{breadcrumbs} = view->can("breadcrumbs")->($args{path}, $args{lang});
   $args{deps} //= {};
 
   my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
@@ -409,7 +409,7 @@ sub sitemap {
   my %args = @_;
   my $template = "content$args{path}";
   setlocale $_, $LANG{$args{lang}} for LC_ALL;
-  $args{breadcrumbs} = view->can("breadcrumbs")->($args{path});
+  $args{breadcrumbs} = view->can("breadcrumbs")->($args{path}, $args{lang});
   $args{deps} //= {};
   my @new_sources = view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
 
@@ -471,6 +471,15 @@ sub next_view {
   my $args = pop;
   $args->{view} = [@{$args->{view}}] if ref $args->{view}; # copy it since we're changing it
   return ref $args->{view} && @{$args->{view}} ? shift @{$args->{view}} : delete $args->{view};
+}
+
+sub langify_template {
+  my %args = @_;
+  my (undef, undef, $extension) = parse_filename $args{path};
+  s/^[^.]+\.// for my $lang = $extension;
+  %args{template} .= ".$lang" if defined %args{template};
+  my $view = next_view(\%args);
+  return view->can($view)->(%args);
 }
 
 sub skip {
@@ -634,6 +643,7 @@ sub offline {
 
 sub breadcrumbs {
   my $src = shift;
+  my $lang = shift;
   utf8::decode $src;
   my @path = split m!/!, $src;
   pop @path;
@@ -642,7 +652,7 @@ sub breadcrumbs {
   for (@path) {
       $abspath .= "$_/";
       $_ ||= "Home";
-      push @rv, qq(<a href="$abspath">\u$_</a>);
+      push @rv, qq(<a href="${abspath}index.html$lang">\u$_</a>);
   }
   return join "&nbsp;&raquo;&nbsp;", @rv;
 }
