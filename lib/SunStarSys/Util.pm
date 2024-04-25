@@ -24,7 +24,7 @@ our $VERSION = "3.1";
 
 # memoization (a'la <ring.h>) to control RAM usage during large-scale builds
 my $rtf_ring_hdr = { next => undef, prev => undef, cache => {}, count => 0 };
-our $RTF_RING_SIZE_MAX = 10_000; #tunable
+our $RTF_RING_SIZE_MAX = 1_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;

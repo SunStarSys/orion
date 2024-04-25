@@ -116,13 +116,15 @@ sub translate {
   print $fh $_;
   close $fh;
   eval {
-    push @rv, map {
-      s/\\u([0-9a-f]{4})/decode('%u' . $1)/ge;
-      utf8::upgrade $_;
-      s/&lt;/</g;
-      s/&gt;/>/g;
-      $_
-    } map $_->{"translated-text"}, sort {$a->{key} <=> $b->{key}} map @{$_->{data}->{documents}},
+    $rv[$_->{key}-1+($idx-1)*100] = do {
+      for ($_->{"translated-text"}) {
+        s/\\u([0-9a-f]{4})/decode('%u' . $1)/ge;
+        utf8::upgrade $_;
+        s/&lt;/</g;
+        s/&gt;/>/g;
+      }
+      $_->{"translated-text"}
+    } for map @{$_->{data}->{documents}},
     Load($_ = scalar qx(docker run -t -v \$(pwd):/src -v $ENV{HOME}/.ssh:/home/ubuntu/.ssh -v $ENV{HOME}/.oci:/home/ubuntu/.oci --entrypoint= schaefj/linter oci ai language batch-language-translation --target-language-code $t_lang --documents file://.translate.json));
   };
   die "oci ai language ... failed: $?: $_: $@" if $? or $@;

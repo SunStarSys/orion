@@ -1177,10 +1177,12 @@ our %LANG = (
   ".en" => "en_US.UTF-8",
   ".fr" => "fr_FR.UTF-8",
   ".es" => "es_ES.UTF-8",
+  ".ru" => "ru_RU.UTF-8",
   "de" => "de_DE.UTF-8",
   "en" => "en_US.UTF-8",
   "fr" => "fr_FR.UTF-8",
   "es" => "es_ES.UTF-8",
+  "ru" => "ru_RU.UTF-8",
 );
 
 sub title {

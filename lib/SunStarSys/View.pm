@@ -46,6 +46,7 @@ our %LANG = (
   ".en" => "en_US.UTF-8",
   ".es" => "es_ES.UTF-8",
   ".fr" => "fr_FR.UTF-8",
+  ".ru" => "ru_RU.UTF-8",
   ""    => "en_US.UTF-8",
 );
 
@@ -151,7 +152,7 @@ sub single_narrative :Sealed {
   $d->Purity(1);
   eval $d->Dump;
 
-  utf8::downgrade $_ for grep defined, map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %$args_headers;
+  utf8::encode $_ for grep defined, map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %$args_headers;
 
   my $headers = Dump $args_headers;
   my $categories = delete $$args_headers{categories};
@@ -389,12 +390,14 @@ my %title = (
     es => "Índice de ",
     de => "Index von ",
     fr => "Indice de ",
+    ru => "Индекс",
   },
   sitemap => {
     en => "Sitemap of ",
     es => "Mapa del sitio de ",
     de => "Seitenverzeichnis von ",
     fr => "Plan du site de ",
+    ru => "Карта сайта",
   }
 );
 
