@@ -48,7 +48,7 @@ $s_args{content} =~ s{](\(.*?\))}{
   push @mdlinks, $1;
   "]<!-- #### -->"
 }ge;
-$s_args{content} =~ s{(\[snippet:[^\]]+\])}{
+$s_args{content} =~ s{(\[(?:snippet:[^\]]+|TOC)\]))}{
   push @snippets, $1;
   "<!-- ##### -->"
 }ge;
