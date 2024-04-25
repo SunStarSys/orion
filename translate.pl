@@ -22,7 +22,7 @@ read_text_file $src, \ my %s_args;
 my %t_args;
 my @keys = qw/title categories keywords published archived status acl/;
 
-@{$t_args{headers}}{@keys} = translate $s_lang, $t_lang, @{$s_args{headers}}{@keys};
+@{$t_args{headers}}{@keys} = translate $s_lang, $t_lang, @{$s_args{headers}}{@keys} if keys %{$s_args{headers}};
 
 delete $t_args{headers}{acl} unless defined $s_args{headers}{acl};
 
@@ -83,12 +83,14 @@ if (exists $s_args{headers}{dependencies}) {
 }
 
 open my $fh, ">:utf8", $targ or die "open '$targ' failed: $!";
-utf8::encode $_ for map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %{$t_args{headers}};
-my $headers = Dump $t_args{headers};
-utf8::decode $headers;
-print $fh "$headers---\n\n";
-print $fh $t_args{content};
+if (keys %{$t_args{headers}}) {
 
+  utf8::encode $_ for map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %{$t_args{headers}};
+  my $headers = Dump $t_args{headers};
+  utf8::decode $headers;
+  print $fh "$headers---\n\n";
+}
+print $fh $t_args{content};
 exit 0;
 
 sub translate {
