@@ -1400,6 +1400,7 @@ sub utf8decode {
 }
 
 sub vcs_date {
+  no warnings 'uninitialized';
   my $value = shift;
   my $content = $value->repr;
   my $lang = @_ ? shift->repr : ".en";
