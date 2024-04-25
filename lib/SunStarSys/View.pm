@@ -477,7 +477,7 @@ sub langify_template {
   my %args = @_;
   my (undef, undef, $extension) = parse_filename $args{path};
   s/^[^.]+\.// for my $lang = $extension;
-  %args{template} .= ".$lang" if defined %args{template};
+  $args{template} .= ".$lang" if defined $args{template};
   my $view = next_view(\%args);
   return view->can($view)->(%args);
 }
