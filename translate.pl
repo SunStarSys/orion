@@ -32,23 +32,23 @@ $s_args{content} =~ s{^(#+ )}{
   push @headings, $1;
   "<!--  -->"
 }ge;
-$s_args{content} =~ s{(^\`{3}[\w-]+\n.*?\n\`{3}$|<script .*?</script>)}{
+$s_args{content} =~ s{(^\`{3}[\w-]+\n.*?\n\`{3}$|<(script|style).*?</\2>)}{
   push @code_blocks, $1;
   "<!-- # -->"
 }gmse;
 $s_args{content} =~ s{(\${2}.*?\${2}|<span class="editormd-tex">.*?</span>)}{
   push @katex_strings, $1;
   "<!-- ## -->"
-}ge;
+}msge;
 $s_args{content} =~ s{(\{[\%\#\{].*?[\%\#\}]\})}{
   push @dtls, $1;
   "<!-- ### -->"
-}ge;
+}msge;
 $s_args{content} =~ s{](\(.*?\))}{
   push @mdlinks, $1;
   "]<!-- #### -->"
 }ge;
-$s_args{content} =~ s{(\[(?:snippet:[^\]]+|TOC)\]))}{
+$s_args{content} =~ s{(\[(?:snippet:[^\]]+|TOC)\])}{
   push @snippets, $1;
   "<!-- ##### -->"
 }ge;
@@ -75,7 +75,7 @@ $t_args{content} =~ s{<!-- # -->}{shift @code_blocks}ge;
 $t_args{content} =~ s{<!--  -->}{shift @headings}ge;
 
 ## oci rendering fixups
-$t_args{content} =~ s/"([^"]+)"\(/[$1](/g;
+# NEEDS WORK: $t_args{content} =~ s/"([^"]+)"[(]/[$1](/g;
 $t_args{content} =~ s/\)\n\n/).\n\n/g;
 
 if (exists $s_args{headers}{dependencies}) {
