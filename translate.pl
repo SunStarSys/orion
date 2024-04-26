@@ -1,4 +1,5 @@
 #!/usr/bin/env -S perl -Ilib
+# SPDX License Identifier: Apache License 2.0
 use utf8;
 use strict;
 use warnings FATAL => 'all';
