@@ -1,7 +1,7 @@
 #!/usr/bin/env -S perl -Ilib
 use utf8;
 use strict;
-use warnings FATAL => 'all';
+use warnings;
 use SunStarSys::Util qw/read_text_file parse_filename Dump Load/;
 use Cpanel::JSON::XS;
 use APR::Request qw/decode/;
@@ -134,6 +134,7 @@ sub translate {
     } for map @{$_->{data}->{documents}},
     Load($_ = scalar qx(docker run -t -v \$(pwd):/src -v $ENV{HOME}/.ssh:/home/ubuntu/.ssh -v $ENV{HOME}/.oci:/home/ubuntu/.oci --entrypoint= schaefj/linter oci ai language batch-language-translation --target-language-code $t_lang --documents file://.translate.json));
   };
+  warn $_;
   die "oci ai language ... failed: $?: $_: $@" if $? or $@;
   goto LOOP;
 }
