@@ -127,7 +127,7 @@ sub translate {
   print $fh $_;
   close $fh;
   eval {
-    $rv[$_->{key}-1+($idx-1)*100] = do {
+    $rv[$_->{key}-1] = do {
       for ($_->{"translated-text"}) {
         s/\\u([0-9a-f]{4})/decode('%u' . $1)/ge;
         utf8::upgrade $_;
