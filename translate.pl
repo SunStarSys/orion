@@ -1,7 +1,7 @@
 #!/usr/bin/env -S perl -Ilib
 use utf8;
 use strict;
-use warnings;
+use warnings FATAL => 'all';
 use SunStarSys::Util qw/read_text_file parse_filename Dump Load/;
 use Cpanel::JSON::XS;
 use APR::Request qw/decode/;
