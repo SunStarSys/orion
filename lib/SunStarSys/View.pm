@@ -47,6 +47,10 @@ our %LANG = (
   ".es" => "es_ES.UTF-8",
   ".fr" => "fr_FR.UTF-8",
   ".ru" => "ru_RU.UTF-8",
+  ".he" => "he_IL.UTF-8",
+  ".sv" => "sv_SV.UTF-8",
+  ".kr" => "kr_KR.UTF-8",
+  ".zh-TW" => "zh_TW.UTF-8",
   ""    => "en_US.UTF-8",
 );
 
@@ -393,6 +397,8 @@ my %title = (
     ru => "Индекс ",
     sv => "Index för ",
     he => "אינדקס של ",
+    kr => "색인 ",
+    "zh-TW" => "指數",
   },
   sitemap => {
     en => "Sitemap of ",
@@ -402,6 +408,8 @@ my %title = (
     ru => "Карта сайта ",
     sv => "Webbplatskarta för",
     he => "מפת אתר של ",
+    kr => "사이트맵 ",
+    "zh-TW" => "網站地圖",
   }
 );
 
@@ -409,8 +417,13 @@ my %month = (
   en => [qw/0 January February March April May June July August September October November December/],
   es => [qw/0 enero febrero marzo abril mayo junio julio agostp  septiembre octubre noviembre diciembre/],
   de => [qw/0 Januar Februrar März April Mai Juni Juli August September Oktober November Dezember/],
-  fr => [qw/0 janvier février mars avril mai juin juillet août septembre octobre novembre décembre/]
-);
+  fr => [qw/0 janvier février mars avril mai juin juillet août septembre octobre novembre décembre/],
+  ru => [qw/0 Январь Февраль Март Апрель Май Июнь Июль Август Сентябрь Октябрь Ноябрь Декабрь/],
+  sv => [qw/0 Januari Februari Mars April Maj Juni Juli Augusti September Oktober November December/],
+  he => [qw/0 דצמבר נובמבר אוקטובר ספטמבר אוגוסט יולי יוני מאי אפריל מרץ פברואר ינואר/],
+  kr => [qw/0 1월 2월 3월 4월 5월 6월 7월 8월 9월 10월 11월 12월/],
+  "zh-TW" => [qw/0 一月 二月 三月 四月 五月 六月 七月 八月 九月 十月 十一月 十二月/],
+  );
 
 sub sitemap {
   my %args = @_;

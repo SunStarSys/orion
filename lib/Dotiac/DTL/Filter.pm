@@ -1180,6 +1180,8 @@ our %LANG = (
   ".ru" => "ru_RU.UTF-8",
   ".he" => "he_IL.UTF_8",
   ".sv" => "sv_SV.UTF-8",
+  ".kr" => "kr_KR.UTF-8",
+  ".zh-TW" => "zh_TW.UTF-8",
   "de" => "de_DE.UTF-8",
   "en" => "en_US.UTF-8",
   "fr" => "fr_FR.UTF-8",
@@ -1187,6 +1189,8 @@ our %LANG = (
   "ru" => "ru_RU.UTF-8",
   "he" => "he_IL.UTF-8",
   "sv" => "sv_SV.UTF-8",
+  "kr" => "kr_KR.UTF-8",
+  "zh-TW" => "zh_TW.UTF-8",
 );
 
 sub title {
