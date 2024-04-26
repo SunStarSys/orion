@@ -26,7 +26,7 @@ my @keys = qw/title categories keywords published archived status acl/;
 
 delete $t_args{headers}{acl} unless defined $s_args{headers}{acl};
 
-my (@headings, @code_blocks, @katex_strings, @dtls, @mdlinks, @snippets, @key_prefixes, @entities);
+my (@headings, @code_blocks, @katex_strings, @dtls, @mdlinks, @snippets, @key_prefixes, @entities, @newlines);
 
 $s_args{content} =~ s{^(#+ )}{
   push @headings, $1;
@@ -44,27 +44,34 @@ $s_args{content} =~ s{(\{[\%\#\{].*?[\%\#\}]\})}{
   push @dtls, $1;
   "<!-- ### -->"
 }msge;
-$s_args{content} =~ s{](\(.*?\))}{
-  push @mdlinks, $1;
-  "]<!-- #### -->"
+$s_args{content} =~ s{(]\([^)]+?)(\s+[^\)]*)?\)}{
+  no warnings 'uninitialized';
+  push @mdlinks, "$1", ")";
+  "<!-- #### -->$2<!-- #### -->";
 }ge;
+
 $s_args{content} =~ s{(\[(?:snippet:[^\]]+|TOC)\])}{
   push @snippets, $1;
   "<!-- ##### -->"
 }ge;
 
-if ($s_ext =~ /^ya?ml\b/) {
-  $s_args{content} =~ s{^(\s*(?:- )?[\w-]+: )}{
+if ($s_ext =~ /^(ya?ml|bib)\b/) {
+  $s_args{content} =~ s{^(\s*(?:- )?[\w-]+\s*[:=] )}{
     push @key_prefixes, $1;
     "<!-- ###### -->"
   }gmse;
 }
-$s_args{content} =~ s{(\&\S+;)}{
+$s_args{content} =~ s{(\&\S+;|\`|!?\[|])}{
   push @entities, $1;
   "<!-- ####### -->"
 }ge;
+$s_args{content} =~ s{(?<!\n)\n(?!\n)}{
+  push @newlines, "\n";
+  "<!-- ######## -->"
+}ge;
 
 $t_args{content} = join "\n\n", translate $s_lang, $t_lang, split /\n\n/, $s_args{content};
+$t_args{content} =~ s{<!-- ######## -->}{shift @newlines}ge;
 $t_args{content} =~ s{<!-- ####### -->}{shift @entities}ge;
 $t_args{content} =~ s{<!-- ###### -->}{shift @key_prefixes}ge;
 $t_args{content} =~ s{<!-- ##### -->}{shift @snippets}ge;

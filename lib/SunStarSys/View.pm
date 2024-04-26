@@ -390,14 +390,18 @@ my %title = (
     es => "Índice de ",
     de => "Index von ",
     fr => "Indice de ",
-    ru => "Индекс",
+    ru => "Индекс ",
+    sv => "Index för ",
+    he => "אינדקס של ",
   },
   sitemap => {
     en => "Sitemap of ",
     es => "Mapa del sitio de ",
     de => "Seitenverzeichnis von ",
     fr => "Plan du site de ",
-    ru => "Карта сайта",
+    ru => "Карта сайта ",
+    sv => "Webbplatskarta för",
+    he => "מפת אתר של ",
   }
 );
 

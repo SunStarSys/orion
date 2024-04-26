@@ -1178,11 +1178,15 @@ our %LANG = (
   ".fr" => "fr_FR.UTF-8",
   ".es" => "es_ES.UTF-8",
   ".ru" => "ru_RU.UTF-8",
+  ".he" => "he_IL.UTF_8",
+  ".sv" => "sv_SV.UTF-8",
   "de" => "de_DE.UTF-8",
   "en" => "en_US.UTF-8",
   "fr" => "fr_FR.UTF-8",
   "es" => "es_ES.UTF-8",
   "ru" => "ru_RU.UTF-8",
+  "he" => "he_IL.UTF-8",
+  "sv" => "sv_SV.UTF-8",
 );
 
 sub title {
@@ -1476,7 +1480,7 @@ sub strip_prefix {
     $prefix = qr/^\S*?\Q$prefix\E/;
   }
   else {
-    $prefix = qr!\S+/content\b!;
+    $prefix = qr!\S+/content\b/?!;
   }
   $content =~ s!$prefix!!g;
   return $value->set($content);
