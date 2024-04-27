@@ -203,7 +203,7 @@ EOT
   }
 
   $categories = [sort $categories =~ /(\b[\w\s-]+\b)/g] if defined($categories) and not ref $categories;
-  $keywords = [sort split /[;,]\s*/, $keywords] if defined($keywords) and not ref $keywords;
+  $keywords = [sort split /[;,，]\s*/, $keywords] if defined($keywords) and not ref $keywords;
   undef $categories if $filename eq "index"; #index files are forbidden from categorization (conflicts w/ below index.html$lang setup)
 
   if (exists $args{category_root}
