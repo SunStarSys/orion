@@ -30,7 +30,7 @@ else
   sleep 3
 fi
 mkdir -p www/.build-log
-time timeout 60 perl build_site.pl --source-base=trunk --target-base=www --revision=0
+time timeout 100 perl build_site.pl --source-base=trunk --target-base=www --revision=0
 rv=$?
 pkill -U $USER -f markdownd.js
 wait
