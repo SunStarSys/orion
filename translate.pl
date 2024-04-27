@@ -61,7 +61,7 @@ $s_args{content} =~ s{(\[(?:snippet:[^\]]+|TOC)\])}{
 }ge;
 
 if ($s_ext =~ /^(ya?ml|bib)\b/) {
-  $s_args{content} =~ s{^(\s*(?:- )?[\w-]+\s*[:=] )}{
+  $s_args{content} =~ s{^(\s*(?:- )?[\w-]+\s*[:=]\s*)}{
     push @key_prefixes, $1;
     "<!-- ###### -->"
   }gmse;
@@ -89,6 +89,7 @@ $t_args{content} =~ s{<!--  -->}{shift @headings}ge;
 ## oci rendering fixups
 # NEEDS WORK: $t_args{content} =~ s/"([^"]+)"[(]/[$1](/g;
 $t_args{content} =~ s/\)\n\n/).\n\n/g;
+$t_args{content} =~ s/^(@\w+\{.*?\n)\n/$1}\n/gms;
 
 if (exists $s_args{headers}{dependencies}) {
   s/\.$s_lang/.$t_lang/g, utf8::encode $_ for $t_args{headers}{dependencies} = $s_args{headers}{dependencies};
