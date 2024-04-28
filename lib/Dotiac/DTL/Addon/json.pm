@@ -63,7 +63,7 @@ sub unimport {
 sub json {
 	my $value=shift;
 	$Dotiac::DTL::Addon::json::json->pretty(0);
-	$Dotiac::DTL::Addon::json::json->utf8(1);
+	#$Dotiac::DTL::Addon::json::json->utf8(1);
 	return $value->set($json->encode($value->content));
 }
 
@@ -84,7 +84,7 @@ sub json_ascii {
 sub json_pretty {
 	my $value=shift;
 	$Dotiac::DTL::Addon::json::json->pretty(1);
-	$Dotiac::DTL::Addon::json::json->utf8(1);
+	#$Dotiac::DTL::Addon::json::json->utf8(1);
 	return $value->set($json->encode($value->content));
 }
 
