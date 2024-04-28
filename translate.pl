@@ -61,7 +61,7 @@ $s_args{content} =~ s{(\[(?:snippet:[^\]]+|TOC)\])}{
 }ge;
 
 if ($s_ext =~ /^(ya?ml|bib)\b/) {
-  $s_args{content} =~ s{^(\s*(?:- )?[\w-]+\s*[:=]\s*)}{
+  $s_args{content} =~ s{(^\s*(?:- )?[\w-]+\s*[:=]\s*|["'{}])}{
     push @key_prefixes, $1;
     "<!-- ###### -->"
   }gmse;
@@ -124,7 +124,7 @@ sub translate {
   push @cobj, shift @obj while @obj and @cobj < 100;
   return @rv unless @cobj;
   warn ++$idx;
-  local $_ = Cpanel::JSON::XS->new->utf8(1)->encode(\@cobj);
+  local $_ = Cpanel::JSON::XS->new->encode(\@cobj);
   open my $fh, ">:encoding(UTF-8)", ".translate.json";
   print $fh $_;
   close $fh;
