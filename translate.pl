@@ -14,7 +14,7 @@ mkdir "$ENV{HOME}/.ssh", 0700;
 
 my ($src, $targ) = @ARGV;
 
-$SIG{__WARN__} = sub { warn "SRC=$src\n"; warn @_ };
+$SIG{__WARN__} = sub { warn @_, " SRC=$src" };
 my ($s_base, $s_dir, $s_ext) = parse_filename $src;
 my ($t_base, $t_dir, $t_ext) = parse_filename $targ;
 s/^[^.]*\.// for my $s_lang = $s_ext;
@@ -24,10 +24,6 @@ $targ = $src unless length "$t_dir$t_base";
 read_text_file $src, \ my %s_args;
 my %t_args;
 my @keys = qw/title categories keywords published archived status acl/;
-
-@{$t_args{headers}}{@keys} = translate $s_lang, $t_lang, @{$s_args{headers}}{@keys} if keys %{$s_args{headers}};
-
-delete $t_args{headers}{acl} unless defined $s_args{headers}{acl};
 
 my (@headings, @code_blocks, @katex_strings, @dtls, @mdlinks, @snippets, @key_prefixes, @entities, @newlines);
 
@@ -75,7 +71,13 @@ $s_args{content} =~ s{(?<!\n)\n(?!\n)}{
   "<!-- ######## -->"
 }ge;
 
-$t_args{content} = join "\n\n", translate $s_lang, $t_lang, split /\n\n/, $s_args{content};
+my @t_content;
+
+(@{$t_args{headers}}{@keys}, @t_content) = translate $s_lang, $t_lang, @{keys %{$s_args{headers}} ? $s_args{headers} : {}}{@keys}, split /\n\n/, $s_args{content};
+delete $t_args{headers}{acl} unless defined $s_args{headers}{acl};
+
+$t_args{content} = join "\n\n", @t_content;
+
 $t_args{content} =~ s{<!-- ######## -->}{shift @newlines}ge;
 $t_args{content} =~ s{<!-- ####### -->}{shift @entities}ge;
 $t_args{content} =~ s{<!-- ###### -->}{shift @key_prefixes}ge;
@@ -96,7 +98,7 @@ if (exists $s_args{headers}{dependencies}) {
 }
 
 open my $fh, ">:utf8", $targ or die "open '$targ' failed: $!";
-if (keys %{$t_args{headers}}) {
+if (keys %{$s_args{headers}}) {
 
   utf8::encode $_ for grep defined, map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %{$t_args{headers}};
   my $headers = Dump $t_args{headers};
@@ -114,7 +116,7 @@ sub translate {
       key => "$idx",
       languageCode => $s_lang,
       text => $args[$idx-1],
-    };
+    } if defined $args[$idx-1];
   }
 
   my @rv;
@@ -123,7 +125,7 @@ sub translate {
   my @cobj = ();
   push @cobj, shift @obj while @obj and @cobj < 100;
   return @rv unless @cobj;
-  warn ++$idx;
+  warn "LOOP ", ++$idx;
   local $_ = Cpanel::JSON::XS->new->encode(\@cobj);
   open my $fh, ">:encoding(UTF-8)", ".translate.json";
   print $fh $_;
