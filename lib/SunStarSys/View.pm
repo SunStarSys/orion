@@ -275,7 +275,7 @@ sub asymptote {
       print $fh $body;
       close $fh;
       #push @sources, "$file.asy$lang";
-      system "time asy --noglobalread --noglobalwrite -f html -o '$file' '$file.asy$lang'" and die "asy html rendering of '$prefix' failed: $?";
+      system "time asy -noglobalread -f html -o '$file' '$file.asy$lang'" and die "asy html rendering of '$prefix' failed: $?";
       rename "$file.html", "$file.html$lang";
       #push @sources, "$file.html$lang";
     }
