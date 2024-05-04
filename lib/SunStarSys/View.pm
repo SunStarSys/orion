@@ -275,7 +275,7 @@ sub asymptote {
       print $fh $body;
       close $fh;
       #push @sources, "$file.asy$lang";
-      system "time asy -f html -o '$file' '$file.asy$lang'" and die "asy html rendering of '$prefix' failed: $?";
+      system "time asy --noglobalread --noglobalwrite -f html -o '$file' '$file.asy$lang'" and die "asy html rendering of '$prefix' failed: $?";
       rename "$file.html", "$file.html$lang";
       #push @sources, "$file.html$lang";
     }
@@ -553,7 +553,7 @@ sub latexmk {
   read_text_file $file, \%args unless exists $args{content} and defined $args{headers};
   my $cache_file = "$ENV{TARGET_BASE}/$dir$base.$ext$lang";
   my $cached = 0;
-  my $generator = $args{generator} // "xelatex";
+  my $generator = $args{generator} // 'xelatex --no-shell-escape %O %S';
   my $bib_mtime = max 0, map {(-f $_) ? File::stat::populate(CORE::stat(_))->mtime : ()} $args{content} =~ /^\\addbibresource\{(.*?)\}/mg;
 
   if (-f $cache_file and open my $fh, "<:encoding(UTF-8)", $cache_file) {
@@ -566,7 +566,7 @@ sub latexmk {
     }
   }
 
-  if (not $cached and -f $file and my $status = system "latexmk -pdfxe -pdfxelatex=$generator -auxdir=/tmp '$file'") {
+  if (not $cached and -f $file and my $status = system "latexmk -pdfxe -pdfxelatex='$generator' -auxdir=/tmp '$file'") {
     unlink </tmp/$base.$ext*>, <*.{out,tex,pre,aux,ps,pdf,prc,log}>;
     die "latexmk -$args{format} rendering of '$file' failed: ". ($status>>8);
   }
