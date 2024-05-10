@@ -28,7 +28,7 @@ our $RTF_RING_SIZE_MAX = 1_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;
-  utf8::decode $file;
+  utf8::encode $file unless ref $file;
   $out->{mtime} = $_->mtime for map File::stat::populate(CORE::stat(_)), grep -f, $file;
   $out->{mtime} //= -1;
   warn "$file not a text file nor a reference" and return unless -T _ or ref $file;
@@ -178,7 +178,7 @@ sub copy_if_newer {
     my $copied = 0;
     my $compress = 0;
     $dest .= ".gz" and $compress++ if -T $src and $dest =~ m#/content/#;
-    utf8::downgrade $_ for my ($s, $d) = ($src, $dest);
+    utf8::encode $_ for my ($s, $d) = ($src, $dest);
     copy $s, $d and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
     if ($compress and $copied) {
       gzip $d, "$d.tmp";
@@ -255,12 +255,14 @@ sub get_lock {
 sub touch {
     @_ or push @_, $_;
     for (@_) {
-        utime undef, undef, $_ and next;
-        open my $fh, ">>", $_
-            or die "Can't open $_: $!\n";
+      my $file = $_;
+      utf8::encode $file;
+      utime undef, undef, $file and next;
+        open my $fh, ">>", $file
+            or die "Can't open $file: $!\n";
         close $fh;
-        utime undef, undef, $_
-            or die "Can't touch $_: $!\n";
+        utime undef, undef, $file
+            or die "Can't touch $file: $!\n";
     }
 }
 
