@@ -28,7 +28,7 @@ our $RTF_RING_SIZE_MAX = 1_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;
-  utf8::encode $file unless ref $file;
+  utf8::decode $file unless ref $file;
   $out->{mtime} = $_->mtime for map File::stat::populate(CORE::stat(_)), grep -f, $file;
   $out->{mtime} //= -1;
   warn "$file not a text file nor a reference" and return unless -T _ or ref $file;
@@ -253,7 +253,7 @@ sub get_lock {
 }
 
 sub touch {
-    @_ or push @_, $_;
+    @_ or push @_, $_ if defined;
     for (@_) {
       my $file = $_;
       utf8::encode $file;
