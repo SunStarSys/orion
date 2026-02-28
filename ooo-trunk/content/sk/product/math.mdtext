@@ -1,0 +1,36 @@
+Title:  Apache OpenOffice Math
+Notice:    Licensed to the Apache Software Foundation (ASF) under one
+           or more contributor license agreements.  See the NOTICE file
+           distributed with this work for additional information
+           regarding copyright ownership.  The ASF licenses this file
+           to you under the Apache License, Version 2.0 (the
+           "License"); you may not use this file except in compliance
+           with the License.  You may obtain a copy of the License at
+           .
+             http://www.apache.org/licenses/LICENSE-2.0
+           .
+           Unless required by applicable law or agreed to in writing,
+           software distributed under the License is distributed on an
+           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+           KIND, either express or implied.  See the License for the
+           specific language governing permissions and limitations
+           under the License.
+[![Obrazovka Apache OpenOffice Math](/product/pix/math.png)](/product/pix/math-big.png "Kliknite pre zväčšenie") # {.rfloatimg}
+
+*Vytvárajte rovnice a vzorce pre vaše dokumenty*
+
+**Math** je súčasť Apache OpenOffice na tvorbu matematických rovníc. Najčastejšie
+je používaný ako editor rovníc pre textové dokumenty, ale tiež môže byť použitý 
+s inými typmi dokumentov alebo samostatne. Keď je použitý v programe **Writer**, 
+rovnica je upravovaná ako objekt v textovom dokumente. Tiež môžete tieto rovnice
+vložiť do ostatných Apache OpenOffice programov, napríklad [Calc][1] a
+[Impress][2].
+
+Pri používaní **Math** sú dostupné tri hlavné spôsoby ako vložiť vzorec:
+
+- Zadajte značky v editore rovníc.
+- Kliknite pravým tlačítkom myši na editor rovníc a vyberte symbol z kontextovej ponuky.
+- Vyberte symbol z panelu nástrojov *Výber*.
+
+[1]: calc.html "Apache OpenOffice Calc"
+[2]: impress.html "Apache OpenOffice Impress"

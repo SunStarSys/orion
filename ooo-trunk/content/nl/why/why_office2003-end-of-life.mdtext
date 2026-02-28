@@ -1,0 +1,32 @@
+Title:     Office 2003 einde levensduur
+Notice:    Licensed to the Apache Software Foundation (ASF) under one
+           or more contributor license agreements.  See the NOTICE file
+           distributed with this work for additional information
+           regarding copyright ownership.  The ASF licenses this file
+           to you under the Apache License, Version 2.0 (the
+           "License"); you may not use this file except in compliance
+           with the License.  You may obtain a copy of the License at
+           .
+             http://www.apache.org/licenses/LICENSE-2.0
+           .
+           Unless required by applicable law or agreed to in writing,
+           software distributed under the License is distributed on an
+           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+           KIND, either express or implied.  See the License for the
+           specific language governing permissions and limitations
+           under the License.
+
+##De deadline april 2014
+
+Microsoft heeft [aangekondigd][1] dat zij de ondersteuning voor Office 2003 en Windows XP beëindigen op 8 april 2014.  Wat betekent dat?  Zoals zij het beschrijven:
+"Na 8 april 2014 zullen er geen beveiligingsupdates, hotfixes die geen betrekking hebben op beveiliging, gratis of betaalde opties voor assistentie met ondersteuning of updates voor online technische inhoud meer plaatsvinden."  Dit,
+volgens Microsoft, stelt gebruikers van Office 2003 bloot aan grotere "Security & Compliance Risks".
+
+##De alternatieven verkennen
+
+Sommige bedrijven en gebruikers zullen een grote cheque gaan geven aan Microsoft en upgraden naar een nieuwe versie van Windows en een nieuwe versie van Office.  Maar andere bedrijven zullen dit als een mogelijkheid zien 
+om de alternatieven te verkennen, inclusief open bron-producten zoals Apache OpenOffice, het leidende gratis kantoorpakket. Het is niet te vroeg om de planning te maken voor een migratie weg van 
+Microsoft Office 2003 en Windows XP.  Veel bedrijven zijn al reeds gestart.
+
+
+[1]: http://www.microsoft.com/en-us/windows/endofsupport.aspx

@@ -1,0 +1,41 @@
+Title: Support for translators and native language teams
+Notice:    Licensed to the Apache Software Foundation (ASF) under one
+           or more contributor license agreements.  See the NOTICE file
+           distributed with this work for additional information
+           regarding copyright ownership.  The ASF licenses this file
+           to you under the Apache License, Version 2.0 (the
+           "License"); you may not use this file except in compliance
+           with the License.  You may obtain a copy of the License at
+           .
+             http://www.apache.org/licenses/LICENSE-2.0
+           .
+           Unless required by applicable law or agreed to in writing,
+           software distributed under the License is distributed on an
+           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+           KIND, either express or implied.  See the License for the
+           specific language governing permissions and limitations
+           under the License.
+
+We are a community of volunteers with all advantages and disadvantages.
+We do not have a formal support organisation like the companies, but we
+are highly motivated volunteers that often reply faster!
+
+There are different kind of support for different needs. Several group
+like developers and marketing have their own mailing lists. For localization
+there is a special mailing list, you can join to ask questions direct,
+and read the latest information, just sent an empty e-mail to:
+
+[Sign up for localization mailing list][1]
+
+You can also send a mail direct without joining the maillist:
+
+[Send question to l10n mailling list][2]
+
+**WARNING** if you do not subscribe you might miss answers!
+
+Further we have collected a "frequently asked questions" to help especially
+new volunteers.
+
+
+[1]: mailto:L10N-subscribe@openoffice.apache.org
+[2]: mailto:L10N@openoffice.apache.org

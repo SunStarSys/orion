@@ -1,0 +1,53 @@
+Title:     Apache OpenOffice za Linux
+Notice:    Licensed to the Apache Software Foundation (ASF) under one
+           or more contributor license agreements.  See the NOTICE file
+           distributed with this work for additional information
+           regarding copyright ownership.  The ASF licenses this file
+           to you under the Apache License, Version 2.0 (the
+           "License"); you may not use this file except in compliance
+           with the License.  You may obtain a copy of the License at
+           .
+             http://www.apache.org/licenses/LICENSE-2.0
+           .
+           Unless required by applicable law or agreed to in writing,
+           software distributed under the License is distributed on an
+           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+           KIND, either express or implied.  See the License for the
+           specific language governing permissions and limitations
+           under the License.
+
+## Podrška za Linux distribuciju/verziju
+
+Sadašnji Apache OpenOffice podržava sledeće Linux distribucije i verzije... 
+
+Specifične distribucijske napomene:
+
+  - distribucija a:  beleške...
+  - distribucija b:  beleške...
+  - distribucija c:  beleške...
+
+U principu je potrebno sledeće:
+
+- Linux kernel verzija 2.6 ili noviji, glibc2 verzija 2.11.1 ili noviji
+
+
+## Hardverski zahtevi
+
+  - **Memorija**: najmanje 256 megabajta RAM-a (512 MB RAM-a je preporučeno).
+  - **Skladištenje**: najmanje 400 megabajta dostupnog prostora na disku za standardnu instalaciju preuzete putem interneta.
+  - **Grafika**: X-Server sa 1024 x 768 ili veća rezolucija sa najmanje 256 boja.
+
+
+## Linux - specifične osobine
+
+Apache OpenOffice ima sledeće posebne karakteristike na Linux-u:
+
+  - funkcija 1
+  - funkcija 2
+  - funkcija 3
+
+## Dodatni resursi
+
+  - Kliknite ovde za [preuzimanje](http://www.openoffice.org/download/)
+  - Kliknite ovde da biste dobili [instrukcije za instaliranje OpenOffice-a na Linux-u] (http://www.openoffice.org/download/common/instructions.html#linux)
+  - Kliknite ovde da biste dobili pomoć i podršku na [forumu podrške od strane zajednice](http://forum.openoffice.org/)
