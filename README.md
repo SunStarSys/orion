@@ -7,7 +7,7 @@
 ## TO BUILD THE www.iconoclasts.blog SITE to ./www
 
 ```shell
-   % ./test.sh clean
+   % ./test.sh
 ```
 
 ### TO generate the link topology graph (SVGZ), run
@@ -20,8 +20,8 @@
 ## USAGE
 
 ```shell
-export SVN_URL="..."
-% ./test.sh clean
+% ./test.sh
+% ./test.sh ooo
 % ./test.sh
 ```
 
