@@ -1,11 +1,12 @@
 #!/usr/bin/bash
-# USAGE: $0 [clean]
+# USAGE: $0 [ooo]
 : "${SVN_URL:=https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.iconoclasts.blog}"
 mkdir -p ~/.subversion
 set -e
 set -x
-if [[ "${1:-}" == clean ]]; then
+if [[ "${1:-}" == ooo ]]; then
   sudo rm -rf trunk www
+  ln -s ooo-trunk trunk
 fi
 for d in trunk www; do
   if [[ ! -d "$d" ]]; then

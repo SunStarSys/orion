@@ -1,0 +1,7 @@
+doctype:    /doctype.html
+brand:      /brand.html
+footer:     /footer.html
+topnav:     /l10n/topnav.html
+leftnav:    /l10n/leftnav.html
+rightnav:   /l10n/rightnav.html
+home:       home

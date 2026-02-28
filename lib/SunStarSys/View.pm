@@ -42,14 +42,17 @@ use base 'sealed';
 use sealed;
 
 our %LANG = (
+  ".ar" => "ar_SA.UTF-8",
   ".de" => "de_DE.UTF-8",
   ".en" => "en_US.UTF-8",
   ".es" => "es_ES.UTF-8",
   ".fr" => "fr_FR.UTF-8",
+  ".pt-BR" => "pt_BR.UTF-8",
   ".ru" => "ru_RU.UTF-8",
   ".he" => "he_IL.UTF-8",
   ".sv" => "sv_SV.UTF-8",
-  ".kr" => "kr_KR.UTF-8",
+  ".ko" => "ko_KR.UTF-8",
+  ".ja" => "ja_JP.UTF-8",
   ".zh-TW" => "zh_TW.UTF-8",
   ""    => "en_US.UTF-8",
 );
@@ -390,38 +393,47 @@ sub fetch_deps {
 
 my %title = (
   index => {
+    ar => "فهرس ",
     en => "Index of ",
     es => "Índice de ",
     de => "Index von ",
     fr => "Indice de ",
+    "pt-BR" => "Índice de ",
     ru => "Индекс ",
     sv => "Index för ",
     he => "אינדקס של ",
-    kr => "색인 ",
+    ko => "색인 ",
+    jp => "目次 ",
     "zh-TW" => "指數",
   },
   sitemap => {
+    ar => "خريطة الموقع الخاصة بـ ",
     en => "Sitemap of ",
     es => "Mapa del sitio de ",
     de => "Seitenverzeichnis von ",
     fr => "Plan du site de ",
+    "pt-BR" => "Mapa do site de ",
     ru => "Карта сайта ",
     sv => "Webbplatskarta för",
     he => "מפת אתר של ",
-    kr => "사이트맵 ",
+    ko => "사이트맵 ",
+    jp => "サイトマップ ",
     "zh-TW" => "網站地圖",
   }
 );
 
 my %month = (
+  ar => [qw/0 يناير فبراير مارس إبريل مايو يونيو يوليو أغسطس سبتمبر أكتوبر نوفمبر ديسمبر/],
   en => [qw/0 January February March April May June July August September October November December/],
   es => [qw/0 enero febrero marzo abril mayo junio julio agostp  septiembre octubre noviembre diciembre/],
   de => [qw/0 Januar Februrar März April Mai Juni Juli August September Oktober November Dezember/],
   fr => [qw/0 janvier février mars avril mai juin juillet août septembre octobre novembre décembre/],
+  "pt-BR" => [qw/0 janeiro fevereiro março abril maio junho julho agosto septembro outubro novembro dezembro/],
   ru => [qw/0 Январь Февраль Март Апрель Май Июнь Июль Август Сентябрь Октябрь Ноябрь Декабрь/],
   sv => [qw/0 Januari Februari Mars April Maj Juni Juli Augusti September Oktober November December/],
   he => [qw/0 דצמבר נובמבר אוקטובר ספטמבר אוגוסט יולי יוני מאי אפריל מרץ פברואר ינואר/],
-  kr => [qw/0 1월 2월 3월 4월 5월 6월 7월 8월 9월 10월 11월 12월/],
+  ko => [qw/0 1월 2월 3월 4월 5월 6월 7월 8월 9월 10월 11월 12월/],
+  ja => [qw/0 1月 2月 3月 4月 5月 6月 7月 8月 9月 10月 11月 12月/],
   "zh-TW" => [qw/0 一月 二月 三月 四月 五月 六月 七月 八月 九月 十月 十一月 十二月/],
   );
 

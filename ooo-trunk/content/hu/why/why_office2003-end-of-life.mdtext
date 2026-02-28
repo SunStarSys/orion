@@ -1,0 +1,29 @@
+Title:     Miért az Apache OpenOffice: Microsoft Office 2003 élettartam lejárat
+Notice:    Licensed to the Apache Software Foundation (ASF) under one
+           or more contributor license agreements.  See the NOTICE file
+           distributed with this work for additional information
+           regarding copyright ownership.  The ASF licenses this file
+           to you under the Apache License, Version 2.0 (the
+           "License"); you may not use this file except in compliance
+           with the License.  You may obtain a copy of the License at
+           .
+             http://www.apache.org/licenses/LICENSE-2.0
+           .
+           Unless required by applicable law or agreed to in writing,
+           software distributed under the License is distributed on an
+           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+           KIND, either express or implied.  See the License for the
+           specific language governing permissions and limitations
+           under the License.
+
+##2014 április - a határidő
+
+A Microsoft [bejelentette][1], hogy 2014. április 8-ával beszüntetik a Microsoft Office 2003 és a Microsoft Windows Xp támogatását. Mit jelent ez? Amint írják, "2014. április 8-át követően nem lesznek új biztonsági frissítések, nem biztonsági javítások, ingyenes vagy fizetős támogatási leetőségek illetve online technikai tartalom frissítések."  Ez, a Microsoft szerint, a Microsoft Office 2003 felhasználóit magasabb "Biztonsági és Megfelelőségi Kockázatnak" teszi ki.
+
+##Alternatívák keresése
+
+Néhány vállalat és magánfelhasználó egy nagy összegről szóló csekket állít ki a Microsoft részére és frissíteni fog a Windows és az Office egy új változatára. Más vállalatok viszont meglátják a lehetőséget ebben ahhoz, hogy egyéb megoldások után nézzenek, beleértve a nyílt forrású programokat is, mint amilyen az ingyenes irodai csomagok között a vezető helyen álló Apache OpenOffice. Ideje átgondolni a Microsoft Office 2003 és Microsoft Windows XP programok leváltását. Számos vállalat már megtette..
+
+
+[1]: http://www.microsoft.com/en-us/windows/endofsupport.aspx
+

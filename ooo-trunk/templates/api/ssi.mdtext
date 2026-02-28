@@ -1,0 +1,6 @@
+doctype: /doctype.html
+brand:	/brand.html
+footer:	/footer.html
+topnav:	/topnav.html
+leftnav:	/api/leftnav.html
+home:		home

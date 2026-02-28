@@ -1,0 +1,42 @@
+Title: יתרונות Apache OpenOffice: תוכנה מצויינת
+Notice:    Licensed to the Apache Software Foundation (ASF) under one
+           or more contributor license agreements.  See the NOTICE file
+           distributed with this work for additional information
+           regarding copyright ownership.  The ASF licenses this file
+           to you under the Apache License, Version 2.0 (the
+           "License"); you may not use this file except in compliance
+           with the License.  You may obtain a copy of the License at
+           .
+             http://www.apache.org/licenses/LICENSE-2.0
+           .
+           Unless required by applicable law or agreed to in writing,
+           software distributed under the License is distributed on an
+           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+           KIND, either express or implied.  See the License for the
+           specific language governing permissions and limitations
+           under the License.
+css: ../rtl.css
+
+![יתרונות Apache OpenOffice: תוכנה מצויינת](/why/images/why_great.png) # {.rfloatimg}
+
+תוכנה מצויינת דורשת אנשים מצויינים. Apache OpenOffice היא תוצר לאחר 20 שנות פיתוח מתמשך. מאחר ותוכננה במקור כתוכנה יחידה, התוכנות בה מציגות אחידות ביניהן. שיטת הפיתוח כ**קוד-פתוח** מבטיחה שהכל גלוי.
+
+  - **תכנון טוב יותר**
+
+	Apache OpenOffice היא מוצר אמין ובשל, שממשיך להתפתח כבר יותר מעשרים שנה.
+	כבר מראשית הדרך, תוכננה OpenOffice כמוצר תוכנה אחד, ולא כחבילת-תוכנות שמורכבת מתוכנות שונות לגמרי, מה שהופך את השימוש בה לאחיד וקל יותר &ndash; 
+	אם למדת דבר מסויים בתוכנה אחת בחבילת-התוכנות, אפשר להשתמש בו ביתר התוכנות שבחבילה. 
+	בעקבות זאת, אפשר לפתוח מסמך מכל סוג מכל תוכנה בחבילה, ובנוסף, OpenOffice ניתנת להתקנה על כל מערכות-ההפעלה הרווחות - Microsoft Windows, Apple Mac, GNU/Linux, Sun Solaris.
+	
+  - **הכי טוב בשבילך**
+
+    Apache OpenOffice מכילה את כל התוכנות למשרד, בחבילה אחת. בנוסף, אפשר לייצא ממנה מסמכי PDF כדי לוודא שאנשים יצפו במסמך שיצרת בדיוק כפי שרצית.
+	קיים גם מאגר הרחבות הולך וגדל, המאפשר למפתחים להוסיף תכונות ל-OpenOffice.
+	פרויקט Apache OpenOffice מפרסם עדכוני גירסה מספר פעמים בשנה, מה שמאפשר לך ליהנות מתכונות חדשות, בהמשך.
+	
+  - **כנות**
+
+    Apache OpenOffice, בשונה מתוכנות מסחריות אחרות, מפותחת בגישת **קוד-פתוח**, "ללא סודות": 
+	כל אחד יכול לעיין בקוד של התוכנה, ולתקן בעיות. כל אחד יכול לדווח על בעיות ולבקש שיפורים עתידיים, וכל אחד יכול לראות התדיינויות ותגובות בין משתמשים ומפתחים.
+	מצב הגירסה הנוכחית והתוכניות לגירסאות הבאות מפורסמים ב-Wiki,
+	כך שבאפשרותך לבחור מתי לעבור לגירסה הבאה וליהנות מהתכונות החדשות שלה.

@@ -318,6 +318,7 @@ sub syswrite_all {
       my ($x) = map {my $x = $_; utf8::encode $x if utf8::is_utf8 $x; $x} $data;
       syswrite $build_log, $x;
     }
+    no warnings 'uninitialized';
     while (($bytes = syswrite($fh, substr($data, $total))) > 0) {
       $total += $bytes;
       return $total if $total == length $data;

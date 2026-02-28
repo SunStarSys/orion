@@ -1,0 +1,44 @@
+Title:  היתרון שבחבילה
+Notice:    Licensed to the Apache Software Foundation (ASF) under one
+           or more contributor license agreements.  See the NOTICE file
+           distributed with this work for additional information
+           regarding copyright ownership.  The ASF licenses this file
+           to you under the Apache License, Version 2.0 (the
+           "License"); you may not use this file except in compliance
+           with the License.  You may obtain a copy of the License at
+           .
+             http://www.apache.org/licenses/LICENSE-2.0
+           .
+           Unless required by applicable law or agreed to in writing,
+           software distributed under the License is distributed on an
+           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+           KIND, either express or implied.  See the License for the
+           specific language governing permissions and limitations
+           under the License.
+css:	../rtl.css
+
+Apache OpenOffice אינה רק אוסף של שש תוכנות. 
+שלא כמו המתחרים, חבילת-התוכנות הזו לא נוצרה מתוכנות עצמאיות, אלא תוכננה מראש כחבילה אחת שלמה:
+
+- כל התוכנות פועלות ונראות אותו הדבר, דבר המקל על אופן השימוש בהן, אחרי שלמדת לעבוד עם אחת מהן (למשל, סגנונות ועיצוב).
+  Apache OpenOffice מתאימה את עצמה גם לסגנון הצבעים שבחרת במערכת ההפעלה שלך.
+  
+- אותם סרגלים וכפתורים בדיוק נמצאים בשימוש בתוכנות החבילה. למשל, 
+  סרגל כלי-הציור ב-Writer נמצאה גם ב-Impress וב-Draw.
+  
+- כל התוכנות בחבילה משתמשות באותם מילונים ובודק-איות. שינוי הגדרות של בודק-האיות ייפעל בכל תוכנות החבילה. 
+  
+- Apache OpenOffice יזהה את סוג הקובץ וייפתח את התוכנה המתאימה ביותר לעריכתו. 
+
+- אפשר להעביר מידע בין התוכנות בקלות.
+
+- כל התוכנות שומרות את הקבצים כקבצי OpenDocument, תקן בינלאומי לשמירת מסמכים. תצורת קבצים אלו נשמרת כ-XML וחוסכת מקום בכונן הקשיח, לעומת סוגי הקבצים של המתחרים.
+  בנוסף, ניתן תמיד לפתוח קבצי OpenDocument מכל תוכנה שתומכת בסוג קבצים זה. 
+  
+- חבילת-התוכנות מותקנת בבת אחת, בתהליך התקנה פשוט.
+
+- כל התוכנות בחבילה מסופקות באותו רישיון - ללא חיובים נסתרים, עכשיו, או בעתיד.
+
+בסיכומו של דבר, כל מה שצריך מחבילת-תוכנות למשרד - [הורד עכשיו][1]!
+
+[1]: /download/ "הורדת Apache OpenOffice"

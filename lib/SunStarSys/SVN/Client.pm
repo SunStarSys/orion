@@ -1,17 +1,19 @@
 package SunStarSys::SVN::Client;
+
 # ithread-safe SVN::Client (delegation model)
 use warnings;
 use strict;
 use APR::Pool;
+use Apache2::RequestRec;
 use SVN::Core;
 use SVN::Client;
 use SVN::Delta;
 use SunStarSys::Util qw/normalize_svn_path get_lock/;
 use File::Basename qw/dirname basename/;
 use Fcntl qw/SEEK_SET/;
-use base "sealed";
+use base "sealed"; # ANON
+use sealed "all";  # named
 
-no warnings 'redefine';
 #__PACKAGE__ declarations for sealed method lookups
 sub _create_auth;
 sub new;
@@ -27,16 +29,29 @@ sub diff;
 sub log;
 
 # accessors
+
 sub r       {shift->{r}}
 sub client  {shift->{client}}
 sub context {shift->{client}->{ctx}}
 sub pool    {shift->{pool}}
 
-sub _create_auth :Sealed {
-  my $pool = pop;
-  my Apache2::RequestRec $r = pop or return [];
+# classname aliases
+
+use constant AR => "Apache2::RequestRec";
+use constant SVN => "SVN::Client";
+
+use constant string  => "";
+use constant boolean => "";
+use constant integer => "";
+use constant coderef => "";
+use constant hashref => "";
+
+
+# ctor helper
+
+sub _create_auth  (string $class, AR $r, _p_apr_pool_t $pool) {
   $r = $r->main unless $r->is_initial_req;
-  my $authcb = sub {
+  my $authcb = sub :Sealed {
     my $cred = shift;
     $cred->username($r->pnotes("svnuser"));
     $cred->password($r->pnotes("svnpassword"));
@@ -49,41 +64,44 @@ sub _create_auth :Sealed {
   ];
 }
 
-sub SVN::Client::log_msg {
-  my $self = shift;
+# monkey patching
+no warnings 'redefine';
 
-  if (@_) {
-    my $rv = shift;
+sub _log_msg  (SVN $self, coderef $rv = undef) {
+  if (defined $rv) {
     $self->{'log_msg_callback'} = [\$rv, $self->{'ctx'}->log_msg_baton3($rv)];
   }
   return $$self{'log_msg_callback'}[-1];
 }
 
-sub SVN::Client::config {
-  my $self = shift;
-  if (@_) {
-    $self->{config} = $self->{ctx}->config(shift, $self->{pool});
+sub _config  (SVN $self, hashref $c = undef) {
+  if (defined $c) {
+    $self->{config} = $self->{ctx}->config($c, $self->{pool});
   }
   return $self->{config};
 }
 
-sub SVN::Client::notify {
-  my $self = shift;
-  if (@_) {
-    my $rv = shift;
+sub _notify  (SVN $self, coderef $rv = undef) {
+  if (defined $rv) {
     $self->{notify_callback} = [\$rv, $self->{ctx}->notify_baton($rv)];
   }
   return $$self{notify_callback}[-1];
 }
 
-sub new :Sealed {
-  my SVN::Client $client = "SVN::Client";
-  my SunStarSys::SVN::Client $class = shift;
-  my Apache2::RequestRec $r = shift;
+{
+  no strict qw/refs/;
+  *{"SVN::Client::" . $_} = *{"_$_"}{CODE} for qw/log_msg config notify/;
+}
+
+# ctor
+
+sub new  (__PACKAGE__ $class, AR $r) {
+  my SVN $client;
   local $_ = $r ? $r->pool : $SVN::Core::gpool;
-  my $pool = $r ? bless $_, "_p_apr_pool_t" : $_;
+  my _p_apr_pool_t $pool = $r ? bless $_, "_p_apr_pool_t" : $_;
   unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool, config => {};
   $client = $client->new(@_) or die "Can't create SVN::Client: $!";
+
   return bless {
     r      => $r,
     client => $client,
@@ -91,23 +109,21 @@ sub new :Sealed {
   }, $class;
 }
 
-sub add :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my ($filename, $recursive) = @_;
-  my SVN::Client $svn = $self->client;
+# methods
+
+sub add  (__PACKAGE__ $self, string $filename, boolean $recursive) {
+  my SVN $svn = $self->client;
   normalize_svn_path $filename;
   $svn->add4($filename, $recursive ? $SVN::depth::infinity : $SVN::depth::empty, 0, 0, 1);
 }
 
-sub merge :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my ($filename, $target_path, $target_revision, $dry_run) = @_;
+sub merge  (__PACKAGE__ $self, string $filename, string $target_path, integer $target_revision, boolean $dry_run) {
   ($filename, $target_path) = map dirname($_), $filename, $target_path if $filename !~ m#/$#;
 
   normalize_svn_path $filename, $target_path;
 
-  my Apache2::RequestRec $r = $self->r;
-  my SVN::Client $svn = $self->client;
+  my AR $r = $self->r;
+  my SVN $svn = $self->client;
   my (@add, @delete, @restore, @update, @conflict);
   my %dispatch = (
     $SVN::Wc::Notify::Action::add           => \@add,
@@ -116,7 +132,7 @@ sub merge :Sealed {
     $SVN::Wc::Notify::Action::restore       => \@restore,
     $SVN::Wc::Notify::Action::update_update => \@update,
     $SVN::Wc::Notify::State::conflicted     => \@conflict,
-);
+  );
 
   $svn->notify(sub {
     my ($path, $action, undef, undef, $state) = @_;
@@ -169,13 +185,11 @@ sub merge :Sealed {
 
 }
 
-sub update :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my ($filename, $depth) = @_;
+sub update  (__PACKAGE__ $self, string $filename, integer $depth) {
   normalize_svn_path $filename;
   my $dir = dirname $filename;
-  my Apache2::RequestRec $r = $self->r;
-  my SVN::Client $svn = $self->client;
+  my AR $r = $self->r;
+  my SVN $svn = $self->client;
   my (@add, @delete, @restore, @update, @conflict);
   my %dispatch = (
     $SVN::Wc::Notify::Action::add           => \@add,
@@ -205,27 +219,25 @@ sub update :Sealed {
   return $rv;
 }
 
-sub copy :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my ($source, $target) = @_;
+sub copy  (__PACKAGE__ $self, string $source, string $target) {
   normalize_svn_path $_ for $source, $target;
-  my SVN::Client $client = $self->client;
+  my SVN $client = $self->client;
   $client->copy($source, 'WORKING', $target);
 }
 
-sub move :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my ($source, $target, $force) = (@_, 1);
+sub move  (__PACKAGE__ $self, string $source, string $target) {
+  shift, shift, shift;
+  my ($force) = (@_, 1);
   normalize_svn_path $_ for $source, $target;
-  my SVN::Client $client = $self->client;
+  my SVN $client = $self->client;
   $client->move($source, undef, $target, $force);
 }
 
-sub delete :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my ($filename, $force) = (@_, 1);
+sub delete  (__PACKAGE__ $self, string $filename) {
+  shift, shift;
+  my ($force) = (@_, 1);
   normalize_svn_path $filename;
-  my SVN::Client $client = $self->client;
+  my SVN $client = $self->client;
   $client->delete($filename, $force);
 }
 
@@ -234,11 +246,11 @@ eval '$status[$SVN::Wc::Status::' . "$_]=qq/\u$_/"
     for qw/modified conflicted added deleted unversioned
            normal ignored missing replaced obstructed/;
 
-sub status :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my Apache2::RequestRec $r = $self->r;
-  my SVN::Client $client = $self->client;
-  my ($filename, $depth) = (@_, wantarray ? $SVN::Depth::immediates :$SVN::Depth::empty);
+sub status  (__PACKAGE__ $self, string $filename) {
+  shift, shift;
+  my AR $r = $self->r;
+  my SVN $client = $self->client;
+  my ($depth) = (@_, wantarray ? $SVN::Depth::immediates :$SVN::Depth::empty);
   my $prefix = $filename;
   $prefix =~ s![^/]+$!!;
   normalize_svn_path $filename;
@@ -251,36 +263,32 @@ sub status :Sealed {
     push @rv, [$path => $status[$_]] for $status->text_status;
     return 0;
   };
-  my $pool = $self->pool;
+  my _p_apr_pool_t $pool = $self->pool;
 
   $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef);
   return map @$_, @rv if wantarray;
   return $rv[0]->[1];
 }
 
-sub info :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my Apache2::RequestRec $r = $self->r;
-  my SVN::Client $client = $self->client;
-  my ($filename, $callback, $remote_revision) = @_;
+sub info  (__PACKAGE__ $self, string $filename, coderef $callback, $remote_revision = undef) {
+  my AR $r = $self->r;
+  my SVN $client = $self->client;
   normalize_svn_path $filename;
   $client->info($filename, undef, $remote_revision, $callback, 0);
 }
 
-sub mkdir :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my SVN::Client $client = $self->client;
-  my ($url, $make_parents) = (@_, 1);
+sub mkdir  (__PACKAGE__ $self, $url) {
+  shift, shift;
+  my SVN $client = $self->client;
+  my ($make_parents) = (@_, 1);
   $url =~/(.*)/;
   $client->mkdir3($1, $make_parents, undef);
 }
 
-sub diff :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my SVN::Client $client = $self->client;
-  my ($filename, $recursive, $revision) = @_;
+sub diff  (__PACKAGE__ $self, string $filename, boolean $recursive, integer $revision) {
+  my SVN $client = $self->client;
   my $base_revision = $revision ? $revision - 1 : "BASE";
-  my Apache2::RequestRec $r = $self->r;
+  my AR $r = $self->r;
   normalize_svn_path $filename;
   open my $dfh, "+>", undef or die "DFH open failed: $!";
   open my $efh, "+>", undef or die "EFH open failed: $!";
@@ -299,20 +307,17 @@ sub diff :Sealed {
   return $rv;
 }
 
-sub log :Sealed {
-  my SunStarSys::SVN::Client $self = shift;
-  my ($filename, $prevision, $frevision, $limit) = @_;
-  my SVN::Client $svn = $self->client;
+sub log  (__PACKAGE__ $self, string $filename, integer $prevision//="HEAD", integer $frevision//=1, integer $limit) {
+  my SVN $svn = $self->client;
   $limit //= 1 if defined $prevision and $prevision ne "HEAD";
-  $prevision //= 'HEAD';
   $self->info($filename, sub {$filename = $_[1]->URL});
   s/-internal//, s/:4433// for $filename;
-  s!/cms-sites/.*$!! for my $prefix = $filename;
   my @rv;
   my @props = qw/svn:log svn:author svn:date/;
   local $@;
   eval {$svn->log5(
-    $filename, undef, [$prevision, $frevision // 1], $limit // 100, 1, 0, 1, \@props, sub :Sealed {
+    $filename, undef, [[$prevision, $frevision]], $limit // 100, 1, 1, 0, \@props,
+    sub :Sealed {
       my _p_svn_log_entry_t $log_entry = shift;
       my %cp2;
       @cp2{keys %{$log_entry->changed_paths2}} = map +{action => $_->action, text_modified => $_->text_modified, props_modified => $_->props_modified}, values %{$log_entry->changed_paths2};
@@ -321,18 +326,17 @@ sub log :Sealed {
   return \@rv;
 }
 
-our $AUTOLOAD;
-
 sub AUTOLOAD {
   no strict 'refs';
+  our $AUTOLOAD;
   my ($method_name) = (split /::/, $AUTOLOAD)[-1];
   return if $method_name eq "DESTROY";
 
   if (defined(my $client_method = $_[0]->client->can($method_name))) {
-    *$AUTOLOAD = sub :Sealed {
-      my SunStarSys::SVN::Client $self = shift;
-      my Apache2::RequestRec $r = $self->{r};
-      my SVN::Client $client = $self->{client};
+    *$AUTOLOAD = sub :Sealed (__PACKAGE__ $self) {
+      shift;
+      my AR $r = $self->r;
+      my SVN $client = $self->client;
       my $file_idx = $method_name =~ /prop_?get/ ? 1 : $method_name =~ /prop_?set/ ? 2 : 0;
       my $filename = $_[$file_idx];
       if (ref $filename) {
@@ -359,6 +363,9 @@ sub AUTOLOAD {
 }
 
 eval {__PACKAGE__->new->log_msg(sub {})};
+eval {__PACKAGE__->new->propget};
+eval {__PACKAGE__->new->checkout};
+eval {__PACKAGE__->new->checkout};
 eval {__PACKAGE__->new->commit};
 eval {__PACKAGE__->new->cleanup(__FILE__)};
 eval {__PACKAGE__->new->propget(__FILE__)};

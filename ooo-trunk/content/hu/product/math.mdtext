@@ -1,0 +1,38 @@
+Title:  Apache OpenOffice Math
+Notice:    Licensed to the Apache Software Foundation (ASF) under one
+           or more contributor license agreements.  See the NOTICE file
+           distributed with this work for additional information
+           regarding copyright ownership.  The ASF licenses this file
+           to you under the Apache License, Version 2.0 (the
+           "License"); you may not use this file except in compliance
+           with the License.  You may obtain a copy of the License at
+           .
+             http://www.apache.org/licenses/LICENSE-2.0
+           .
+           Unless required by applicable law or agreed to in writing,
+           software distributed under the License is distributed on an
+           "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+           KIND, either express or implied.  See the License for the
+           specific language governing permissions and limitations
+           under the License.
+
+[![Apache OpenOffice Math képernyőmentés](/product/pix/math.png)](/product/pix/math-big.png "Kattintson a kép nagyobb változatáért") # {.rfloatimg}
+
+*Készítsen egyenleteket és képleteket dokumentumaihoz*
+
+A **Math** az Apache OpenOffice képletszerkesztője. Leggyakrabban szöveges 
+dokumentumokban előforduló képletek, egyenletek megszerkesztésére 
+használatos, de más dokumentumtípusokkal és önmagában is használható. 
+
+A **Writer**-en belül használva az egyenlet egy önálló, szöveges dokumentumba 
+ágyazott objektumként viselkedik. Hasonlóképpen beilleszthetők ezek az objektumok 
+más OpenOffice programba is, mint például a [Calc][1] és [Impress][2].
+
+A **Math** három fő eljárást biztosít a képletbeírásra:
+
+- Jelölőnyelv segítségével az egyenletszerkesztőben
+- Az egyenletszerkeszőben történő jobb kattintással és a szimbólum helyi menüből való kiválasztásával
+- A szimbólum *Képletelemek* eszközpanelből való kiválasztásával
+
+[1]: calc.html "Apache OpenOffice Calc"
+[2]: impress.html "Apache OpenOffice Impress"
