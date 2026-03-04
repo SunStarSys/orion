@@ -3,16 +3,16 @@ package path;
 # taken from django's url.py
 
 our @patterns = (
-	[qr!doctype.mdtext$!, single_narrative => { template => "doctype.html", compress => 1 }],
-	[qr!brand.mdtext$!, single_narrative => { template => "brand.html", compress => 1 }],
+	[qr!doctype.mdtext$!, single_narrative => { template => "doctype.html" }],
+	[qr!brand.mdtext$!, single_narrative => { template => "brand.html" }],
 	[qr!footer.mdtext$!, single_narrative => { template => "footer.html" }],
 	[qr!topnav.mdtext$!, single_narrative => { template => "navigator.html" }],
 	[qr!leftnav.mdtext$!, single_narrative => { template => "navigator.html" }],
 	[qr!rightnav.mdtext$!, single_narrative => { template => "navigator.html" }],
 	[qr!\-passthru.html$!, "passthru"],
-	[qr!\.mdtext$!, single_narrative => { template => "single_narrative.html", compress => 1 }],
-	[qr!\.html$!, html_page => { template => "html_page.html", compress => 1 }],
-	[qr!\.htm$!, htm_page => { template => "html_page.html", compress => 1 }],
+	[qr!\.mdtext$!, single_narrative => { template => "single_narrative.html" }],
+	[qr!\.html$!, html_page => { template => "html_page.html" }],
+	[qr!\.htm$!, htm_page => { template => "html_page.html" }],
 ) ;
 
 # for specifying interdependencies between the files
