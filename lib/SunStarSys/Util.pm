@@ -17,7 +17,7 @@ our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fi
                     unload_package purge_from_inc touch normalize_svn_path sanitize_relative_path parse_filename
                     walk_content_tree archived seed_file_deps seed_file_acl Load Dump/;
 
-our $VERSION = "3.1";
+our $VERSION = "3.2";
 
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
@@ -28,7 +28,7 @@ our $RTF_RING_SIZE_MAX = 1_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;
-  utf8::decode $file unless ref $file;
+  utf8::is_utf8 $file or utf8::decode $file unless ref $file;
   $out->{mtime} = $_->mtime for map File::stat::populate(CORE::stat(_)), grep -f, $file;
   $out->{mtime} //= -1;
   warn "$file not a text file nor a reference" and return unless -T _ or ref $file;
@@ -406,17 +406,20 @@ sub walk_content_tree (&) {
 END {
   if ($dependencies) {
     open my $deps, ">:raw", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
+    utf8::is_utf8($_) and utf8::encode $_ for map @$_, values %$dependencies;
+    utf8::is_utf8($_) and utf8::encode $_ for keys %$dependencies;
     print $deps Dump $dependencies;
   }
   if ($acl) {
     open my $fh, ">:raw", "$ENV{TARGET_BASE}/.acl" or die "Can't open '.acl' for writing: $!";
+    utf8::is_utf8($_) and utf8::encode $_ for map {$_->{path}, values %{$_->{rules}}} @$acl;
     print $fh Dump $acl;
   }
 }
 
 sub archived {
   my ($path) = (@_, $_);
-  my $file = "content/$path";
+  my $file = "content$path";
   read_text_file $file, \ my %data;
   return +($data{headers}{status} // "") eq "archived";
 }
@@ -426,7 +429,7 @@ sub archived {
 
 sub seed_file_deps {
   my ($path) = (@_, $_);
-  utf8::encode $path if utf8::is_utf8 $path;
+  utf8::decode $path unless utf8::is_utf8 $path;
   my $dir = dirname($path);
   read_text_file "content$path", \ my %d;
   no strict 'refs';
@@ -436,9 +439,10 @@ sub seed_file_deps {
   my %seen;
   @{$$dependencies{$path}} = grep !$seen{$_}++, @{$$dependencies{$path} // []},
     grep {
+      utf8::decode $_ unless utf8::is_utf8 $_;
       s/^content// and $_ ne $path and not archived
     }
-    map glob("content$_"), map {my $x = $_; utf8::encode $x if utf8::is_utf8 $x; index($x, "/") == 0  ? $x : "'$dir'/$x"}
+    map glob("content$_"), map {index($_, "/") == 0  ? $_ : "'$dir'/$_"}
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies} // "";
 
   no warnings 'uninitialized';
@@ -454,13 +458,14 @@ sub seed_file_deps {
   my $attachments_dir = "content$dir/$base.page";
   if (-d $attachments_dir) {
     s/^[^\.]*// for my $lang = $ext;
-    push @{$$dependencies{$path}}, map {utf8::downgrade $_; $_} grep s/^content// && !$seen{$_}++, glob("'$attachments_dir'/*$lang");
+    push @{$$dependencies{$path}}, grep s/^content// && !$seen{$_}++, glob("'$attachments_dir'/*$lang");
   }
   delete $$dependencies{$path} unless @{$$dependencies{$path}};
 }
 
 sub seed_file_acl {
   my ($path) = (@_, $_);
+  utf8::decode $path unless utf8::is_utf8 $path;
   read_text_file "content$path", \ my %d;
   no strict 'refs';
   my ($prior) = grep $acl->[$_]{path} eq "content$path", 0..$#$acl;

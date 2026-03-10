@@ -92,7 +92,7 @@ sub single_narrative :Sealed {
   my @new_sources = $view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
   $args{breadcrumbs} = $view->can("breadcrumbs")->($args{path}, $args{lang});
 
-  utf8::decode $args{path};
+  #utf8::decode $args{path};
 
   my @closed = split /\s*[;,]\s*/, $args{headers}{closed} // "";
   my @muted = split /\s*[;,]\s*/, $args{headers}{muted} // "";
@@ -159,7 +159,7 @@ sub single_narrative :Sealed {
   $d->Purity(1);
   eval $d->Dump;
 
-  utf8::encode $_ for grep defined, map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %$args_headers;
+  utf8::is_utf8 $_ and utf8::encode $_ for grep defined, map ref($_) eq "HASH" ? values %$_ : ref($_) eq "ARRAY" ? @$_ : $_, values %$args_headers;
 
   my $headers = Dump $args_headers;
   my $categories = delete $$args_headers{categories};
