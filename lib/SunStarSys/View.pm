@@ -364,10 +364,10 @@ sub fetch_deps {
         my $s = view->can("memoize") or die "Can't locate method: memoize\n";
         # quick_deps set to 2 to avoid infinite recursion on cyclic dependency graph
 	$$args{view} //= [];
-	unshift @{$$args{view}}, $method;
+	unshift @{$$args{view}}, $method unless $method eq "memoize";
 	local $@;
         my (undef, $ext, $vars, @ns) = eval {$s->(path => $file, lang => $lang, %$args, quick_deps => 2)};
-	shift @{$$args{view}};
+	shift @{$$args{view}} unless $method eq "memoize";
         $file = "$dirname$filename.$ext$lang";
         #$file .= ".gz" if $$args{compress};
         $data->{$file} = $vars;
