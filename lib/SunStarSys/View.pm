@@ -92,8 +92,6 @@ sub single_narrative :Sealed {
   my @new_sources = $view->can("fetch_deps")->($args{path} => $args{deps}, $args{quick_deps});
   $args{breadcrumbs} = $view->can("breadcrumbs")->($args{path}, $args{lang});
 
-  #utf8::decode $args{path};
-
   my @closed = split /\s*[;,]\s*/, $args{headers}{closed} // "";
   my @muted = split /\s*[;,]\s*/, $args{headers}{muted} // "";
   my @important = split /\s*[;,]\s*/, $args{headers}{important} // "";
@@ -205,13 +203,17 @@ EOT
     }
   }
 
-  $categories = [sort $categories =~ /(\b[\w\s-]+\b)/g] if defined($categories) and not ref $categories;
+  $categories = [map ucfirst, ref $categories ? @$categories : sort $categories =~ /(\b[\w\s-]+\b)/g] if defined $categories;
   $keywords = [sort split /[;,，、]\s*/, $keywords] if defined($keywords) and not ref $keywords;
-  undef $categories if $filename eq "index"; #index files are forbidden from categorization (conflicts w/ below index.html$lang setup)
-
-  if (exists $args{category_root}
-      and exists $args{headers}
-      and defined $categories) {
+  if ($filename eq "index") {
+    #index files are forbidden from categorization (conflicts w/ below index.html$lang setup)
+    my %seen;
+    $categories //= [];
+    $seen{$_}++ for @$categories;
+    push @$categories, grep !$seen{$_}++, map ucfirst, map ref $_ ? @$_ : sort(/(\b[\w\s-]+\b)/g),
+      map $_->[1]->{headers}->{categories} || (), grep $_->[1]->{headers}, @{$args{deps}};
+  }
+  elsif (exists $args{category_root} and exists $args{headers} and defined $categories) {
 
     my $category_root = "content$args{category_root}";
 
@@ -359,9 +361,13 @@ sub fetch_deps {
       }
       else {
         local $SunStarSys::Value::Offline = 1 if $quick == 3;
-        my $s = view->can($method) or die "Can't locate method: $method\n";
+        my $s = view->can("memoize") or die "Can't locate method: memoize\n";
         # quick_deps set to 2 to avoid infinite recursion on cyclic dependency graph
-        my (undef, $ext, $vars, @ns) = $s->(path => $file, lang => $lang, %$args, quick_deps => 2);
+	$$args{view} //= [];
+	unshift @{$$args{view}}, $method;
+	local $@;
+        my (undef, $ext, $vars, @ns) = eval {$s->(path => $file, lang => $lang, %$args, quick_deps => 2)};
+	shift @{$$args{view}};
         $file = "$dirname$filename.$ext$lang";
         #$file .= ".gz" if $$args{compress};
         $data->{$file} = $vars;
