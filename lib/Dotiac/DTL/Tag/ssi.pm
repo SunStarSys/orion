@@ -47,6 +47,7 @@ sub new {
                     my ($re, $method, $args) = @$p;
                     next unless "/$path" =~ $re;
                     ++$ok if $args->{category_root} or $args->{archive_root};
+                    $ok = 0 if $args->{headers}{acl} =~ /\*=[\s,]/;
                     last;
                   }
                   die "Inadmissible ssi target: /$path" unless $ok or not eval '@path::patterns';
