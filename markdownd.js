@@ -71,7 +71,7 @@ virtualConsole.sendTo(console);
 if (cluster.isMaster) {
   console.log(`Master ${process.pid} is running`);
 
-  for (let i = 0; i < nproc; i++) {
+  for (let i = 0; i < 4 * nproc; i++) {
     cluster.fork();
   }
 
