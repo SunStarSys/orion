@@ -55,7 +55,7 @@ Usage: $0 --source-base /path/to/trunk/or/a/branch --target-base /path/to/target
 USAGE
 
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
-$runners ||= 8; # 8 is arbitrary but educated guess
+$runners ||= 16; # 8 is arbitrary but educated guess
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET_BASE} = $target_base;
