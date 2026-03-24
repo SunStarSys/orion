@@ -131,12 +131,12 @@ sub svn_cleanup {
 
 sub svn_add {
     my $ctx = shift->new;
-    syswrite STDOUT, "Adding $_.\n" and $ctx->add($_, 1) for @_;
+    syswrite(STDOUT, "Adding $_.\n"), $ctx->add($_, 1) for @_;
 }
 
 sub svn_rm {
     my $ctx = shift->new;
-    syswrite STDOUT, "Removing $_.\n" and $ctx->delete($_, 1) for @_;
+    syswrite(STDOUT, "Removing $_.\n"), $ctx->delete($_, 1) for @_;
 }
 
 sub svn_ps {

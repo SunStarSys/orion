@@ -176,8 +176,8 @@ sub copy_if_newer {
     die "Undefined arguments to copy($src, $dest)\n"
         unless defined $src and defined $dest;
     my $copied = 0;
-    my $compress = 0; #disable
-    $dest .= ".gz" if $compress and -T $src and $dest =~ m#/content/#;
+    my $compress = 0;
+    $dest .= ".gz" and $compress++ if -T $src and $dest =~ m#/content/# and basename($src) ne ".htaccess";
     utf8::encode $_ for my ($s, $d) = ($src, $dest);
     copy $s, $d and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
     if ($compress and $copied) {

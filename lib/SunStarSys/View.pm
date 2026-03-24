@@ -99,6 +99,11 @@ sub single_narrative :Sealed {
   my $page_path = $file;
   $page_path =~ s!\.[^/]+$!.page!;
   my $root = basename $page_path;
+
+  # only include parallel deps (from globs in the Dependencies header)
+  my $dir = $args{deps_root} // dirname($path);
+  $args{deps} = [grep {index(dirname($_->[0]), $dir)==0} @{$args{deps}}];
+
   if (-d $page_path) {
     for my $f (grep -f, glob "'$page_path/'*") {
       if ($f =~ m!/([^/]+)\.md(?:text)?\Q$args{lang}\E$!) {
@@ -129,17 +134,16 @@ sub single_narrative :Sealed {
         $args{$key} = {};
         read_text_file $f, $args{$key};
         utf8::encode $args{$key}{content};
-        $args{$key}{content} = Load $args{$key}{content};
+        $args{$key}->{key} = $key;
+        $args{$key}->{facts} = $args{facts} if exists $args{facts};
+        $args{$key}->{deps} = $args{deps} if exists $args{deps};
+        $args{$key}{content} = Load $args{preprocess} ? Template($args{$key}{content})->render($args{$key}) : $args{$key}{content};
       }
       elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b|\.ya?ml\b)[^\/]*$/) {
         push @{$args{attachments}}, "$root/" . basename $f;
       }
     }
   }
-
-  # only include parallel deps (from globs in the Dependencies header)
-  my $dir = $args{deps_root} // dirname($path);
-  $args{deps} = [grep {index(dirname($_->[0]), $dir)==0} @{$args{deps}}];
 
   if ($args{preprocess}) {
     $args{content} = sort_tables(Template($args{content})->render(\%args));
@@ -251,6 +255,53 @@ EOT
 
   $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
   my @rv = (Template($template)->render(\%args), html => \%args, @new_sources);
+  setlocale $_, $LANG{".en"} for LC_ALL;
+  return @rv;
+}
+
+sub comment :Sealed {
+  my %args = @_;
+  my $path = $args{path};
+  my $file = "content$args{path}";
+  my $template = $args{template};
+  $args{deps} //= {};
+
+  read_text_file $file, \%args unless exists $args{content} and exists $args{headers};
+  setlocale $_, $LANG{$args{lang}} for LC_ALL;
+  $template = $args{headers}{template} if exists $args{headers}{template};
+
+  my $page_path = $file;
+  $page_path =~ s!\.page/comment.*$!.md$args{lang}!;
+  my $root = basename $page_path;
+
+  s/\..*$// for $args{key} = basename $file;
+  
+  read_text_file $page_path, $args{root} = {};
+  
+  my view $view;
+ 
+  my @closed = split /\s*[;,]\s*/, $args{root}{headers}{closed} // "";
+  my @muted = split /\s*[;,]\s*/, $args{root}{headers}{muted} // "";
+  my @important = split /\s*[;,]\s*/, $args{root}{headers}{important} // "";
+
+  for my $c (@closed) {
+    ++$args{closed} and last if index($args{key}, $c) == 0;
+  }
+  for my $m (@muted) {
+    ++$args{muted} and last if index($args{key}, $m) == 0;
+  }
+  for my $i (@important) {
+    ++$args{important} and last if $args{key} eq $i;
+  }
+
+  if ($args{preprocess}) {
+    $args{content} = sort_tables(Template($args{content})->render(\%args));
+  }
+  else {
+    $args{content} = sort_tables($args{content});
+  }
+
+  my @rv = (Template($template)->render(\%args), html => \%args);
   setlocale $_, $LANG{".en"} for LC_ALL;
   return @rv;
 }
