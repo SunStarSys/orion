@@ -37,7 +37,8 @@ use SunStarSys::ASF;
 use IO::Compress::Gzip qw/gzip/;
 use Fcntl;
 use base 'sealed';
-#use sealed 'deparse';
+use sealed;
+
 sub syswrite_all;
 
 my ($revision, $target_base, $source_base, $dirq, $runners, $offline, @errors);
@@ -53,7 +54,7 @@ GetOptions ( "target-base=s", \$target_base,
 die <<USAGE unless defined $target_base and -d $source_base;
 Usage: $0 --source-base /path/to/trunk/or/a/branch --target-base /path/to/target [ --runners N ] [--offline]
 USAGE
-
+utf8::encode $dirq if defined $dirq;
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
 $runners ||= 16; # 8 is arbitrary but educated guess
 
@@ -102,7 +103,7 @@ sub main :Sealed {
   $fd2rid[fileno $runners[$_]->{socket}] = $_ for 0..$#runners;
   my @new_sources;
   my @dirqueue = $dirq // ("cgi-bin", "templates", "content");
-  my IO::Select $sockets = "IO::Select";
+  my IO::Select $sockets;
   $sockets = $sockets->new;
   $sockets->add(map $_->{socket}, @runners);
 
@@ -160,7 +161,7 @@ sub main :Sealed {
   shutdown $_, 1 for map $_->{socket}, @runners;
   syswrite_all "Waiting for kids...\n";
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
-  syswrite_all "All done.\n";
+  syswrite_all "Build done.\n";
   exit -1 if $saw_error;
   exit 0; # avoid global cleanup segfault
 }
@@ -212,7 +213,7 @@ sub process_file :Sealed {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
         if ($args->{headers}) {
-          my Data::Dumper $d = "Data::Dumper";
+          my Data::Dumper $d;
           $d = $d->new([$args->{headers}], ['$args->{headers}']);
           $d->Deepcopy(1);
           $d->Purity(1);
@@ -220,7 +221,7 @@ sub process_file :Sealed {
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
         my $start_call = [gettimeofday];
-        my ($content, $ext, undef, @new_sources) = $s->(website => $ENV{WEBSITE}, repos => $ENV{REPOS}, path => $path, lang => $lang, %$args);
+        my ($content, $ext, undef, @new_sources) = $s->(nonce => rand, website => $ENV{WEBSITE}, repos => $ENV{REPOS}, path => $path, lang => $lang, %$args);
         my $elapsed = tv_interval($start_call);
         if ($$args{compress}) {
           $lang .= ".gz";
@@ -234,12 +235,12 @@ sub process_file :Sealed {
           my $dest = "$target_base/$target_file.$ext$lang";
           my $encoding = $$args{encoding} // ($$args{compress} ? "raw" : "encoding(UTF-8)");
           my $mtime;
-          $mtime = $_->mtime for map stat $_, "content/$path";
+          #$mtime = $_->mtime for map stat $_, "content/$path";
           open my $fh, ">:$encoding", $dest
             or die "Can't open $dest: $!\n";
           print $fh $content;
           close $fh;
-          utime $mtime, $mtime, $dest if $mtime;
+          #utime $mtime, $mtime, $dest if $mtime;
         }
         syswrite_all "Built to $target_base/$target_file.$ext$lang in ${elapsed}s.\n";
         return @new_sources;
@@ -264,7 +265,7 @@ sub fork_runner :Sealed {
     }
     # in child
     close $child;
-    my IO::Select $r = "IO::Select";
+    my IO::Select $r;
     $r = $r->new;
     $r->add($parent);
 
@@ -318,7 +319,6 @@ sub syswrite_all {
       my ($x) = map {my $x = $_; utf8::encode $x if utf8::is_utf8 $x; $x} $data;
       syswrite $build_log, $x;
     }
-    no warnings 'uninitialized';
     while (($bytes = syswrite($fh, substr($data, $total))) > 0) {
       $total += $bytes;
       return $total if $total == length $data;
