@@ -17,6 +17,13 @@
 ```shell
     % ./links2dotcfg.pl '^$' index ""
 ```
+
+### TO generate the content dependency graph (SVGZ), run
+
+```shell
+    % ./deps2dotcfg.pl '^$' index ""
+```
+
 ## Buildable text content should be UTF-8
 
 ## USAGE
