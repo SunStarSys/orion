@@ -3,6 +3,8 @@
 ## Prerequisites
 
 - docker
+- 8 CPU
+- 32GB RAM
 
 ## TO BUILD THE www.iconoclasts.blog SITE to ./www
 
