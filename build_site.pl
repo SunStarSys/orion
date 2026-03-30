@@ -56,7 +56,7 @@ Usage: $0 --source-base /path/to/trunk/or/a/branch --target-base /path/to/target
 USAGE
 utf8::encode $dirq if defined $dirq;
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
-$runners ||= 16; # 8 is arbitrary but educated guess
+$runners ||= `nproc`; # 8 is arbitrary but educated guess
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET_BASE} = $target_base;
@@ -233,7 +233,7 @@ sub process_file :Sealed {
         }
         if (defined $content) {
           my $dest = "$target_base/$target_file.$ext$lang";
-          my $encoding = $$args{encoding} // ($$args{compress} ? "raw" : "encoding(UTF-8)");
+          my $encoding = $$args{encoding} // ($$args{compress} ? "raw" : "utf8");
           my $mtime;
           #$mtime = $_->mtime for map stat $_, "content/$path";
           open my $fh, ">:$encoding", $dest
