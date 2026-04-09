@@ -47,7 +47,6 @@ use constant integer => "";
 use constant coderef => "";
 use constant hashref => "";
 
-
 # ctor helper
 
 sub _create_auth (string $class, AR $r, _p_apr_pool_t $pool) {
@@ -100,10 +99,10 @@ sub new :Sealed (__PACKAGE__ $class, AR $r) {
   $r = $r->main if $r and !$r->is_initial_req;
   state $initialized :shared;
   state $p = bless APR::Pool->new, "_p_apr_pool_t";
-  eval{SVN::Core::utf_initialize($p)} if $r and !$initialized++;
+  eval{SVN::Core::utf_initialize($p)}, warn "UTF_INITITALIZED" if $r and !$initialized++;
   local $_ = $r ? $r->pool : $p;
   my _p_apr_pool_t $pool = bless $_, "_p_apr_pool_t";
-  unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool, config => {};
+  unshift @_, $r ? (auth => $class->_create_auth($r, $pool)) : (), pool => $pool, config => {};
   my SVN $client;
   $client = $client->new(@_) or die "Can't create SVN::Client: $!";
 
@@ -345,6 +344,7 @@ sub AUTOLOAD {
   if (defined(my $client_method = $_[0]->client->can($method_name))) {
     *$AUTOLOAD = sub :Sealed (__PACKAGE__ $self) {
       shift;
+      return unless @_;
       my AR $r = $self->r;
       my SVN $client = $self->client;
       my $file_idx = $method_name =~ /prop_?get/ ? 1 : $method_name =~ /prop_?set/ ? 2 : 0;
@@ -374,24 +374,14 @@ sub AUTOLOAD {
   die "$AUTOLOAD(): method not found!";
 }
 
-
-
 INIT {
-  local $@;
-  eval {__PACKAGE__->new(undef)->log_msg(undef)};
-  warn $@ if $@;
-  eval {__PACKAGE__->new(undef)->checkout(__FILE__)};
-  warn $@ if $@;
-  eval {__PACKAGE__->new(undef)->commit(__FILE__)};
-  warn $@ if $@;
-  eval {__PACKAGE__->new(undef)->cleanup(__FILE__)};
-  warn $@ if $@;
-  eval {__PACKAGE__->new(undef)->propget(__FILE__)};
-  warn $@ if $@;
-  eval {__PACKAGE__->new(undef)->propset(__FILE__)};
-  warn $@ if $@;
-  eval {__PACKAGE__->new(undef)->revert(__FILE__)};
-  warn $@ if $@;
+  __PACKAGE__->new(undef)->log_msg();
+  __PACKAGE__->new(undef)->checkout();
+  __PACKAGE__->new(undef)->commit();
+  __PACKAGE__->new(undef)->cleanup();
+  __PACKAGE__->new(undef)->propget();
+  __PACKAGE__->new(undef)->propset();
+  __PACKAGE__->new(undef)->revert();
 }
 
 1;
