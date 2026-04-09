@@ -374,22 +374,24 @@ sub AUTOLOAD {
   die "$AUTOLOAD(): method not found!";
 }
 
-if (undef) {
+
+
+INIT {
   local $@;
   eval {__PACKAGE__->new(undef)->log_msg(undef)};
+  warn $@ if $@;
   eval {__PACKAGE__->new(undef)->checkout(__FILE__)};
-  warn $@;
+  warn $@ if $@;
   eval {__PACKAGE__->new(undef)->commit(__FILE__)};
-  warn $@;
+  warn $@ if $@;
   eval {__PACKAGE__->new(undef)->cleanup(__FILE__)};
-  warn $@;
+  warn $@ if $@;
   eval {__PACKAGE__->new(undef)->propget(__FILE__)};
-  warn $@;
+  warn $@ if $@;
   eval {__PACKAGE__->new(undef)->propset(__FILE__)};
-  warn $@;
+  warn $@ if $@;
   eval {__PACKAGE__->new(undef)->revert(__FILE__)};
-  warn $@;
-  undef $@;
+  warn $@ if $@;
 }
 
 1;
