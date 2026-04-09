@@ -187,7 +187,7 @@ sub single_narrative :Sealed {
     unless (-f $f) {
       mkpath $archive_dir;
       unlink glob("$archive_dir/../../*/*/$filename.$ext");
-      open my $fh, ">:encoding(UTF-8)", $f
+      open my $fh, ">:utf8", $f
         or die "Can't archive $path to $f: $!\n";
       print $fh <<EOT;
 $archive_headers
@@ -197,7 +197,7 @@ EOT
       push @new_sources, $f;
     }
     for my $f (grep {utf8::encode($_), not -f} "$archive_dir/index.html$lang", dirname($archive_dir)."/index.html$lang") {
-      open my $fh, ">:encoding(UTF-8)", $f
+      open my $fh, ">:utf8", $f
         or die "Can't open archive to $f: $!\n";
       my $type = $f eq "$archive_dir/index.html$lang" ? "year" : "month";
       print $fh <<EOT;
@@ -217,7 +217,7 @@ EOT
     push @$categories, grep !$seen{$_}++, map ucfirst, map ref $_ ? @$_ : sort(/(\b[\w\s-]+\b)/g),
       map $_->[1]->{headers}->{categories} || (), grep $_->[1]->{headers}, @{$args{deps}};
   }
-  elsif (exists $args{category_root} and exists $args{headers} and defined $categories) {
+  elsif (exists $args{category_root} and exists $args{headers} and ref $categories) {
 
     my $category_root = "content$args{category_root}";
 
@@ -228,7 +228,7 @@ EOT
         local $_ = "$category_root/$cat";
         utf8::encode $_;
         mkpath $_;
-        open my $fh, ">:encoding(UTF-8)", $f
+        open my $fh, ">:utf8", $f
           or die "Can't categorize $path to $f: $!\n";
         print $fh <<EOT;
 $headers
@@ -240,7 +240,7 @@ EOT
       }
 
       for my $f (grep {utf8::encode($_); not -f} "$category_root/$cat/index.html$lang") {
-        open my $fh, ">:encoding(UTF-8)", $f
+        open my $fh, ">:utf8", $f
           or die "Can't categorize $f: $!\n";
         print $fh <<EOT;
 {% include "category.html" %}
@@ -250,8 +250,8 @@ EOT
     }
   }
 
-  $args{headers}{categories} = $categories if defined $categories;
-  $args{headers}{keywords}   = $keywords   if defined $keywords;
+  $args{headers}{categories} = join ",", @$categories if ref $categories;
+  $args{headers}{keywords}   = join ",", @$keywords   if ref $keywords;
 
   $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
   my @rv = (Template($template)->render(\%args), html => \%args, @new_sources);
@@ -275,11 +275,11 @@ sub comment :Sealed {
   my $root = basename $page_path;
 
   s/\..*$// for $args{key} = basename $file;
-  
+
   read_text_file $page_path, $args{root} = {};
-  
+
   my view $view;
- 
+
   my @closed = split /\s*[;,]\s*/, $args{root}{headers}{closed} // "";
   my @muted = split /\s*[;,]\s*/, $args{root}{headers}{muted} // "";
   my @important = split /\s*[;,]\s*/, $args{root}{headers}{important} // "";
@@ -320,14 +320,14 @@ sub asymptote {
     my $cached = 0;
     -d $attachments_dir or do { local $_ = $attachments_dir; utf8::encode $_; mkpath $_ };
     my $file = "$attachments_dir/$prefix";
-    if (-f "$file.asy$lang" and open my $fh, "<:encoding(UTF-8)", "$file.asy$lang") {
+    if (-f "$file.asy$lang" and open my $fh, "<:utf8", "$file.asy$lang") {
       read $fh, my $content, -s $fh;
       if ($content eq $body) {
         ++$cached;
       }
     }
     unless ($cached) {
-      open my $fh, ">:encoding(UTF-8)", "$file.asy$lang" or die "Can't open '$file.asy$lang' for writing: $!";
+      open my $fh, ">:utf8", "$file.asy$lang" or die "Can't open '$file.asy$lang' for writing: $!";
       print $fh $body;
       close $fh;
       #push @sources, "$file.asy$lang";
@@ -625,7 +625,7 @@ sub latexmk {
   my $generator = $args{generator} // 'xelatex --no-shell-escape %O %S';
   my $bib_mtime = max 0, map {(-f $_) ? File::stat::populate(CORE::stat(_))->mtime : ()} $args{content} =~ /^\\addbibresource\{(.*?)\}/mg;
 
-  if (-f $cache_file and open my $fh, "<:encoding(UTF-8)", $cache_file) {
+  if (-f $cache_file and open my $fh, "<:utf8", $cache_file) {
     read $fh, my $content, -s $fh;
     if ($content eq $args{content} and $args{mtime} >= $bib_mtime) {
       ++$cached;
@@ -649,7 +649,7 @@ sub latexmk {
 
   move "$base.$ext.$args{format}", "$ENV{TARGET_BASE}/$dir$base.$args{format}$lang";
   unlink </tmp/$base.$ext*>, <*.{out,tex,pre,aux,ps,pdf,prc,log}>;
-  open my $fh, ">:encoding(UTF-8)", $cache_file or die "Can't write to '$cache_file': $!";
+  open my $fh, ">:utf8", $cache_file or die "Can't write to '$cache_file': $!";
   print $fh $args{content};
   close $fh;
   return undef, $args{format} => \%args;

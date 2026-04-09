@@ -64,7 +64,7 @@ sub read_text_file {
   }
 
   $file =~ /^(.*)$/, $file = $1, utf8::encode $file unless ref $file;
-  my $encoding = ref $file ? "raw" : "encoding(UTF-8)";
+  my $encoding = ref $file ? "raw" : "utf8";
   open my $fh, "<:$encoding", $file or die "Can't open file $file: $!\n";
 
   my $headers = 1;

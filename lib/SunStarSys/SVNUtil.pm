@@ -2,11 +2,12 @@ package SunStarSys::SVNUtil;
 
 # assumes svn 1.7+, but will mostly work with prior versions
 
-use SVN::Client;
+use APR;
+use APR::Pool;
 use SVN::Wc;
 use SVN::Delta;
 use SVN::Core;
-use APR::Pool;
+use SVN::Client;
 use strict;
 use warnings;
 use base 'Exporter';
@@ -14,7 +15,7 @@ use SunStarSys::Util qw/normalize_svn_path/;
 our @EXPORT = qw/svn_up svn_status svn_add svn_rm svn_ps is_version_controlled *USERNAME *PASSWORD/;
 our $VERSION = "1.0";
 our ($USERNAME, $PASSWORD) = @ENV{qw/SVN_USERNAME SVN_PASSWORD/};
-
+our $pool = bless APR::Pool->new, "_p_apr_pool_t";
 sub auth {
     my $authcb = sub {
         my $cred = shift;
@@ -23,12 +24,12 @@ sub auth {
         $cred->may_save(0);
     };
     return [
-        SVN::Client::get_ssl_server_trust_file_provider(),
-        SVN::Client::get_simple_prompt_provider($authcb, 1),
+        SVN::Client::get_ssl_server_trust_file_provider($pool),
+        SVN::Client::get_simple_prompt_provider($authcb, 1, $pool),
         ];
 }
 
-sub new { return SVN::Client->new( auth => auth ) }
+sub new { return SVN::Client->new( auth => auth, pool => $pool ) }
 
 sub svn_up {
     my $ctx = shift->new;
