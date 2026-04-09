@@ -1,19 +1,20 @@
 package SunStarSys::SVN::Client;
-
+use v5.38;
 # ithread-safe SVN::Client (delegation model)
-use warnings;
-use strict;
 use APR::Pool;
 use Apache2::RequestRec;
+use Apache2::ServerUtil;
 use SVN::Core;
 use SVN::Client;
 use SVN::Delta;
+use SVN::Repos;
+use SVN::Fs;
 use SunStarSys::Util qw/normalize_svn_path get_lock/;
 use File::Basename qw/dirname basename/;
 use Fcntl qw/SEEK_SET/;
 use base "sealed"; # ANON
-use sealed "all";  # named
-
+use sealed;
+use threads::shared;
 #__PACKAGE__ declarations for sealed method lookups
 sub _create_auth;
 sub new;
@@ -49,12 +50,11 @@ use constant hashref => "";
 
 # ctor helper
 
-sub _create_auth  (string $class, AR $r, _p_apr_pool_t $pool) {
-  $r = $r->main unless $r->is_initial_req;
+sub _create_auth (string $class, AR $r, _p_apr_pool_t $pool) {
   my $authcb = sub :Sealed {
-    my $cred = shift;
-    $cred->username($r->pnotes("svnuser"));
-    $cred->password($r->pnotes("svnpassword"));
+    my _p_svn_auth_cred_simple_t $cred = shift;
+    $cred->username($r->pnotes("svnuser"), $pool);
+    $cred->password($r->pnotes("svnpassword"), $pool);
     $cred->may_save(0);
   };
 
@@ -67,7 +67,7 @@ sub _create_auth  (string $class, AR $r, _p_apr_pool_t $pool) {
 # monkey patching
 no warnings 'redefine';
 
-sub _log_msg  (SVN $self, coderef $rv = undef) {
+sub _log_msg (SVN $self, coderef $rv = undef) {
   if (defined $rv) {
     $self->{'log_msg_callback'} = [\$rv, $self->{'ctx'}->log_msg_baton3($rv)];
   }
@@ -95,11 +95,16 @@ sub _notify  (SVN $self, coderef $rv = undef) {
 
 # ctor
 
-sub new  (__PACKAGE__ $class, AR $r) {
-  my SVN $client;
-  local $_ = $r ? $r->pool : $SVN::Core::gpool;
-  my _p_apr_pool_t $pool = $r ? bless $_, "_p_apr_pool_t" : $_;
+sub new :Sealed (__PACKAGE__ $class, AR $r) {
+  shift, shift;
+  $r = $r->main if $r and !$r->is_initial_req;
+  state $initialized :shared;
+  state $p = bless APR::Pool->new, "_p_apr_pool_t";
+  eval{SVN::Core::utf_initialize($p)} if $r and !$initialized++;
+  local $_ = $r ? $r->pool : $p;
+  my _p_apr_pool_t $pool = bless $_, "_p_apr_pool_t";
   unshift @_, auth => $class->_create_auth($r, $pool), pool => $pool, config => {};
+  my SVN $client;
   $client = $client->new(@_) or die "Can't create SVN::Client: $!";
 
   return bless {
@@ -111,13 +116,13 @@ sub new  (__PACKAGE__ $class, AR $r) {
 
 # methods
 
-sub add  (__PACKAGE__ $self, string $filename, boolean $recursive) {
+sub add :Sealed (__PACKAGE__ $self, string $filename, boolean $recursive) {
   my SVN $svn = $self->client;
   normalize_svn_path $filename;
   $svn->add4($filename, $recursive ? $SVN::depth::infinity : $SVN::depth::empty, 0, 0, 1);
 }
 
-sub merge  (__PACKAGE__ $self, string $filename, string $target_path, integer $target_revision, boolean $dry_run) {
+sub merge :Sealed (__PACKAGE__ $self, string $filename, string $target_path, integer $target_revision, boolean $dry_run) {
   ($filename, $target_path) = map dirname($_), $filename, $target_path if $filename !~ m#/$#;
 
   normalize_svn_path $filename, $target_path;
@@ -181,11 +186,12 @@ sub merge  (__PACKAGE__ $self, string $filename, string $target_path, integer $t
   $rv .= "R   $_\n" for @restore;
   $rv .= "D   $_\n" for @delete;
 
+  utf8::decode $rv unless utf8::is_utf8 $rv;
   return $rv;
 
 }
 
-sub update  (__PACKAGE__ $self, string $filename, integer $depth) {
+sub update :Sealed (__PACKAGE__ $self, string $filename, integer $depth) {
   normalize_svn_path $filename;
   my $dir = dirname $filename;
   my AR $r = $self->r;
@@ -216,29 +222,36 @@ sub update  (__PACKAGE__ $self, string $filename, integer $depth) {
   $rv .= "R   $_\n" for @restore;
   $rv .= "D   $_\n" for @delete;
 
+  utf8::decode $rv unless utf8::is_utf8 $rv;
   return $rv;
 }
 
-sub copy  (__PACKAGE__ $self, string $source, string $target) {
+sub copy :Sealed (__PACKAGE__ $self, string $source, string $target) {
   normalize_svn_path $_ for $source, $target;
   my SVN $client = $self->client;
-  $client->copy($source, 'WORKING', $target);
+  my $rv = $client->copy($source, 'WORKING', $target);
+  utf8::decode $rv unless ref $rv or utf8::is_utf8 $rv;
+  return $rv;
 }
 
-sub move  (__PACKAGE__ $self, string $source, string $target) {
+sub move :Sealed (__PACKAGE__ $self, string $source, string $target) {
   shift, shift, shift;
   my ($force) = (@_, 1);
   normalize_svn_path $_ for $source, $target;
   my SVN $client = $self->client;
-  $client->move($source, undef, $target, $force);
+  my $rv = $client->move($source, undef, $target, $force);
+  utf8::decode $rv unless ref $rv or utf8::is_utf8 $rv;
+  return $rv;
 }
 
-sub delete  (__PACKAGE__ $self, string $filename) {
+sub delete :Sealed (__PACKAGE__ $self, string $filename) {
   shift, shift;
   my ($force) = (@_, 1);
   normalize_svn_path $filename;
   my SVN $client = $self->client;
-  $client->delete($filename, $force);
+  my $rv = $client->delete($filename, $force);
+  utf8::decode $rv unless ref $rv or utf8::is_utf8 $rv;
+  return $rv;
 }
 
 my @status;
@@ -246,9 +259,8 @@ eval '$status[$SVN::Wc::Status::' . "$_]=qq/\u$_/"
     for qw/modified conflicted added deleted unversioned
            normal ignored missing replaced obstructed/;
 
-sub status  (__PACKAGE__ $self, string $filename) {
+sub status :Sealed (__PACKAGE__ $self, string $filename) {
   shift, shift;
-  my AR $r = $self->r;
   my SVN $client = $self->client;
   my ($depth) = (@_, wantarray ? $SVN::Depth::immediates :$SVN::Depth::empty);
   my $prefix = $filename;
@@ -260,18 +272,17 @@ sub status  (__PACKAGE__ $self, string $filename) {
     my _p_svn_wc_status2_t $status = shift or return 0;
     $path =~ s!^\Q$prefix\E!!
       or $path = "./";
+    utf8::decode $path unless utf8::is_utf8 $path;
     push @rv, [$path => $status[$_]] for $status->text_status;
     return 0;
   };
-  my _p_apr_pool_t $pool = $self->pool;
 
   $client->status4($filename, $SVN::Delta::INVALID_REVISION, $callback, $depth, (0) x 4, undef);
   return map @$_, @rv if wantarray;
   return $rv[0]->[1];
 }
 
-sub info  (__PACKAGE__ $self, string $filename, coderef $callback, $remote_revision = undef) {
-  my AR $r = $self->r;
+sub info :Sealed (__PACKAGE__ $self, string $filename, coderef $callback, $remote_revision = undef) {
   my SVN $client = $self->client;
   normalize_svn_path $filename;
   $client->info($filename, undef, $remote_revision, $callback, 0);
@@ -285,10 +296,9 @@ sub mkdir  (__PACKAGE__ $self, $url) {
   $client->mkdir3($1, $make_parents, undef);
 }
 
-sub diff  (__PACKAGE__ $self, string $filename, boolean $recursive, integer $revision) {
+sub diff :Sealed (__PACKAGE__ $self, string $filename, boolean $recursive, integer $revision) {
   my SVN $client = $self->client;
   my $base_revision = $revision ? $revision - 1 : "BASE";
-  my AR $r = $self->r;
   normalize_svn_path $filename;
   open my $dfh, "+>", undef or die "DFH open failed: $!";
   open my $efh, "+>", undef or die "EFH open failed: $!";
@@ -303,11 +313,11 @@ sub diff  (__PACKAGE__ $self, string $filename, boolean $recursive, integer $rev
   warn $@ if $@;
   seek $_, 0, SEEK_SET for $dfh, $efh;
   my $rv = join "", <$efh>, <$dfh>;
-  utf8::decode($rv);
+  utf8::decode $rv unless utf8::is_utf8 $rv;
   return $rv;
 }
 
-sub log  (__PACKAGE__ $self, string $filename, integer $prevision//="HEAD", integer $frevision//=1, integer $limit) {
+sub log :Sealed (__PACKAGE__ $self, string $filename, integer $prevision//="HEAD", integer $frevision//=1, integer $limit) {
   my SVN $svn = $self->client;
   $limit //= 1 if defined $prevision and $prevision ne "HEAD";
   $self->info($filename, sub {$filename = $_[1]->URL});
@@ -321,7 +331,7 @@ sub log  (__PACKAGE__ $self, string $filename, integer $prevision//="HEAD", inte
       my _p_svn_log_entry_t $log_entry = shift;
       my %cp2;
       @cp2{keys %{$log_entry->changed_paths2}} = map +{action => $_->action, text_modified => $_->text_modified, props_modified => $_->props_modified}, values %{$log_entry->changed_paths2};
-      push @rv, [$log_entry->revision, \%cp2, grep utf8::decode($_), @{$log_entry->revprops}{@props}];
+      push @rv, [$log_entry->revision, \%cp2, grep {defined and utf8::decode($_); 1} @{$log_entry->revprops}{@props}];
     })};
   return \@rv;
 }
@@ -351,22 +361,35 @@ sub AUTOLOAD {
         else {
           normalize_svn_path $filename;
         }
-        splice @_, $file_idx, 1, $filename;
+        splice @_, $file_idx, 1, $filename if @_ > 1;
       }
       my ($repos, $user, $lock) = $filename =~ m{^/x1/cms/wc(?:build)?/([^/]+)/([^-/]+)};
       $lock = get_lock("/x1/cms/locks/$repos-wc-$user") if defined $repos and defined $user;
-      $client_method->($client, @_); # SVN::Client::$client_method will push ctx and pool args.
+      my $rv = $client_method->($client, @_); # SVN::Client::$client_method will push ctx and pool args.
+      ref or (defined and utf8::decode $_) for ref($rv) eq "HASH" ? %$rv : ref($rv) eq "ARRAY" ? @$rv : $rv;
+      return $rv;
     };
     goto &{*{$AUTOLOAD}{CODE}};
   }
   die "$AUTOLOAD(): method not found!";
 }
 
-eval {__PACKAGE__->new->log_msg(sub {})};
-eval {__PACKAGE__->new->propget};
-eval {__PACKAGE__->new->checkout};
-eval {__PACKAGE__->new->checkout};
-eval {__PACKAGE__->new->commit};
-eval {__PACKAGE__->new->cleanup(__FILE__)};
-eval {__PACKAGE__->new->propget(__FILE__)};
+if (undef) {
+  local $@;
+  eval {__PACKAGE__->new(undef)->log_msg(undef)};
+  eval {__PACKAGE__->new(undef)->checkout(__FILE__)};
+  warn $@;
+  eval {__PACKAGE__->new(undef)->commit(__FILE__)};
+  warn $@;
+  eval {__PACKAGE__->new(undef)->cleanup(__FILE__)};
+  warn $@;
+  eval {__PACKAGE__->new(undef)->propget(__FILE__)};
+  warn $@;
+  eval {__PACKAGE__->new(undef)->propset(__FILE__)};
+  warn $@;
+  eval {__PACKAGE__->new(undef)->revert(__FILE__)};
+  warn $@;
+  undef $@;
+}
+
 1;
