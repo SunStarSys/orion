@@ -62,8 +62,8 @@ chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET_BASE} = $target_base;
 
 my ($repos, $website) = $source_base =~ m!/([^/]+)/([^/]+)/(?:trunk|branches)\b!;
-$ENV{REPOS} = $repos;
-$ENV{WEBSITE} = $website;
+$ENV{REPOS} //= $repos;
+$ENV{WEBSITE} //= $website;
 
 open my $build_log, ">>:raw", "$target_base/.build-log/$revision.log" or die "Can't open .build-log/$revision.log: $!";
 

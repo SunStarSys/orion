@@ -21,8 +21,6 @@ fi
 
 if [ -n "$LAUNCH_APACHE2" ]; then
   APACHE_PID_FILE=/tmp/httpd.pid APACHE_RUN_DIR=/etc/apache2 APACHE_LOG_DIR=/tmp APACHE_RUN_USER=ubuntu APACHE_RUN_GROUP=ubuntu /usr/sbin/apache2 -k start
-  grep AddType /etc/apache2/mods-enabled/mime.conf
-  grep AddEncoding /etc/apache2/mods-enabled/mime.conf
   timeout 300 tail -f /tmp/error.log
   exit 0
 fi
@@ -30,14 +28,15 @@ fi
 if [[ -d trunk/content ]]; then
   svn cleanup trunk || :
   svn up trunk || :
-  sleep 3
 else
   git clone "$GIT_URL" trunk
-  sleep 3
 fi
+
+export WEBSITE="${GIT_URL##*/}" REPOS=public
+
 (
   trap time EXIT
-  WEBSITE=www REPOS=www node markdownd.js
+  node markdownd.js
 ) &
 
 mkdir -p www/.build-log

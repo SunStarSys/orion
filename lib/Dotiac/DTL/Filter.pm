@@ -1443,7 +1443,7 @@ sub vcs_time {
 sub vcs_revision {
   my $value = shift;
   my $content = $value->repr;
-  $content =~ /\$Revision:\s+(\d+)\s+\$/ or return $value;
+  $content =~ /\$Revision:\s+(\d+)\s+\$/ or return $value->set("");
   return $value->set($1);
 }
 
@@ -1480,7 +1480,7 @@ sub vcs_author {
     $rv .= qq(<img src="data:$data"> $name</a>);
     return Dotiac::DTL::Value->safe($rv);
   }
-  return $value->set(undef);
+  return $value->set("");
 }
 
 sub strip_prefix {
