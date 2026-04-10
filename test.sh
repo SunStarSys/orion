@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 # USAGE: $0 [ooo]
-: "${SVN_URL:=https://vcs.sunstarsys.com/repos/svn/public/cms-sites/www.iconoclasts.blog}"
+: "${GIT_URL:=https://github.com/SunStarSys/www.iconoclasts.blog}"
 mkdir -p ~/.subversion
 set -e
 set -x
@@ -16,20 +16,30 @@ for d in trunk www; do
   fi
 done
 if [[ "${NO_DOCKER:-}" != 1 ]] && command -v docker >/dev/null 2>&1; then
-  exec docker run -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion -e SVN_URL="$SVN_URL" -e LANG="$LANG" --entrypoint= schaefj/linter zsh -c ". ~/.asdf/asdf.sh && zsh test.sh"
+  exec docker run ${LAUNCH_APACHE2+-p 8000:80} -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion -v $(pwd)/sites-enabled:/etc/apache2/sites-enabled -e GIT_URL="$GIT_URL" -e LANG="$LANG" -e LAUNCH_APACHE2="$LAUNCH_APACHE2" --entrypoint= schaefj/linter zsh -c "zsh test.sh"
 fi
-(
-  trap time EXIT
-  WEBSITE=www REPOS=www node markdownd.js
-) &
+
+if [ -n "$LAUNCH_APACHE2" ]; then
+  APACHE_PID_FILE=/tmp/httpd.pid APACHE_RUN_DIR=/etc/apache2 APACHE_LOG_DIR=/tmp APACHE_RUN_USER=ubuntu APACHE_RUN_GROUP=ubuntu /usr/sbin/apache2 -k start
+  grep AddType /etc/apache2/mods-enabled/mime.conf
+  grep AddEncoding /etc/apache2/mods-enabled/mime.conf
+  timeout 300 tail -f /tmp/error.log
+  exit 0
+fi
+
 if [[ -d trunk/content ]]; then
   svn cleanup trunk || :
   svn up trunk || :
   sleep 3
 else
-  svn co "$SVN_URL"/trunk
+  git clone "$GIT_URL" trunk
   sleep 3
 fi
+(
+  trap time EXIT
+  WEBSITE=www REPOS=www node markdownd.js
+) &
+
 mkdir -p www/.build-log
 time timeout 300 perl build_site.pl --source-base=trunk --target-base=www --revision=0
 rv=$?

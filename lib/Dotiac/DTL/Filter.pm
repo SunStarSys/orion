@@ -1422,7 +1422,7 @@ sub vcs_date {
   my $content = $value->repr;
   my $lang = @_ ? shift->repr : ".en";
   $content =~ /\$Date: ([\d: +-]+) \(/
-    or return $value;
+    or return $value->set("");
   my @args = split /\D/, $1;
   $args[0] -= 1900;
   $args[1] -= 1;

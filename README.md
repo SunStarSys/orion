@@ -12,6 +12,12 @@
    % ./test.sh
 ```
 
+## TO REVIEW THE BUILT ./www SITE UNDER APACHE2 on localhost:8000
+
+```shell
+  % LAUNCH_APACHE2=1 ./test.sh
+```
+
 ### TO generate the link topology graph (SVGZ), run
 
 ```shell
@@ -32,6 +38,7 @@
 % ./test.sh
 % ./test.sh ooo
 % ./test.sh
+% LAUNCH_APACHE2=1 ./test.sh
 ```
 
 ### (IoC) Build API
