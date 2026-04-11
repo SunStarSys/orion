@@ -3543,7 +3543,7 @@
             sequenceDiagram      : false,          // sequenceDiagram.js only support IE9+
         };
 
-        var settings        = $.extend(true, defaults, options || {});
+        var settings        = $.extend(defaults, options || {});
         //var marked          = editormd.$marked;
         var markedRenderer  = new marked.Renderer();
         markdownToC         = markdownToC || [];
@@ -3754,25 +3754,22 @@
             }
 
             text = trim(text);
-            var escapedText = text.toLowerCase().replace(/[^\w]+/g, "-");
-            var isChinese = /^[\u4e00-\u9fa5]+$/.test(text);
-            var id        = (isChinese) ? escape(text).replace(/\%/g, "") : text.toLowerCase().replace(/[^\w]+/g, "-");
 
-            text = text.replace(/\$\$(.*?)\$\$/g, ($full, $1) => {return "<span class=\"" + editormd.classNames.tex +"\">"+$1+"</span>"});
-            linkText = linkText.replace(/\$\$(.*?)\$\$/g, ($full, $1) => {return "<span class=\"" + editormd.classNames.tex +"\">"+$1+"</span>"});
-
+            var escapedText    = text.toLowerCase().replace(/[^\w]+/g, "-");
             var toc = {
                 text  : text,
                 level : level,
                 slug  : escapedText
             };
 
+            var isChinese = /^[\u4e00-\u9fa5]+$/.test(text);
+            var id        = (isChinese) ? escape(text).replace(/\%/g, "") : text.toLowerCase().replace(/[^\w]+/g, "-");
 
             markdownToC.push(toc);
 
             var headingHTML = "<h" + level + " id=\"h"+ level + "-" + this.options.headerPrefix + id +"\">";
 
-            headingHTML    += "<a name=\"" + escapedText + "\" class=\"reference-link\"></a>";
+            headingHTML    += "<a name=\"" + text + "\" class=\"reference-link\"></a>";
             headingHTML    += "<span class=\"header-link octicon octicon-link\"></span>";
             headingHTML    += (hasLinkReg) ? this.atLink(this.emoji(linkText)) : this.atLink(this.emoji(text));
             headingHTML    += "</h" + level + ">";
@@ -3850,14 +3847,10 @@
         };
 
         markedRenderer.listitem = function(text) {
-            text = text.replace(/\$\$(.*?)\$\$/g, ($full, $1) => {
-                        return "<span class=\"" + editormd.classNames.tex + "\">" + $1 + "</span>";
-                    });
             if (settings.taskList && /^\s*\[[x\s]\]\s*/.test(text))
             {
                 text = text.replace(/^\s*\[\s\]\s*/, "<input type=\"checkbox\" class=\"task-list-item-checkbox\" /> ")
-                    .replace(/^\s*\[x\]\s*/,  "<input type=\"checkbox\" class=\"task-list-item-checkbox\" checked disabled /> ")
-                ;
+                           .replace(/^\s*\[x\]\s*/,  "<input type=\"checkbox\" class=\"task-list-item-checkbox\" checked disabled /> ");
 
                 return "<li style=\"list-style: none;\">" + this.atLink(this.emoji(text)) + "</li>";
             }
@@ -3893,7 +3886,6 @@
         {
             var text  = toc[i].text;
             var level = toc[i].level;
-            var slug  = toc[i].slug;
 
             if (level < startLevel) {
                 continue;
@@ -3912,7 +3904,7 @@
                 html += "</ul></li>";
             }
 
-            html += "<li><a class=\"toc-level-" + level + "\" href=\"#" + slug + "\" level=\"" + level + "\">" + text + "</a><ul>";
+            html += "<li><a class=\"toc-level-" + level + "\" href=\"#" + text + "\" level=\"" + level + "\">" + text + "</a><ul>";
             lastLevel = level;
         }
 
@@ -4101,7 +4093,7 @@
         var defaults = {
             gfm                  : true,
             toc                  : true,
-            tocm                 : true,
+            tocm                 : false,
             tocStartLevel        : 1,
             tocTitle             : "目录",
             tocDropdown          : false,
@@ -4109,13 +4101,13 @@
             markdown             : "",
             markdownSourceCode   : false,
             htmlDecode           : false,
-            autoLoadKaTeX        : false,
+            autoLoadKaTeX        : true,
             pageBreak            : true,
             atLink               : true,    // for @link
             emailLink            : true,    // for mail address auto link
-            tex                  : true,
-            taskList             : true,   // Github Flavored Markdown task lists
-            emoji                : true,
+            tex                  : false,
+            taskList             : false,   // Github Flavored Markdown task lists
+            emoji                : false,
             flowChart            : false,
             sequenceDiagram      : false,
             previewCodeHighlight : true
@@ -4211,7 +4203,7 @@
             if (settings.mermaid && editormd.$mermaid) {
                 var idx = 0;
                 for (const e of previewContainer.find(".mermaid").toArray()) {
-                    mermaid.render("mermaid-" + ++idx, $(e).text(), function(graph) {
+                    editormd.$mermaid.render("mermaid-" + ++idx, $(e).text(), function(graph) {
                         e.outerHTML = graph;
                     });
                 }
@@ -4245,7 +4237,6 @@
             }
             else
             {
-                editormd.$katex = katex;
                 katexHandle();
             }
         }
