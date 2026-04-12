@@ -2,6 +2,7 @@ package SunStarSys::SVN::Client;
 use v5.38;
 # ithread-safe SVN::Client (delegation model)
 use APR::Pool;
+use APR::OS;
 use Apache2::RequestRec;
 use Apache2::ServerUtil;
 use SVN::Core;
@@ -14,6 +15,7 @@ use File::Basename qw/dirname basename/;
 use Fcntl qw/SEEK_SET/;
 use base "sealed"; # ANON
 use sealed;
+use threads;
 use threads::shared;
 #__PACKAGE__ declarations for sealed method lookups
 sub _create_auth;
@@ -96,14 +98,17 @@ sub _notify  (SVN $self, coderef $rv = undef) {
 
 sub new :Sealed (__PACKAGE__ $class, AR $r) {
   shift, shift;
-  $r = $r->main if $r and !$r->is_initial_req;
-  state $initialized :shared;
+  my SVN $client;
+  return bless {
+    client => $client,
+  }, $class unless $r;
+
+  our $initialized :shared;
   state $p = bless APR::Pool->new, "_p_apr_pool_t";
-  eval{SVN::Core::utf_initialize($p)}, warn "UTF_INITITALIZED" if $r and !$initialized++;
+  eval{SVN::Core::utf_initialize($p)}, warn "UTF_INITITALIZED:$$:" . APR::OS::current_thread_id() if $r and !$initialized++;
   local $_ = $r ? $r->pool : $p;
   my _p_apr_pool_t $pool = bless $_, "_p_apr_pool_t";
   unshift @_, $r ? (auth => $class->_create_auth($r, $pool)) : (), pool => $pool, config => {};
-  my SVN $client;
   $client = $client->new(@_) or die "Can't create SVN::Client: $!";
 
   return bless {
@@ -374,7 +379,7 @@ sub AUTOLOAD {
   die "$AUTOLOAD(): method not found!";
 }
 
-INIT {
+eval {
   __PACKAGE__->new(undef)->log_msg();
   __PACKAGE__->new(undef)->checkout();
   __PACKAGE__->new(undef)->commit();
@@ -382,6 +387,6 @@ INIT {
   __PACKAGE__->new(undef)->propget();
   __PACKAGE__->new(undef)->propset();
   __PACKAGE__->new(undef)->revert();
-}
+};
 
 1;

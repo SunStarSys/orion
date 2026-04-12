@@ -19,6 +19,28 @@ our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fi
 
 our $VERSION = "3.2";
 
+sub parse_filename;
+sub read_text_file;
+
+my %actions;
+my @actions = qw/edit update revert copy move delete add commit diff mail merge production promote resolve rollback search static account comment watch unwatch like unlike markmap archived verified/;
+
+for my $yml_file (map /^(.*)$/, </x1/cms/build/fields.yml.*>) {
+  my (undef, undef, $ext) = parse_filename $yml_file;
+  s/^[^.]*\.// for my $lang = $ext;
+  read_text_file $yml_file, \ my %args;
+  my $yml = Load map {utf8::encode($_); $_} $args{content};
+  $actions{$lang} =[map {utf8::decode($_); $_} @$yml{@actions}];
+}
+
+my %action_en;
+
+for (keys %actions) {
+    for my $idx (0.. $#{$actions{en}}) {
+	$action_en{$actions{$_}[$idx]} = $actions{en}[$idx];
+    }
+}
+
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
 
@@ -421,7 +443,7 @@ sub archived {
   my ($path) = (@_, $_);
   my $file = "content$path";
   read_text_file $file, \ my %data;
-  return +($data{headers}{status} // "") eq "archived";
+  return +($action_en{lc($data{headers}{status})} // "") eq "archived";
 }
 
 # invoke this inside a walk_content_tree {} block:

@@ -1,0 +1,35 @@
+---
+archived: ~
+categories: ~
+keywords: ~
+published: ~
+status: ~
+title: Actions en anglais
+---
+
+edit: modifier
+update: mise à jour
+revert: rétablir
+copy: copier
+move: déplacer
+delete: supprimer
+add: ajouter
+commit: valider
+diff: diff
+mail: courrier
+merge: fusion
+production: production
+promote: promouvoir
+resolve: résoudre
+rollback: annulation
+search: recherche
+static: statique
+account: compte
+comment: commentaire
+watch: souscrire
+unwatch: déconnexion
+like: comme
+unlike: différent
+markmap: marque
+archived: archivé
+verified: vérifié

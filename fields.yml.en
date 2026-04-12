@@ -1,0 +1,29 @@
+---
+title: English Actions
+---
+edit: edit
+update: update
+revert: revert
+copy: copy
+move: move
+delete: delete
+add: add
+commit: commit
+diff: diff
+mail: mail
+merge: merge
+production: production
+promote: promote
+resolve: resolve
+rollback: rollback
+search: search
+static: static
+account: account
+comment: comment
+watch: subscribe
+unwatch: unsubcribe
+like: like
+unlike: unlike
+markmap: markmap
+archived: archived
+verified: verified
