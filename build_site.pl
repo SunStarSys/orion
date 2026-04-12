@@ -43,7 +43,7 @@ use sealed;
 sub syswrite_all;
 
 my ($revision, $target_base, $source_base, $dirq, $runners, $offline);
-my @errors :shared;
+my @errors;
 
 GetOptions ( "target-base=s", \$target_base,
              "source-base=s", \$source_base,
