@@ -190,7 +190,7 @@ sub process_dir {
             state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, [$_, $@] if $@;};
             mkpath "$target_base/$root" unless $made_target_dir++;
             map $_->join, @threads unless exists $cache{$dir};
-            push(@threads, threads->create($s, $_)), next unless ++$cache{$dir} < 5;
+            push(@threads, threads->create($s, $_)), next unless ++$cache{$dir} < $runners;
             $s->();
         }
         else {
