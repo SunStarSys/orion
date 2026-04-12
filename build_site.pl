@@ -193,7 +193,7 @@ sub process_dir {
             my $n = fileno $wtr;
             state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, "$_:$@" if $@};
             mkpath "$target_base/$root" unless $made_target_dir++;
-            $thread_queue->enqueue($_), warn "THREAD:$cache{$dir}:$_\n" and next if ++$cache{$dir} % $runners > $runners / 2;
+            $thread_queue->enqueue($_), next if ++$cache{$dir} % $runners >= $runners / 2;
             $s->();
         }
         else {
@@ -326,7 +326,7 @@ sub fork_runner :Sealed {
     if ($] == 5.038002 and $^O eq "linux") {
       # threads::join is fubar somehow for perl v5.38.2 on linux,
       # so we just wait for dust to settle...
-        sleep 3;
+        sleep 1;
     }
     else {
         $_->join for @threads;
