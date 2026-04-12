@@ -43,7 +43,7 @@ use sealed;
 sub syswrite_all;
 
 my ($revision, $target_base, $source_base, $dirq, $runners, $offline);
-my @errors;
+my @errors :shared;
 
 GetOptions ( "target-base=s", \$target_base,
              "source-base=s", \$source_base,
@@ -193,7 +193,7 @@ sub process_dir {
             my $n = fileno $wtr;
             state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, [$_, $@] and warn $@ if $@};
             mkpath "$target_base/$root" unless $made_target_dir++;
-            $thread_queue->enqueue($_), warn "THREAD:$cache{$dir}:$_" and next if ++$cache{$dir} % $runners > $runners / 2 and /\Q.md.\E\w+$/;
+            $thread_queue->enqueue($_), warn "THREAD:$cache{$dir}:$_\n" and next if ++$cache{$dir} % $runners > $runners / 2 and /\Q.md.\E\w+$/;
             $s->();
         }
         else {
