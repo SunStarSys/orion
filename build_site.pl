@@ -193,7 +193,7 @@ sub process_dir {
             my $n = fileno $wtr;
             state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, "$_:$@" if $@};
             mkpath "$target_base/$root" unless $made_target_dir++;
-            $thread_queue->enqueue($_), warn "THREAD:$cache{$dir}:$_\n" and next if ++$cache{$dir} % $runners > $runners / 2 and /\Q.md.\E\w+$/;
+            $thread_queue->enqueue($_), warn "THREAD:$cache{$dir}:$_\n" and next if ++$cache{$dir} % $runners > $runners / 2;
             $s->();
         }
         else {
@@ -357,7 +357,7 @@ main();
            Licensed to the Apache Software Foundation (ASF) under one
            or more contributor license agreements.  See the NOTICE file
            distributed with this work for additional information
-           regarding copyright ownership.  The ASF licenses this file
+           regarding copyright ownership. The ASF licenses this file
            to you under the Apache License, Version 2.0 (the
            "License"); you may not use this file except in compliance
            with the License.  You may obtain a copy of the License at
