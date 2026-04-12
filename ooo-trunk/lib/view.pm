@@ -93,10 +93,11 @@ sub html_page {
     $args{ssi} = {};
     read_text_file $ssi_header_file, $args{ssi};
 
-    if ($args{content} =~ m!<head.*?>(.*?)</head>(?:.*?<body(.*?)>)?(.*?)(?:</body>|\Z)!si) {
+    eval {
+      if ($args{content} =~ m!<head.*?>(.*?)</head>(?:.*?<body(.*?)>)?(.*?)(?:</body>|\Z)!si) {
         @args{qw/head bodytag content/} = ($1, $2, $3);
-    }
-
+      }
+    };
     $args{breadcrumbs} =~ s/home/$args{ssi}{headers}{home}/;
 
     return Template($template)->render(\%args), html => \%args;

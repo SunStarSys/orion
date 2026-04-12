@@ -43,7 +43,7 @@ use sealed;
 sub syswrite_all;
 
 my ($revision, $target_base, $source_base, $dirq, $runners, $offline);
-my @errors;
+my @errors :shared;
 
 GetOptions ( "target-base=s", \$target_base,
              "source-base=s", \$source_base,
@@ -191,7 +191,7 @@ sub process_dir {
         if (-f _) {
             state %cache;
             my $n = fileno $wtr;
-            state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, [$_, $@] and warn $@ if $@};
+            state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, "$_:$@" if $@};
             mkpath "$target_base/$root" unless $made_target_dir++;
             $thread_queue->enqueue($_), warn "THREAD:$cache{$dir}:$_\n" and next if ++$cache{$dir} % $runners > $runners / 2 and /\Q.md.\E\w+$/;
             $s->();
@@ -280,7 +280,7 @@ sub fork_runner :Sealed {
       $SIG{KILL} = sub {threads->exit};
       while (my $data = $thread_queue->dequeue()) {
         syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
-        push @errors, [$data, $@] and warn $@ if $@;
+        push @errors, "$data:$@" and warn $@ if $@;
       }
       threads->exit;
     };
@@ -321,7 +321,7 @@ sub fork_runner :Sealed {
             warn "syswrite_all failed: $!";
         }
     }
-    die "File $_->[0] had processing errors: $_->[1]" for @errors;
+    die "Processing errors: $_" for @errors;
     $thread_queue->enqueue(undef) for 1 .. $runners;
     if ($] == 5.038002 and $^O eq "linux") {
       # threads::join is fubar somehow for perl v5.38.2 on linux,
