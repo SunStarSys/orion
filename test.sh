@@ -40,6 +40,8 @@ export WEBSITE="${GIT_URL##*/}" REPOS=public
 ) &
 
 mkdir -p www/.build-log
+perl -V | grep -i thread
+ulimit -c unlimited
 time timeout 300 perl build_site.pl --source-base=trunk --target-base=www --revision=0
 rv=$?
 pkill -U $USER -f markdownd.js

@@ -41,7 +41,7 @@ use sealed;
 sub syswrite_all;
 
 my ($revision, $target_base, $source_base, $dirq, $runners, $offline);
-my @errors :shared;
+my @errors;
 
 GetOptions ( "target-base=s", \$target_base,
              "source-base=s", \$source_base,
@@ -70,12 +70,12 @@ open my $build_log, ">>:raw", "$target_base/.build-log/$revision.log" or die "Ca
 # fire and forget (blocking semantics are bad when users can disconnect the fifo we write to
 for (\*STDOUT, \*STDERR, $build_log) {
   my $n = fileno $_;
-  open $_, ">>&$n:raw" unless $_ == $build_log;
+  open $_, ">>&=$n" or die "WTF: $n" unless $_ == $build_log;
   my $flags = 0;
   $flags = fcntl $_, F_GETFL, $flags;
   $flags |= O_NONBLOCK;
   fcntl $_, F_SETFL, $flags;# or die "Can't set O_NONBLOCK on fd $n: $!";
-  $|=1;
+  $|=1, select $_ for select $_;
 }
 
 $SIG{__WARN__} = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_"; warn $_};
@@ -131,14 +131,15 @@ sub main :Sealed {
   for my $p ($sockets->can_read(3)) {
     local $_ = '';
     my $bytes;
-
+    no warnings 'uninitialized';
     while (($bytes = sysread $p, $_, 4096, length) > 0) {
       last if substr($_, -1, 1) eq "\n";
     }
     if ($bytes <= 0) {
-      warn "sysread failed: $! ", fileno $p;
-      $sockets->remove($p);
+      my $err = $!;
+      warn "sysread failed: $err ", fileno $p;
       $runners[$fd2rid[fileno $p]]->{wait} = 1;
+      $sockets->remove($p);
       close $p;
       $saw_error++;
       next;
@@ -171,6 +172,7 @@ sub process_dir {
     my $made_target_dir;
     my @threads;
     no warnings 'uninitialized';
+
     for (map $_->[0], sort {$b->[1] <=> $a->[1]} map [$_, -d],# dirs first, schwartzian xform
          map "$root/$_", grep $_ ne "." && $_ ne ".." && $_ ne ".svn", readdir $dir) {
 
@@ -182,15 +184,14 @@ sub process_dir {
             if (syswrite_all($wtr, "$_\n") <= 0) {
                 warn "syswrite_all failed: $!";
             }
-            $_->join for @threads;
             next;
         }
         if (-f _) {
             state %cache;
-            state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, [$_, $@] if $@;};
+            my $n = fileno $wtr;
+            state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, [$_, $@] and warn $@ if $@; threads->exit if $@};
             mkpath "$target_base/$root" unless $made_target_dir++;
-            map $_->join, @threads unless exists $cache{$dir};
-            push(@threads, threads->create($s, $_)), next unless ++$cache{$dir} < $runners;
+            push (@threads, threads->create($s, $_)), warn "THREAD:$cache{$dir}:$_" and next if ++$cache{$dir} % $runners > $runners / 2 and /\Q.md.\E\w+$/;
             $s->();
         }
         else {
@@ -271,7 +272,6 @@ sub fork_runner :Sealed {
     my IO::Select $r;
     $r = $r->new;
     $r->add($parent);
-
     while (1) {
         my ($p) = $r->can_read();
         # minor race condition: this issue seems inherent to any attempts
@@ -308,9 +308,8 @@ sub fork_runner :Sealed {
             warn "syswrite_all failed: $!";
         }
     }
-    warn "File $_->[0] had processing errors: $_->[1]" for @errors;
-    _exit -1 if @errors;
-    _exit 0; # avoid segfault on global cleanup
+    die "File $_->[0] had processing errors: $_->[1]" for @errors;
+    exit 0;
 }
 
 sub syswrite_all {
