@@ -323,7 +323,13 @@ sub fork_runner :Sealed {
     }
     die "File $_->[0] had processing errors: $_->[1]" for @errors;
     $thread_queue->enqueue(undef) for 1 .. $runners;
-    sleep 3;
+    if ($ENV{GIT_URL}) {
+        # in docker
+        sleep 3;
+    }
+    else {
+        $_->join for @threads;
+    }
     exit 0;
 }
 
