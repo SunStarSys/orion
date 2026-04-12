@@ -442,8 +442,9 @@ END {
 sub archived {
   my ($path) = (@_, $_);
   my $file = "content$path";
+  no warnings 'uninitialized';
   read_text_file $file, \ my %data;
-  return +($action_en{lc($data{headers}{status})} // "") eq "archived";
+  return $action_en{lc($data{headers}{status})} eq "archived";
 }
 
 # invoke this inside a walk_content_tree {} block:
