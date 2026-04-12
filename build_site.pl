@@ -7,7 +7,7 @@
 # --source-base=path  trunk or a branch
 # --runners=N         number of runners to use (default 8)
 # --offline           don't process "dynamic" content from SunStarSys::Value::*
-
+use v5.38;
 use File::Basename;
 use Cwd 'abs_path';
 use POSIX qw/_exit/;
@@ -16,7 +16,8 @@ use List::Util qw/shuffle/;
 use Socket;
 use File::stat;
 use Time::HiRes qw/gettimeofday tv_interval/;
-
+use threads;
+use threads::shared;
 BEGIN {
   my $script_path = dirname($0);
   $script_path = abs_path($script_path);
@@ -26,8 +27,6 @@ BEGIN {
 }
 
 use utf8;
-use strict;
-use warnings;
 use Getopt::Long;
 use File::Path;
 use SunStarSys::Util qw/copy_if_newer parse_filename unload_package/;
@@ -41,7 +40,8 @@ use sealed;
 
 sub syswrite_all;
 
-my ($revision, $target_base, $source_base, $dirq, $runners, $offline, @errors);
+my ($revision, $target_base, $source_base, $dirq, $runners, $offline);
+my @errors :shared;
 
 GetOptions ( "target-base=s", \$target_base,
              "source-base=s", \$source_base,
@@ -157,7 +157,6 @@ sub main :Sealed {
     @dirqueue = $dirq // ("cgi-bin", "templates", "content");
     goto LOOP;
   }
-
   shutdown $_, 1 for map $_->{socket}, @runners;
   syswrite_all "Waiting for kids...\n";
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
@@ -170,7 +169,7 @@ sub process_dir {
     my ($root, $wtr, $final) = @_;
     opendir my $dir, $root or warn "Can't open $root [skipping]: $!" and return;
     my $made_target_dir;
-
+    my @threads;
     no warnings 'uninitialized';
     for (map $_->[0], sort {$b->[1] <=> $a->[1]} map [$_, -d],# dirs first, schwartzian xform
          map "$root/$_", grep $_ ne "." && $_ ne ".." && $_ ne ".svn", readdir $dir) {
@@ -183,12 +182,16 @@ sub process_dir {
             if (syswrite_all($wtr, "$_\n") <= 0) {
                 warn "syswrite_all failed: $!";
             }
+            $_->join for @threads;
             next;
         }
         if (-f _) {
+            state %cache;
+            state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, [$_, $@] if $@;};
             mkpath "$target_base/$root" unless $made_target_dir++;
-            syswrite_all($wtr, "new: $_\n") for eval { process_file($_) };
-            push @errors, [$_, $@] if $@;
+            map $_->join, @threads unless exists $cache{$dir};
+            push(@threads, threads->create($s, $_)), next unless ++$cache{$dir} < 5;
+            $s->();
         }
         else {
             warn "skipping unrecognized entry: $_\n";
@@ -199,7 +202,7 @@ sub process_dir {
 my %method_cache;
 
 sub process_file :Sealed {
-    my $file = shift;
+    my ($file) = (@_, $_);
     my ($filename, $dirname, $extension) = parse_filename $file;
     s/^([^.]+)//, $extension = $1 for my $lang = $extension;
 

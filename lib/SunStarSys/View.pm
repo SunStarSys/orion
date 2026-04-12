@@ -17,14 +17,12 @@ package SunStarSys::View;
 # * new wrapper views like 'reconstruct' and 'trim_local_links' that when combined with
 #   'snippet', allow markdown files in source code repos to be imported to the website;
 # * a more flexible 'sitemap' that takes a 'nest' argument to nest directory links into a tree
-
+use v5.38;
 use utf8;
-use strict;
-use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use Dotiac::DTL::Addon::json;
-use SunStarSys::Util qw/read_text_file sort_tables parse_filename sanitize_relative_path Dump Load touch/;
+use SunStarSys::Util qw/read_text_file sort_tables parse_filename sanitize_relative_path Dump Load touch %action_en/;
 use Data::Dumper ();
 use File::Basename;
 use File::Path;
@@ -170,11 +168,11 @@ sub single_narrative :Sealed {
   my $keywords = $args{headers}{keywords};
 
   utf8::decode $_ for grep defined, $archive_headers, $headers, $categories, $status, $keywords;
-
+  no warnings;
   if (exists $args{archive_root}
       and exists $args{headers}
       and defined $status
-      and lc($status) eq "archived"
+      and $action_en{lc($status)} eq "archived"
       and $args{mtime}) {
 
     my ($mon, $year) = (gmtime $args{mtime})[4,5];
@@ -209,6 +207,7 @@ EOT
 
   $categories = [map ucfirst, ref $categories ? @$categories : sort $categories =~ /(\b[\w\s-]+\b)/g] if defined $categories;
   $keywords = [sort split /[;,，、]\s*/, $keywords] if defined($keywords) and not ref $keywords;
+
   if ($filename eq "index") {
     #index files are forbidden from categorization (conflicts w/ below index.html$lang setup)
     my %seen;

@@ -15,7 +15,7 @@ use warnings;
 
 our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path sanitize_relative_path parse_filename
-                    walk_content_tree archived seed_file_deps seed_file_acl Load Dump/;
+                    walk_content_tree archived seed_file_deps seed_file_acl Load Dump %action_en/;
 
 our $VERSION = "3.2";
 
@@ -33,7 +33,7 @@ for my $yml_file (map /^(.*)$/, </x1/cms/build/fields.yml.*>) {
   $actions{$lang} =[map {utf8::decode($_); $_} @$yml{@actions}];
 }
 
-my %action_en;
+our %action_en;
 
 for (keys %actions) {
     for my $idx (0.. $#{$actions{en}}) {
@@ -442,8 +442,8 @@ END {
 sub archived {
   my ($path) = (@_, $_);
   my $file = "content$path";
-  no warnings 'uninitialized';
   read_text_file $file, \ my %data;
+  no warnings 'uninitialized';
   return $action_en{lc($data{headers}{status})} eq "archived";
 }
 
