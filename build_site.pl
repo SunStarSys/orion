@@ -277,11 +277,12 @@ sub fork_runner :Sealed {
     my $thread_queue = Thread::Queue->new;
     my @threads;
     state $s = sub {
+      $SIG{KILL} = sub {threads->exit};
       while (my $data = $thread_queue->dequeue()) {
         syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
         push @errors, [$data, $@] and warn $@ if $@;
       }
-      threads->exit();
+      threads->exit;
     };
     push @threads, threads->create($s) for 1 .. $runners/4;
     while (1) {
@@ -321,7 +322,8 @@ sub fork_runner :Sealed {
         }
     }
     die "File $_->[0] had processing errors: $_->[1]" for @errors;
-    $thread_queue->enqueue(undef) for 1 .. $runners / 4;
+    $thread_queue->enqueue(undef) for 1 .. $runners;
+    sleep 3;
     exit 0;
 }
 
