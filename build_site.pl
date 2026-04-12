@@ -323,8 +323,9 @@ sub fork_runner :Sealed {
     }
     die "File $_->[0] had processing errors: $_->[1]" for @errors;
     $thread_queue->enqueue(undef) for 1 .. $runners;
-    if ($] >= 5.038002 and $^O eq "linux") {
-        # threads::join is fubar somehow, so we just wait for dust to settle
+    if ($] == 5.038002 and $^O eq "linux") {
+      # threads::join is fubar somehow for perl v5.38.2 on linux,
+      # so we just wait for dust to settle...
         sleep 3;
     }
     else {
