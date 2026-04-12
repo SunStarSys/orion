@@ -18,6 +18,8 @@ use File::stat;
 use Time::HiRes qw/gettimeofday tv_interval/;
 use threads;
 use threads::shared;
+use Thread::Queue;
+
 BEGIN {
   my $script_path = dirname($0);
   $script_path = abs_path($script_path);
@@ -167,7 +169,7 @@ sub main :Sealed {
 }
 
 sub process_dir {
-    my ($root, $wtr, $final) = @_;
+    my ($root, $wtr, $thread_queue, $final) = @_;
     opendir my $dir, $root or warn "Can't open $root [skipping]: $!" and return;
     my $made_target_dir;
     my @threads;
@@ -178,7 +180,7 @@ sub process_dir {
 
         if (-d and not $final) {
             if (m!\.page$!) {
-                process_dir($_, $wtr, "final");
+                process_dir($_, $wtr, $thread_queue, "final");
                 next;
             }
             if (syswrite_all($wtr, "$_\n") <= 0) {
@@ -189,9 +191,9 @@ sub process_dir {
         if (-f _) {
             state %cache;
             my $n = fileno $wtr;
-            state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, [$_, $@] and warn $@ if $@; threads->exit if $@};
+            state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, [$_, $@] and warn $@ if $@};
             mkpath "$target_base/$root" unless $made_target_dir++;
-            push (@threads, threads->create($s, $_)), warn "THREAD:$cache{$dir}:$_" and next if ++$cache{$dir} % $runners > $runners / 2 and /\Q.md.\E\w+$/;
+            $thread_queue->enqueue($_), warn "THREAD:$cache{$dir}:$_" and next if ++$cache{$dir} % $runners > $runners / 2 and /\Q.md.\E\w+$/;
             $s->();
         }
         else {
@@ -272,6 +274,16 @@ sub fork_runner :Sealed {
     my IO::Select $r;
     $r = $r->new;
     $r->add($parent);
+    my $thread_queue = Thread::Queue->new;
+    my @threads;
+    state $s = sub {
+      while (my $data = $thread_queue->dequeue()) {
+        syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
+        push @errors, [$data, $@] and warn $@ if $@;
+      }
+      threads->exit();
+    };
+    push @threads, threads->create($s) for 1 .. $runners/4;
     while (1) {
         my ($p) = $r->can_read();
         # minor race condition: this issue seems inherent to any attempts
@@ -298,7 +310,7 @@ sub fork_runner :Sealed {
             die "ZOMG\n" unless @$patterns;
           }
           else {
-            process_dir($_, $parent);
+            process_dir($_, $parent, $thread_queue);
           }
         }
         last if $bytes <= 0;
@@ -309,6 +321,7 @@ sub fork_runner :Sealed {
         }
     }
     die "File $_->[0] had processing errors: $_->[1]" for @errors;
+    $thread_queue->enqueue(undef) for 1 .. $runners / 4;
     exit 0;
 }
 
