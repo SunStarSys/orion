@@ -68,10 +68,6 @@ EOF
     LINTER+=' -I. -Iblib/lib -Ilib -Ilib/perl5 -c 3<&0'
     ;;
 
-  perlcritic)
-    PCRE_PAT='\.p[ml]$'
-    ;;
-
   flake8)
     PCRE_PAT='\.py$'
     LINTER+=' --select=E999,E902'
