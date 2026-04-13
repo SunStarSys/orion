@@ -16,7 +16,7 @@ for d in trunk www; do
   fi
 done
 if [[ "${NO_DOCKER:-}" != 1 ]] && command -v docker >/dev/null 2>&1; then
-  exec docker run ${LAUNCH_APACHE2+-p 8000:80} -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion -v $(pwd)/sites-enabled:/etc/apache2/sites-enabled -e GIT_URL="$GIT_URL" -e LANG="$LANG" -e LAUNCH_APACHE2="$LAUNCH_APACHE2" --entrypoint= schaefj/linter zsh -c "zsh test.sh"
+  exec docker run ${LAUNCH_APACHE2+-p 127.0.0.1:8000:80} -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion -v $(pwd)/sites-enabled:/etc/apache2/sites-enabled -e GIT_URL="$GIT_URL" -e LANG="$LANG" -e LAUNCH_APACHE2="$LAUNCH_APACHE2" --entrypoint= schaefj/linter zsh -c "zsh test.sh"
 fi
 
 if [ -n "$LAUNCH_APACHE2" ]; then
