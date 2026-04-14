@@ -4,7 +4,7 @@
 
 - docker
 - 8 CPU
-- 32GB RAM
+- 16GB RAM
 
 ## TO BUILD THE www.iconoclasts.blog SITE to ./www
 
