@@ -170,6 +170,7 @@ sub main :Sealed {
 
 sub process_dir {
     my ($root, $wtr, $thread_queue, $final) = @_;
+    utf8::encode $root if utf8::is_utf8 $root;
     opendir my $dir, $root or warn "Can't open $root [skipping]: $!" and return;
     my $made_target_dir;
     my @threads;
