@@ -33,10 +33,10 @@ sub log;
 
 # accessors
 
-sub r       {shift->{r}}
-sub client  {shift->{client}}
-sub context {shift->{client}->{ctx}}
-sub pool    {shift->{pool}}
+sub r       :lvalue {shift->{r}}
+sub client  :lvalue {shift->{client}}
+sub context :lvalue {shift->{client}->{ctx}}
+sub pool    :lvalue {shift->{client}->{pool}}
 
 # classname aliases
 
@@ -103,18 +103,20 @@ sub new :Sealed (__PACKAGE__ $class, AR $r) {
     client => $client,
   }, $class unless $r;
 
-  our $initialized :shared;
+  state $lock :shared;
+  state $initialized :shared;
   state $p = bless APR::Pool->new, "_p_apr_pool_t";
   eval{SVN::Core::utf_initialize($p)}, warn "UTF_INITITALIZED:$$:" . APR::OS::current_thread_id() if $r and !$initialized++;
   local $_ = $r ? $r->pool : $p;
   my _p_apr_pool_t $pool = bless $_, "_p_apr_pool_t";
+
+  lock $lock;
   unshift @_, $r ? (auth => $class->_create_auth($r, $pool)) : (), pool => $pool, config => {};
   $client = $client->new(@_) or die "Can't create SVN::Client: $!";
 
   return bless {
     r      => $r,
     client => $client,
-    pool   => $pool,
   }, $class;
 }
 
@@ -387,6 +389,7 @@ eval {
   __PACKAGE__->new(undef)->propget();
   __PACKAGE__->new(undef)->propset();
   __PACKAGE__->new(undef)->revert();
+  __PACKAGE__->new(undef)->relocate();
 };
 
 1;
