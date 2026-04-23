@@ -9,18 +9,26 @@ use Cwd;
 use File::stat;
 use Fcntl ":flock";
 use Time::HiRes qw/gettimeofday tv_interval/;
+use APR::Pool;
+use SVN::Repos;
+use v5.38;
 use utf8;
-use strict;
-use warnings;
 
-our @EXPORT_OK = qw/read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
-                    unload_package purge_from_inc touch normalize_svn_path sanitize_relative_path parse_filename
+our @EXPORT_OK = qw/sanitize_relative_path read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
+                    unload_package purge_from_inc touch normalize_svn_path parse_filename
                     walk_content_tree archived seed_file_deps seed_file_acl Load Dump %action_en/;
 
 our $VERSION = "3.2";
 
 sub parse_filename;
 sub read_text_file;
+
+our $p;
+
+UNITCHECK {
+  $p = bless APR::Pool->new, "_p_apr_pool_t";
+  eval{SVN::Core::utf_initialize($p)};
+}
 
 my %actions;
 my @actions = qw/edit update revert copy move delete add commit diff mail merge production promote resolve rollback search static account comment watch unwatch like unlike markmap archived verified/;
@@ -290,7 +298,7 @@ sub touch {
 
 #ttc
 sub sanitize_relative_path {
-  for (@_) {
+  for (@_ ? @_ : $_) {
     s#^[\\/]+##g;
     s/^\w+://g; #Windows GRR
     s#([\\/])+#$1#g;
@@ -302,7 +310,7 @@ sub sanitize_relative_path {
 #ttc
 
 sub normalize_svn_path {
-  for (@_) {
+  for (@_? @_ : $_) {
     $_ //= "";
     tr!/!/!s;
     s!/$!!;
@@ -311,6 +319,7 @@ sub normalize_svn_path {
     1 while s!/[^/]+/\.\.(/|$)!$1!;
     utf8::downgrade $_;
   }
+  return 1;
 }
 
 sub shuffle {
@@ -393,20 +402,20 @@ my $dependencies;
 my $acl_string = 'no strict "refs"; *path::acl{ARRAY}';
 my $acl;
 
-sub walk_content_tree (&) {
+sub walk_content_tree :prototype(&) {
   my $wanted = shift;
   $dependencies = eval $dep_string;
   $acl = eval $acl_string;
 
   if (eval '$path::use_cache') {
-    if (-f "$ENV{TARGET_BASE}/.deps") {
+    if (-f "$ENV{TARGET}/.deps") {
       # use the cached .deps file if the incremental build system deems it appropriate
-      open my $deps, "<:raw", "$ENV{TARGET_BASE}/.deps" or die "Can't open .deps for reading: $!";
+      open my $deps, "<:raw", "$ENV{TARGET}/.deps" or die "Can't open .deps for reading: $!";
       eval '*path::dependencies = Load join "", <$deps>';
       $dependencies = eval $dep_string;
     }
-    if (-f "$ENV{TARGET_BASE}/.acl") {
-      open my $fh, "<:raw", "$ENV{TARGET_BASE}/.acl" or die "Can't open .acl for reading: $!";
+    if (-f "$ENV{TARGET}/.acl") {
+      open my $fh, "<:raw", "$ENV{TARGET}/.acl" or die "Can't open .acl for reading: $!";
       eval '*path::acl = Load join "", <$fh>';
       $acl = eval $acl_string;
     }
@@ -427,13 +436,13 @@ sub walk_content_tree (&) {
 
 END {
   if ($dependencies) {
-    open my $deps, ">:raw", "$ENV{TARGET_BASE}/.deps" or die "Can't open '.deps' for writing: $!";
+    open my $deps, ">:raw", "$ENV{TARGET}/.deps" or die "Can't open '.deps' for writing: $!";
     utf8::is_utf8($_) and utf8::encode $_ for map @$_, values %$dependencies;
     utf8::is_utf8($_) and utf8::encode $_ for keys %$dependencies;
     print $deps Dump $dependencies;
   }
   if ($acl) {
-    open my $fh, ">:raw", "$ENV{TARGET_BASE}/.acl" or die "Can't open '.acl' for writing: $!";
+    open my $fh, ">:raw", "$ENV{TARGET}/.acl" or die "Can't open '.acl' for writing: $!";
     utf8::is_utf8($_) and utf8::encode $_ for map {$_->{path}, values %{$_->{rules}}} @$acl;
     print $fh Dump $acl;
   }
@@ -458,12 +467,13 @@ sub seed_file_deps {
   no strict 'refs';
   return if archived $path;
   my ($base, undef, $ext) = parse_filename $path;
-  delete $$dependencies{$path} if $ext =~ /^\.md/;
+  delete $$dependencies{$path} if $ext =~ /^\.md|.ya?ml\b/;
   my %seen;
   @{$$dependencies{$path}} = grep !$seen{$_}++, @{$$dependencies{$path} // []},
     grep {
       utf8::decode $_ unless utf8::is_utf8 $_;
-      s/^content// and $_ ne $path and not archived
+      sanitize_relative_path;
+      s/^content// and $_ ne $path and not archived;
     }
     map glob("content$_"), map {index($_, "/") == 0  ? $_ : "'$dir'/$_"}
     ref $d{headers}{dependencies} ? @{$d{headers}{dependencies}} : split /[;,]?\s+/, $d{headers}{dependencies} // "";
@@ -474,15 +484,34 @@ sub seed_file_deps {
     my $src = $2;
     if ($ssi or index($src, "./") == 0 or index($src, "../") == 0) {
       $src = "$dir/$src", $src = s(/[.]/)(/)g unless $ssi;
-      1 while $src =~ s(/[^./][^/]+/[.]{2}/)(/);
+      sanitize_relative_path $src; $src = "/$src";
       push @{$$dependencies{$path}}, $src unless archived $src or $seen{$src}++;
     }
   }
   my $attachments_dir = "content$dir/$base.page";
   if (-d $attachments_dir) {
     s/^[^\.]*// for my $lang = $ext;
-    push @{$$dependencies{$path}}, grep s/^content// && !$seen{$_}++, glob("'$attachments_dir'/*$lang");
+    push @{$$dependencies{$path}}, grep {sanitize_relative_path; s/^content// && !$seen{$_}++} glob("'$attachments_dir'/*$lang");
   }
+
+  local $@;
+  my ($idx, $author);
+  eval {require SunStarSys::SVN::Client};
+  state $pool = bless APR::Pool->new, "_p_apr_pool_t";
+  state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
+  eval {$svn->info("content$path", sub {$author = $_[1]->last_changed_author})};
+  $author ||= $1 if $d{content} =~ /\$Author:\s+([\w.@-]+)\s+\$/;
+
+  for my $dep_path (@{$$dependencies{$path}}) {
+    splice @{$$dependencies{$path}}, $idx--, 1
+      if eval{SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
+        "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content$dep_path", "--username" => $author // '*',
+        "--groups-file" => "$ENV{TARGET}/group-svn.conf",
+        "$ENV{TARGET}/authz-svn.conf", $pool)};
+
+    ++$idx;
+  }
+
   delete $$dependencies{$path} unless @{$$dependencies{$path}};
 }
 

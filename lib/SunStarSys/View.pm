@@ -619,7 +619,7 @@ sub latexmk {
   my ($base, $dir, $ext) = parse_filename $file;
   s/^([^.]*)//, $ext = $1 for my $lang = $ext;
   read_text_file $file, \%args unless exists $args{content} and defined $args{headers};
-  my $cache_file = "$ENV{TARGET_BASE}/$dir$base.$ext$lang";
+  my $cache_file = "$ENV{TARGET}/$dir$base.$ext$lang";
   my $cached = 0;
   my $generator = $args{generator} // 'xelatex --no-shell-escape %O %S';
   my $bib_mtime = max 0, map {(-f $_) ? File::stat::populate(CORE::stat(_))->mtime : ()} $args{content} =~ /^\\addbibresource\{(.*?)\}/mg;
@@ -629,8 +629,8 @@ sub latexmk {
     if ($content eq $args{content} and $args{mtime} >= $bib_mtime) {
       ++$cached;
     }
-    elsif (-f "$ENV{TARGET_BASE}/$dir$base.bbl$lang" and $bib_mtime < File::stat::populate(CORE::stat(_))->mtime) {
-      copy "$ENV{TARGET_BASE}/$dir$base.bbl$lang", "/tmp/$base.$ext.bbl";
+    elsif (-f "$ENV{TARGET}/$dir$base.bbl$lang" and $bib_mtime < File::stat::populate(CORE::stat(_))->mtime) {
+      copy "$ENV{TARGET}/$dir$base.bbl$lang", "/tmp/$base.$ext.bbl";
     }
   }
 
@@ -639,14 +639,14 @@ sub latexmk {
     die "latexmk -$args{format} rendering of '$file' failed: ". ($status>>8);
   }
   syswrite STDOUT, "Copied to $cache_file.\n"; # internal copy, deletions need this notice to track it
-  ($cached or move "/tmp/$base.$ext.bbl", "$ENV{TARGET_BASE}/$dir$base.bbl$lang") and
-    syswrite STDOUT, "Copied to $ENV{TARGET_BASE}/$dir/$base.bbl$lang.\n"; # another internal copy
+  ($cached or move "/tmp/$base.$ext.bbl", "$ENV{TARGET}/$dir$base.bbl$lang") and
+    syswrite STDOUT, "Copied to $ENV{TARGET}/$dir/$base.bbl$lang.\n"; # another internal copy
 
   return undef, $args{format} => \%args if $cached;
 
   touch $file;
 
-  move "$base.$ext.$args{format}", "$ENV{TARGET_BASE}/$dir$base.$args{format}$lang";
+  move "$base.$ext.$args{format}", "$ENV{TARGET}/$dir$base.$args{format}$lang";
   unlink </tmp/$base.$ext*>, <*.{out,tex,pre,aux,ps,pdf,prc,log}>;
   open my $fh, ">:utf8", $cache_file or die "Can't write to '$cache_file': $!";
   print $fh $args{content};

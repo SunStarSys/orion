@@ -17,8 +17,7 @@ package Dotiac::DTL::Tag::ssi;
 use base qw/Dotiac::DTL::Tag/;
 use SunStarSys::Util qw/read_text_file sanitize_relative_path/;
 use SunStarSys::SVNUtil;
-use strict;
-use warnings;
+use v5.38;
 
 our $VERSION = 0.9;
 
@@ -43,18 +42,29 @@ sub new {
                   my $path = substr $name, 1, -1;
                   sanitize_relative_path $path;
                   my $ok = 0;
+                  read_text_file "content/$path", \ my %data;
+		  warn "content/$path: $!" unless defined $data{content};
                   for my $p (eval '@path::patterns') {
                     no warnings 'uninitialized';
                     my ($re, $method, $args) = @$p;
                     next unless "/$path" =~ $re;
-                    ++$ok if $args->{category_root} or $args->{archive_root};
-                    $ok = 0 if $args->{headers}{acl} =~ /\*=[\s,]/;
+		    local $@;
+		    eval {require SunStarSys::SVN::Client};
+		    my $author;
+		    state $pool = bless APR::Pool->new, "_p_apr_pool_t";
+		    state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
+		    eval {$svn->info("content/$path", sub {$author = $_[1]->last_changed_author})};
+		    $author ||= $1 if $data{content} =~ /\$Author:\s+([\w.@-]+)\s+\$/;
+
+		    $ok = $author ? !eval{SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
+		      "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content/$path", "--username" => $author,
+		      "--groups-file" => "$ENV{TARGET}/group-svn.conf",
+		      "$ENV{TARGET}/authz-svn.conf", $pool)} : ($args->{category_root} || $args->{archive_root});
+		    warn "$author:content/$path:$ENV{TARGET}" if $author and not $ok;
                     last;
                   }
                   die "Inadmissible ssi target: /$path" unless $ok or not eval '@path::patterns';
                   my $dir = File::Basename::dirname "/$path";
-                  read_text_file "content/$path", \ my %data;
-                  warn "content/$path: $!" unless defined $data{content};
                   $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|/|mailto://|\{)(.*?)\2#$1=$2$dir/$3$2#g;
                   $data{content} =~ s#(\[[^\]]*\])\((?!https?://|/|\{|mailto://)([^\)]+)\)#$1($dir/$2)#g;
                   $self->{content}=Dotiac::DTL::Tag->new($data{content});

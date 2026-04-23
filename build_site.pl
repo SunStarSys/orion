@@ -61,7 +61,7 @@ $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
 $runners ||= 2 * `nproc`; # 8 is arbitrary but educated guess
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
-$ENV{TARGET_BASE} = $target_base;
+$ENV{TARGET} //= $target_base;
 
 my ($repos, $website) = $source_base =~ m!/([^/]+)/([^/]+)/(?:trunk|branches)\b!;
 $ENV{REPOS} //= $repos;
@@ -153,7 +153,7 @@ sub main :Sealed {
   goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
 
   if (@new_sources) {
-    syswrite_all "New content dectected: $_\n" for @new_sources;
+    syswrite_all "New content detected: $_\n" for @new_sources;
     syswrite_all "Rebuilding site...\n";
     syswrite_all $_, "[flush]\n" for $sockets->can_write(0);
     @new_sources = ();
@@ -170,7 +170,7 @@ sub main :Sealed {
 
 sub process_dir {
     my ($root, $wtr, $thread_queue, $final) = @_;
-    utf8::encode $root if utf8::is_utf8 $root;
+    utf8::decode $root unless utf8::is_utf8 $root;
     opendir my $dir, $root or warn "Can't open $root [skipping]: $!" and return;
     my $made_target_dir;
     my @threads;
@@ -212,7 +212,7 @@ sub process_file :Sealed {
 
     my $target_file = $dirname . $filename;
     s/^content// for my $target_path = $target_file;
-
+    utf8::encode $target_file if utf8::is_utf8 $target_file;
     my $path = $file;
     $path =~ s!^content!! or goto COPY;
 
@@ -331,9 +331,13 @@ sub fork_runner :Sealed {
         sleep 1;
     }
     else {
-        $_->join for @threads;
+      eval {
+	alarm 3;
+	$_->join for @threads;
+	alarm 0;
+      };
     }
-    exit 0;
+    _exit 0; # skip process/pool cleanups
 }
 
 sub syswrite_all {
