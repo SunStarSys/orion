@@ -504,7 +504,7 @@ sub seed_file_deps {
 
   for my $dep_path (@{$$dependencies{$path}}) {
     splice @{$$dependencies{$path}}, $idx--, 1
-      if eval{SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
+      if $svn->client and eval{SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
         "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content$dep_path", "--username" => $author // '*',
         "--groups-file" => "$ENV{TARGET}/group-svn.conf",
         "$ENV{TARGET}/authz-svn.conf", $pool)};

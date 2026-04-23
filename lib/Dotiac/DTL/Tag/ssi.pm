@@ -56,7 +56,7 @@ sub new {
 		    eval {$svn->info("content/$path", sub {$author = $_[1]->last_changed_author})};
 		    $author ||= $1 if $data{content} =~ /\$Author:\s+([\w.@-]+)\s+\$/;
 
-		    $ok = $author ? !eval{SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
+		    $ok = $author ? !eval{$svn->client and SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
 		      "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content/$path", "--username" => $author,
 		      "--groups-file" => "$ENV{TARGET}/group-svn.conf",
 		      "$ENV{TARGET}/authz-svn.conf", $pool)} : ($args->{category_root} || $args->{archive_root});
