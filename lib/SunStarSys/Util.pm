@@ -9,7 +9,6 @@ use Cwd;
 use File::stat;
 use Fcntl ":flock";
 use Time::HiRes qw/gettimeofday tv_interval/;
-use APR::Pool;
 use SVN::Repos;
 use v5.38;
 use utf8;
@@ -26,10 +25,12 @@ sub read_text_file;
 our $p;
 
 UNITCHECK {
-  $p = bless APR::Pool->new, "_p_apr_pool_t";
-  eval{SVN::Core::utf_initialize($p)};
+  eval {
+    require APR::Pool;
+    $p = bless APR::Pool->new, "_p_apr_pool_t";
+    eval{SVN::Core::utf_initialize($p)};
+  }
 }
-
 my %actions;
 my @actions = qw/edit update revert copy move delete add commit diff mail merge production promote resolve rollback search static account comment watch unwatch like unlike markmap archived verified/;
 
@@ -497,7 +498,7 @@ sub seed_file_deps {
   local $@;
   my ($idx, $author);
   eval {require SunStarSys::SVN::Client};
-  state $pool = bless APR::Pool->new, "_p_apr_pool_t";
+  state $pool = eval {bless APR::Pool->new, "_p_apr_pool_t"};
   state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
   eval {$svn->info("content$path", sub {$author = $_[1]->last_changed_author})};
   $author ||= $1 if $d{content} =~ /\$Author:\s+([\w.@-]+)\s+\$/;

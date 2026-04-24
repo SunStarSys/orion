@@ -9,16 +9,17 @@ $| = 1;
 return 1 unless -f "www/.deps";
 open my $fh, "<:encoding(UTF-8)", "www/.deps", or die "Can't open www/.deps: $!";
 read $fh, my $content, -s $fh or die "WTF?";
+utf8::encode $content if utf8::is_utf8 $content;
 my $yaml_deps = Load $content;
 
 my $nn = 0;
 
-my @language = qw/English Spanish German French/;
-my @lang = qw/.en .es .de .fr/;
+my @language = qw/English Spanish German French Russian Swedish Brazilian-Portugese Arabic Chinese Korean Japanese Hebrew/;
+my @lang = qw/.en .es .de .fr .ru .sv .pt-BR .ar .zh-TW .ko .ja .he/;
 
 my $red_edge_re = shift;
 
-for my $idx (0..3) {
+for my $idx (0..$#lang) {
   my ($root) = grep s!trunk/content!!, <trunk/content/sitemap.*$lang[$idx]> or die "Can't find root document: $!";
   warn "root is $root for $lang[$idx]\n";
   my @dep_nodes = ($root);

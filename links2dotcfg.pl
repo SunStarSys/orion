@@ -24,8 +24,8 @@ my $red_edge_re = shift;
 
 my $root_file_base = shift // "sitemap";
 
-my @language = qw/English Spanish German French/;
-my @lang = @ARGV ? @ARGV : qw/.en .es .de .fr/;
+my @language = qw/English Spanish German French Swedish Brazilian-Portugese Russian Arabic Hebrew Chinese Korean Japanese/;
+my @lang = @ARGV ? @ARGV : qw/.en .es .de .fr .sv .pt-BR .ru .ar .he .zh-TW .ko .ja/;
 for my $idx (0..$#lang) {
   my ($root) = grep s!www/content!!, <www/content/$root_file_base.*$lang[$idx]*> or die "Can't find root document at /$root_file_base: $!";
   warn "root is $root for $language[$idx]: '$lang[$idx]'\n";
