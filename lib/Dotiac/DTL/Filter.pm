@@ -800,7 +800,7 @@ sub pprint {
 
 sub shuffle {
   my $value = shift;
-  my @rv = List::Util::shuffle @{$value->content};
+  my @rv = List::Util::shuffle @{$value->content // []};
   return $value->set(\@rv);
 }
 
@@ -846,7 +846,7 @@ sub removetags {
 	my $tags=shift;
 	$tags=$tags->repr;
 	if ($tags) {
-		my @t=split /\s+/,$tags;
+		my @t=split /[\s,]+/,$tags;
 		my $t=CORE::join("|",map {quotemeta $_} @t);
 		$value=~s/<\/?(?:$t)(?:\/?>|\s[^>]+>)//g;
 	}
@@ -1443,7 +1443,7 @@ sub vcs_time {
 sub vcs_revision {
   my $value = shift;
   my $content = $value->repr;
-  $content =~ /\$Revision:\s+(\d+)\s+\$/ or return $value->set("");
+  $content =~ /\$Revision:\s+(\d+)\s+\$/ or return $value;
   return $value->set($1);
 }
 
@@ -1455,7 +1455,7 @@ sub vcs_author {
   $ENV{REPOS} //= "public";
   if ($content =~ /\$Author:\s+([\w.@-]+)\s+\$/) {
     my $svnuser = $1;
-    tie my %pw, DB_File => "/x1/repos/svn-auth/$ENV{REPOS}/user+group", O_RDONLY or return $value->set($svnuser);
+    tie my %pw, DB_File => "$ENV{TARGET}/user+group", O_RDONLY or return $value->set($svnuser);
     no warnings 'uninitialized';
     my ($comment) = (split /:/, $pw{$svnuser})[2] =~ /^([^<]+)/;
     my $data = (split /:/, $pw{$svnuser})[3];
@@ -1476,11 +1476,11 @@ sub vcs_author {
       $path = "/";
     }
 
-    my $rv = $markdown_search ? qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=$svnuser=;${lang}markdown_search=1">) : qq(<a href="/dynamic/search$path?regex=%22$urlencname%22;${lang}markdown_search=0">);
+    my $rv = $markdown_search ? qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=$svnuser=;${lang}markdown_search=1">) : qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=%22$urlencname%22;${lang}markdown_search=0">);
     $rv .= qq(<img src="data:$data"> $name</a>);
     return Dotiac::DTL::Value->safe($rv);
   }
-  return $value->set("");
+  return $value->set(undef);
 }
 
 sub strip_prefix {
