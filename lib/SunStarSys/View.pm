@@ -103,6 +103,7 @@ sub single_narrative :Sealed {
   $args{deps} = [grep {index(dirname($_->[0]), $dir)==0} @{$args{deps}}];
 
   if (-d $page_path) {
+    my %seen;
     for my $f (grep -f, glob "'$page_path/'*") {
       if ($f =~ m!/([^/]+)\.md(?:text)?\Q$args{lang}\E$!) {
         my $key = $1;
@@ -138,7 +139,8 @@ sub single_narrative :Sealed {
         $args{$key}{content} = Load $args{preprocess} ? Template($args{$key}{content})->render($args{$key}) : $args{$key}{content};
       }
       elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b|\.ya?ml\b)[^\/]*$/) {
-        push @{$args{attachments}}, "$root/" . basename $f;
+	  $f =~ s!\.[^/]+$!!;
+	  push @{$args{attachments}}, "$root/" . basename $f if !$seen{+basename $f}++;
       }
     }
   }
@@ -206,7 +208,7 @@ EOT
   }
 
   $categories = [map ucfirst, ref $categories ? @$categories : sort $categories =~ /(\b[\w\s-]+\b)/g] if defined $categories;
-  $keywords = [sort split /[;,，、]\s*/, $keywords] if defined($keywords) and not ref $keywords;
+  $keywords = [sort split /[;,，、]\s*/, $keywords] if defined $keywords and not ref $keywords;
 
   if ($filename eq "index") {
     #index files are forbidden from categorization (conflicts w/ below index.html$lang setup)
@@ -249,11 +251,12 @@ EOT
     }
   }
 
-  $args{headers}{categories} = join ",", @$categories if ref $categories;
-  $args{headers}{keywords}   = join ",", @$keywords   if ref $keywords;
-
+  $args{headers}{categories} = $categories if ref $categories;
+  $args{headers}{keywords}   = $keywords   if ref $keywords;
   $_ .= "/$filename.html$lang" for grep defined, $args{archive_path};
   my @rv = (Template($template)->render(\%args), html => \%args, @new_sources);
+  $args{headers}{categories} = join ",", @$categories if ref $categories;
+  $args{headers}{keywords}   = join ",", @$keywords   if ref $keywords;
   setlocale $_, $LANG{".en"} for LC_ALL;
   return @rv;
 }
@@ -506,6 +509,7 @@ sub sitemap {
   my ($filename, $dirname, $extension) = parse_filename $args{path};
   s/^[^.]+\.// for my $lang = $extension;
   if ($args{path} =~ m!/(index|sitemap)\b[^/]*$!) {
+    no warnings 'uninitialized';
     $args{headers}{title} //= $title{$1}{$lang}
       . ($dirname =~ m#/20\d{2}/(\d{2})/$#
                  ? $month{$lang}[$1] : ucfirst basename $dirname);
@@ -519,6 +523,7 @@ sub sitemap {
     $lede =~ y/\n/ /, $lede = " &mdash; $lede..." if $lede;
     my ($filename, $dirname) = parse_filename $$_[0];
     if ($$_[0] =~ m!/(index|sitemap|$)[^/]*$! and $title eq ucfirst($1 || "index")) {
+      no warnings 'uninitialized';
       $title = $title{+($1 || "index")}{$lang}
       . ($dirname =~ m#/20\d{2}/(\d{2})/$#
                  ? $month{$lang}[$1] : ucfirst basename $dirname);
