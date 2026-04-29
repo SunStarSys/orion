@@ -12,6 +12,15 @@
    % ./test.sh
 ```
 
+## TO BUILD SOME OTHER GIT-BACKED SITE from ./trunk to ./www
+
+```shell
+
+   % rm -rf trunk www
+   % GIT_URL=https://github.com/FOO/BAR ./test.sh
+
+```
+
 ## TO REVIEW THE BUILT ./www SITE UNDER APACHE2 on localhost:8000
 
 ```shell
