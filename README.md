@@ -94,7 +94,7 @@ Core Build Engine:
        - templates/
 ```
 
-### Site Build Developer API
+### [Site Build Developer API](https://sunstarsys.com/orion/api/build)
 
 ```yaml
     - lib/path.pm:
