@@ -108,10 +108,14 @@ Core Build Engine:
             - pattern: regex to text source file's path against
             - view: method name in view class to invoke
             - args: dict of **args passed to view method in prior slot
-      - @path::dependencies:
+      - %path::dependencies:
         - dict of arrays:
-        - keys are paths to sources rooted in source tree's "content" dir
-        - values are array of similarly rooted files the key depends on
+          - keys are paths to sources rooted in source tree's "content" dir
+          - values are array of similarly rooted files the key depends on
+      - @path::acl
+        - array of hashes:
+          - rules
+          - path
 
     - lib/view.pm:
       - OO: view class should inherit from SunStarSys::View
