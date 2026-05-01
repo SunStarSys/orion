@@ -216,6 +216,7 @@ sub process_file :Sealed {
     my $path = $file;
     $path =~ s!^content!! or goto COPY;
 
+#api
     for my $p (@$patterns) {
         my ($re, $method, $args) = @$p;
         next unless $path =~ $re;
@@ -256,7 +257,7 @@ sub process_file :Sealed {
   COPY:
     my ($dest, $copied) = copy_if_newer $file, "$target_base/$file";
     syswrite_all "Copied to $dest.\n" if $copied;
-
+#api
     return;
 }
 
