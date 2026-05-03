@@ -810,13 +810,19 @@ sub snippet {
                          require SunStarSys::Value::Snippet; # see source for list of valid args
                          $args{$key} = SunStarSys::Value::Snippet->new(%a);
                          my $linenums = $a{numbers} ? "linenums" : "";
+                         my $offset = $args{$key}->{lines}->[0] - 1;
+                         $offset = 0 if $offset < 0;
                          my $filter = exists $a{lang} ? "markdown" : "safe";
                          my $rv = <<EOT;
+
+<div data-offset="$offset">
 
 \`\`\`$a{lang}
 {{ $key.fetch|safe }}
 \`\`\`
 
+
+</div>
 EOT
                          if (defined(my $header = $args{snippet_header})) {
                            $header =~ s/\$snippet\b/$key/g;

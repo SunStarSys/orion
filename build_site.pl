@@ -326,18 +326,19 @@ sub fork_runner :Sealed {
     die "Processing errors: $_" for @errors;
     #$thread_queue->enqueue(undef) for 1 .. $runners;
     $thread_queue->end;
-    if ($] == 5.038002 and $^O eq "linux") {
-      # threads::join is fubar somehow for perl v5.38.2 on linux,
-      # so we just wait for dust to settle...
-        sleep 1;
-    }
-    else {
-      eval {
-	alarm 3;
-	$_->join for @threads;
-	alarm 0;
-      };
-    }
+    # threads::join is fubar somehow for perl v5.38.2 on linux,
+    # so we just wait for dust to settle...
+    eval {
+      alarm 100;
+      if ($] == 5.038002 and $^O eq "linux") {
+        sleep 1 while grep $_->is_running, @threads;
+      }
+      else {
+        $_->join for @threads;
+      }
+      alarm 0;
+    };
+    warn $@ and _exit -1 if $@;
     _exit 0; # skip process/pool cleanups
 }
 
