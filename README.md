@@ -1,3 +1,5 @@
+<img width="200px" src="https://sunstarsys.com/images/sunstar-orion-symbol-linear">
+
 # SunStar Systems' Orion&trade; Enterprise Wiki (SSG Build Toolchain)
 
 ## Prerequisites
