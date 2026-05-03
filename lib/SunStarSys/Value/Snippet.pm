@@ -23,7 +23,7 @@ sub new {
         $uri .= "?p=$args{revision}";
     }
 
-    return bless {
+    my $obj = bless {
         uri     => $uri,
         path    => $args{path},
         token  => $args{token},
@@ -33,13 +33,16 @@ sub new {
         lines   => $args{lines} && [$args{lines} =~ m/(\d+)/g],
         numbers => $args{numbers},
     }, $class;
+
+    $obj->fetch;
+    return $obj;
 }
 
 my %cache;
 
 sub fetch {
     return if $SunStarSys::Value::Offline;
-    my $self = shift;
+    my ($self) = @_;
 
     my $content = $cache{$self->{uri}} //= do {
         die "Unsupported repo type: $self->{type}" unless defined $self->{uri};
@@ -49,17 +52,20 @@ sub fetch {
     };
 
     if (defined $self->{token}) {
-        $content =~ /\Q$self->{token}\E.*\n((?s:.*?))^.*\Q$self->{token}/m
+        $content =~ /^(.*?)^\Q$self->{token}\E.*?\n(.*?)^\Q$self->{token}/ms
             or die "Can't find $self->{token} block at $self->{uri}";
-        $content = $1;
+        $content = $2;
+	my $preamble = $1;
+	$_[0]->{lines}->[1] = $_[0]->{lines}->[0] = ($preamble =~ y/\n//) + 2;
+	$_[0]->{lines}->[1] += ($content =~ tr/\n/\n/) - 1;
     }
     elsif ($self->{lines}) {
         $content = join "\n", grep {defined || ! warn "Missing lines from $self->{uri}"}
             (undef, split /\n/, $content)
-                [$self->{lines}->[0] .. ($self->{lines}->[1] // $content =~ y/\n//)];
+                [($self->{lines}->[0] // 1) .. ($self->{lines}->[1] // $content =~ y/\n//)];
     }
 
-    $content =~ s/^(\s+):::/$1#!/ if $self->{numbers};
+    #$content =~ s/^(\s+):::/$1#!/ if $self->{numbers};
     return $content;
 }
 
@@ -74,7 +80,7 @@ sub pretty_uri {
         $uri .= "#L" . join "-L", @{$self->{lines}};
       }
       elsif ($token) {
-        #$uri .= "#:~:text=$token,,$token";
+        $uri .= "#:~:text=$token,,$token";
       }
     }
     return $uri;

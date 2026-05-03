@@ -407,20 +407,18 @@ sub walk_content_tree :prototype(&) {
   $dependencies = eval $dep_string;
   $acl = eval $acl_string;
 
-  if (eval '$path::use_cache') {
-    if (-f "$ENV{TARGET}/.deps") {
+  if (-f "$ENV{TARGET}/.deps") {
       # use the cached .deps file if the incremental build system deems it appropriate
       open my $deps, "<:raw", "$ENV{TARGET}/.deps" or die "Can't open .deps for reading: $!";
       eval '*path::dependencies = Load join "", <$deps>';
       $dependencies = eval $dep_string;
-    }
-    if (-f "$ENV{TARGET}/.acl") {
+  }
+  if (-f "$ENV{TARGET}/.acl") {
       open my $fh, "<:raw", "$ENV{TARGET}/.acl" or die "Can't open .acl for reading: $!";
       eval '*path::acl = Load join "", <$fh>';
       $acl = eval $acl_string;
-    }
-    return;
   }
+  return if eval '$path::use_cache';
 
   my $cwd = cwd;
   local $_; # filepath that $wanted sub should inspect, rooted in content/ dir
@@ -467,7 +465,7 @@ sub seed_file_deps {
   no strict 'refs';
   return if archived $path;
   my ($base, undef, $ext) = parse_filename $path;
-  delete $$dependencies{$path} if $ext =~ /^\.md|.ya?ml\b/;
+  my $old_deps = delete $$dependencies{$path};
   my %seen;
   @{$$dependencies{$path}} = grep !$seen{$_}++, @{$$dependencies{$path} // []},
     grep {
@@ -496,15 +494,15 @@ sub seed_file_deps {
 
   local $@;
   my ($idx, $author);
-  eval {require SunStarSys::SVN::Client};
+  state $_foo = eval 'BEGIN{local $SIG{__WARN__} = sub {};require SunStarSys::SVN::Client}';
   state $pool = bless APR::Pool->new, "_p_apr_pool_t";
   state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
-  eval {$svn->info("content$path", sub {$author = $_[1]->last_changed_author})};
-  $author ||= $1 if $d{content} =~ /\$Author:\s+([\w.@-]+)\s+\$/;
 
   for my $dep_path (@{$$dependencies{$path}}) {
     splice @{$$dependencies{$path}}, $idx--, 1
-      if $svn->client and eval{SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
+      if !(grep $dep_path eq $_, @$old_deps) and $svn->client and
+      eval { $svn->info("content$path", sub {$author = $_[1]->last_changed_author}) unless $author;
+	     SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
         "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content$dep_path", "--username" => $author // '*',
         "--groups-file" => "$ENV{TARGET}/group-svn.conf",
         "$ENV{TARGET}/authz-svn.conf", $pool)};

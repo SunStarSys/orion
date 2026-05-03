@@ -49,17 +49,16 @@ sub new {
                     my ($re, $method, $args) = @$p;
                     next unless "/$path" =~ $re;
 		    local $@;
-		    eval {require SunStarSys::SVN::Client};
+		    state $_foo = eval 'BEGIN{local $SIG{__WARN__} = sub {};require SunStarSys::SVN::Client}';
 		    my $author;
 		    state $pool = bless APR::Pool->new, "_p_apr_pool_t";
 		    state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
-		    eval {$svn->info("content/$path", sub {$author = $_[1]->last_changed_author})};
-		    $author ||= $1 if $data{content} =~ /\$Author:\s+([\w.@-]+)\s+\$/;
-
-		    $ok = $author ? !eval{$svn->client and SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
-		      "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content/$path", "--username" => $author,
-		      "--groups-file" => "$ENV{TARGET}/group-svn.conf",
-		      "$ENV{TARGET}/authz-svn.conf", $pool)} : ($args->{category_root} || $args->{archive_root});
+		    $ok = $args->{category_root} || $args->{archive_root} || !($svn->client and eval {
+			$svn->info("content/$path", sub {$author = $_[1]->last_changed_author}) unless $author;
+			SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
+		          "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content/$path", "--username" => $author,
+		          "--groups-file" => "$ENV{TARGET}/group-svn.conf",
+		          "$ENV{TARGET}/authz-svn.conf", $pool)});
 		    warn "$author:content/$path:$ENV{TARGET}" if $author and not $ok;
                     last;
                   }

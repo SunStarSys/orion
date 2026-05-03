@@ -288,7 +288,8 @@ sub status :Sealed (__PACKAGE__ $self, string $filename) {
   return $rv[0]->[1];
 }
 
-sub info :Sealed (__PACKAGE__ $self, string $filename, coderef $callback, $remote_revision = undef) {
+sub info :Sealed (__PACKAGE__ $self, string $filename, coderef $callback, $remote_revision) {
+  local $SIG{__WARN__} = sub {};  
   my SVN $client = $self->client;
   normalize_svn_path $filename;
   $client->info($filename, undef, $remote_revision, $callback, 0);

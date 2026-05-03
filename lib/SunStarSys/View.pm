@@ -810,18 +810,28 @@ sub snippet {
                          require SunStarSys::Value::Snippet; # see source for list of valid args
                          $args{$key} = SunStarSys::Value::Snippet->new(%a);
                          my $linenums = $a{numbers} ? "linenums" : "";
+                         my $uri = $args{$key}->pretty_uri;
                          my $offset = $args{$key}->{lines}->[0] - 1;
                          $offset = 0 if $offset < 0;
                          my $filter = exists $a{lang} ? "markdown" : "safe";
                          my $rv = <<EOT;
-
-<div data-offset="$offset">
+<div class="accordion" id="$key-container">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="$key-heading">
+      <button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#$key-target" aria-expanded="true" aria-controls="$key-target">
+         $uri
+      </button>
+    </h2>
+    <div id="$key-target" class="accordion-collapse collapse show" aria-labelledby="$key-heading" data-bs-parent="#$key-container">
+      <div class="accordion-body" data-offset="$offset">
 
 \`\`\`$a{lang}
 {{ $key.fetch|safe }}
 \`\`\`
 
-
+</div>
+</div>
+</div>
 </div>
 EOT
                          if (defined(my $header = $args{snippet_header})) {
