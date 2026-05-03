@@ -12,6 +12,8 @@ use Dotiac::DTL::Addon::markup;
 use ASF::Util qw/read_text_file sort_tables/;
 use base 'SunStarSys::View';
 
+$ENV{NO_COPY_COMPRESS} = 1;
+
 push our @TEMPLATE_DIRS, "templates";
 
 #
