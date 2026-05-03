@@ -1476,7 +1476,7 @@ sub vcs_author {
       $path = "/";
     }
 
-    my $rv = $markdown_search ? qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=$svnuser=;${lang}markdown_search=1">) : qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=%22$urlencname%22;${lang}markdown_search=0">);
+    my $rv = $markdown_search ? qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=$svnuser=;${lang}markdown_search=$markdown_search">) : qq(<a href="https://$ENV{WEBSITE}/dynamic/search$path?regex=%22$urlencname%22;${lang}markdown_search=$markdown_search">);
     $rv .= qq(<img src="data:$data"> $name</a>);
     return Dotiac::DTL::Value->safe($rv);
   }

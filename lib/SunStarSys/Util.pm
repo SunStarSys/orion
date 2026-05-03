@@ -207,7 +207,7 @@ sub copy_if_newer {
         unless defined $src and defined $dest;
     my $copied = 0;
     my $compress = 0;
-    $dest .= ".gz" and $compress++ if -T $src and $dest =~ m#/content/# and basename($src) ne ".htaccess";
+    $dest .= ".gz" and $compress++ if !$ENV{NO_COPY_COMPRESS} and -T $src and $dest =~ m#/content/# and basename($src) ne ".htaccess";
     utf8::encode $_ for my ($s, $d) = ($src, $dest);
     copy $s, $d and $copied++ unless -f $dest and stat($src)->mtime < stat($dest)->mtime;
     if ($compress and $copied) {
@@ -494,7 +494,10 @@ sub seed_file_deps {
 
   local $@;
   my ($idx, $author);
-  state $_foo = eval 'BEGIN{local $SIG{__WARN__} = sub {};require SunStarSys::SVN::Client}';
+  {
+    local $SIG{__WARN__} = sub {};
+    state $_foo = eval 'BEGIN{require SunStarSys::SVN::Client}';
+  }
   state $pool = bless APR::Pool->new, "_p_apr_pool_t";
   state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
 

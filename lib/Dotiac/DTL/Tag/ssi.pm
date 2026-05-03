@@ -49,7 +49,10 @@ sub new {
                     my ($re, $method, $args) = @$p;
                     next unless "/$path" =~ $re;
 		    local $@;
-		    state $_foo = eval 'BEGIN{local $SIG{__WARN__} = sub {};require SunStarSys::SVN::Client}';
+		    {
+		      local $SIG{__WARN__} = sub {};
+		      state $_foo = eval 'BEGIN{require SunStarSys::SVN::Client}';
+		    }
 		    my $author;
 		    state $pool = bless APR::Pool->new, "_p_apr_pool_t";
 		    state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
