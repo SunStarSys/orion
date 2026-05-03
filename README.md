@@ -1,4 +1,6 @@
 ![Linter](https://github.com/SunStarSys/orion/actions/workflows/linter.yml/badge.svg)
+![OOo](https://github.com/SunStarSys/orion/actions/workflows/ooo-site.yml/badge.svg)
+![Iconoclasts](https://github.com/SunStarSys/orion/actions/workflows/iconoclasts.yml/badge.svg)
 
 <img width="200px" src="https://sunstarsys.com/images/sunstar-orion-symbol-linear?github">
 
