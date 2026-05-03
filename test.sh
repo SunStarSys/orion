@@ -24,6 +24,7 @@ fi
 
 if [ -n "$LAUNCH_APACHE2" ]; then
   APACHE_PID_FILE=/tmp/httpd.pid APACHE_RUN_DIR=/etc/apache2 APACHE_LOG_DIR=/tmp APACHE_RUN_USER=ubuntu APACHE_RUN_GROUP=ubuntu /usr/sbin/apache2 -k start
+  node markdownd.js &
   timeout 300 /src/watch.sh
   exit 0
 fi
