@@ -1,3 +1,5 @@
+![Linter](https://github.com/SunStarSys/orion/actions/workflows/linter.yml/badge.svg)
+
 <img width="200px" src="https://sunstarsys.com/images/sunstar-orion-symbol-linear">
 
 # SunStar Systems' Orion&trade; Enterprise Wiki (SSG Build Toolchain)
