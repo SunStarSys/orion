@@ -5,7 +5,7 @@ mkdir -p ~/.subversion
 set -e
 set -x
 if [[ "${1:-}" == ooo ]]; then
-  sudo rm -rf trunk www
+  rm -rf trunk www
   ln -s ooo-trunk trunk
 fi
 for d in trunk www; do
