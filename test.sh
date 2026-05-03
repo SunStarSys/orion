@@ -16,7 +16,7 @@ for d in trunk www; do
   fi
 done
 
-[[ -n "$LAUNCH_APACHE2" && -n "$MOZILLA" ]] && (sleep 10; "$MOZILLA" http://localhost:8000/ &)
+[[ -n "$LAUNCH_APACHE2" && -n "$MOZILLA" ]] && (sleep 3; "$MOZILLA" http://localhost:8000/ )&
 
 if [[ "${NO_DOCKER:-}" != 1 ]] && command -v docker >/dev/null 2>&1; then
   exec docker run ${LAUNCH_APACHE2+-p 127.0.0.1:8000:80} -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion -v $(pwd)/sites-enabled:/etc/apache2/sites-enabled -e GIT_URL="$GIT_URL" -e LANG="$LANG" -e LAUNCH_APACHE2="$LAUNCH_APACHE2" --entrypoint= schaefj/linter zsh -c "zsh test.sh"
