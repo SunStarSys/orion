@@ -215,6 +215,7 @@ sub process_file :Sealed {
     utf8::encode $target_file if utf8::is_utf8 $target_file;
     my $path = $file;
     $path =~ s!^content!! or goto COPY;
+    $path =~ y!/!!s;
 
 #api
     for my $p (@$patterns) {

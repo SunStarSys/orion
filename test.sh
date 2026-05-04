@@ -16,16 +16,21 @@ for d in trunk www; do
   fi
 done
 
-[[ -n "$LAUNCH_APACHE2" && -n "$MOZILLA" ]] && (sleep 3; "$MOZILLA" http://localhost:8000/ )&
+: "${TIMEOUT:=300}"
+
+[[ -n "$LAUNCH_APACHE2" && -n "$MOZILLA" ]] && (
+  sleep 3
+  "$MOZILLA" http://localhost:8000/
+) &
 
 if [[ "${NO_DOCKER:-}" != 1 ]] && command -v docker >/dev/null 2>&1; then
-  exec docker run ${LAUNCH_APACHE2+-p 127.0.0.1:8000:80} -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion -v $(pwd)/sites-enabled:/etc/apache2/sites-enabled -e GIT_URL="$GIT_URL" -e LANG="$LANG" -e LAUNCH_APACHE2="$LAUNCH_APACHE2" --entrypoint= schaefj/linter zsh -c "zsh test.sh"
+  exec docker run ${LAUNCH_APACHE2+-p 127.0.0.1:8000:80} -t -v $(pwd):/src -v $HOME/.subversion:/home/ubuntu/.subversion -v $(pwd)/sites-enabled:/etc/apache2/sites-enabled -e GIT_URL="$GIT_URL" -e LANG="$LANG" -e LAUNCH_APACHE2="$LAUNCH_APACHE2" -e TIMEOUT="$TIMEOUT" --entrypoint= schaefj/linter zsh -c "zsh test.sh"
 fi
 
 if [ -n "$LAUNCH_APACHE2" ]; then
   APACHE_PID_FILE=/tmp/httpd.pid APACHE_RUN_DIR=/etc/apache2 APACHE_LOG_DIR=/tmp APACHE_RUN_USER=ubuntu APACHE_RUN_GROUP=ubuntu /usr/sbin/apache2 -k start
   node markdownd.js &
-  timeout 300 /src/watch.sh
+  timeout $TIMEOUT /src/watch.sh
   exit 0
 fi
 
@@ -45,8 +50,8 @@ export WEBSITE="${GIT_URL##*/}" REPOS=public
 
 mkdir -p www/.build-log
 perl -V | grep -i thread
-sleep 3  #wait for markdown daemon to crank up
-time timeout 300 perl build_site.pl --source-base=trunk --target-base=www --revision=0
+sleep 3 #wait for markdown daemon to crank up
+time timeout $TIMEOUT perl build_site.pl --source-base=trunk --target-base=www --revision=0
 rv=$?
 pkill -U $USER -f markdownd.js
 wait
