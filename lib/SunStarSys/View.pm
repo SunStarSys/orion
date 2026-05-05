@@ -568,9 +568,7 @@ sub next_view {
 
 sub langify_template {
   my %args = @_;
-  my (undef, undef, $extension) = parse_filename $args{path};
-  s/^[^.]+\.// for my $lang = $extension;
-  $args{template} .= ".$lang" if defined $args{template};
+  $args{template} .= $args{lang} if defined $args{template};
   my $view = next_view(\%args);
   return view->can($view)->(%args);
 }
@@ -928,6 +926,32 @@ sub normalize_links {
                        1 while $url =~ s#/[^/]+/\.\./#/#;
                        "$tag=$quote$url$suffix$quote"
                      }gex;
+  return view->can($view)->(%args);
+}
+
+sub titleize_links {
+  my %args = @_;
+  my $view = next_view \%args;
+  read_text_file "content$args{path}", \%args unless exists $args{content};
+
+  no warnings 'uninitialized';
+  $args{content} =~ s{                 # trim markdown links
+                         \[
+                         ( [^\]]+ )
+                         \]
+                         \(
+                         ( (?!https?://|mailto://|\{)[^\)#?"]*? ) ([#?][^\)#?]+)?
+                         \)
+                     }{
+                       my ($title, $url, $suffix, $targ_title) = ($1, $2, $3, "");
+                       my $dir = $url =~ m!^/! ? "content" : dirname "content$args{path}";
+                       if (my ($file) = grep -f, "$dir/$url.md$args{lang}") {
+                         read_text_file $file, \my %d;
+                         $targ_title = qq/ "$d{headers}{title}"/;
+                       }
+                       "[$title]($url$suffix$targ_title)"
+                     }gex;
+
   return view->can($view)->(%args);
 }
 
