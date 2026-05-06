@@ -449,6 +449,7 @@ END {
 sub archived {
   my ($path) = (@_, $_);
   my $file = "content$path";
+  return 1 unless -T $file;
   read_text_file $file, \ my %data;
   no warnings 'uninitialized';
   return $action_en{lc($data{headers}{status})} eq "archived";

@@ -964,7 +964,7 @@ sub titleize_links {
   my $view = next_view \%args;
   read_text_file "content$args{path}", \%args unless exists $args{content};
   my ($idx, @img); 
-  no warnings 'uninitialized';
+  no warnings;
   $args{content} =~ s{                 # trim markdown links
                          (?<!!)\[
                          ( [^\]]+ )
@@ -974,7 +974,7 @@ sub titleize_links {
                          \)
                      }{
 		       state %cache :shared;
-                       my ($title, $url, $suffix, $targ_title, $img) = ($1, $2, $3, "");
+                       my ($title, $url, $suffix, $targ_title, $lede, $img) = ($1, $2, $3, "", "");
 		       if ($url =~ m!^https?://! and !$SunStarSys::Value::Offline) {
 			 $targ_title  = $cache{"$url$args{lang}"} //= do {
 			   require URI;
@@ -990,9 +990,10 @@ sub titleize_links {
 			     $rv;
 			   };
 			   if ($response) {
-			     use utf8;
+			     state $t = Template("{{content|striptags}}");
 			     warn "Can't fetch $url: " . $response->status_line . "\n" unless $response->is_success;
-			     ($response->is_success and $response->decoded_content =~ m!<title>(.*?)</title>!is) ? $1 : "";
+			     ($response->is_success and $response->decoded_content =~ m!<title>(.*?)</title>!is) ?
+			       $t->render({content => $1}) : "";
 			   }
 			   else {
 			     "";
@@ -1001,13 +1002,15 @@ sub titleize_links {
                        }
                        else {
                          my $dir = $url =~ m!^/! ? "content" : dirname "content$args{path}";
-                         if (my ($file) = grep -f, "$dir/$url.md$args{lang}") {
+			 my ($f, $d) = parse_filename "$dir/$url";
+                         if (my ($file) = grep -f, "$d/$f.md$args{lang}") {
                            read_text_file $file, \my %d;
 			   state $t = Template("{{content|lede|markdown|striptags}}");
 			   state $i = Template("{{content|img|safe}}");
-			   my $lede = $t->render(\%d);
+			   $lede = $t->render(\%d);
                            $img = $i->render(\%d);
 			   $img = "" if $img eq "&nbsp;"; # the false value for img filter
+
 			   if ($img =~ /\S/) {
 			     $img =~ /src=["'](.*?)["']|\((.*?)\)/ and $img = $+;
 			     y!/!!s for my $durl = dirname $file;
@@ -1017,14 +1020,9 @@ sub titleize_links {
                            $targ_title = qq/$d{headers}{title}$lede/;
                          }
 		       }
-		       if ($img =~ /\S/) {
-			 push @img, $img;
-			 ++$idx;
-			 qq(<a href="$url$suffix" id="tt-$idx" data-bs-html="true" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>)
-                       }
-		       else {
-			 qq(<a href="$url$suffix" data-bs-html="true" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>)
-		       }
+                       push @img, $img;
+		       ++$idx;
+		       qq(<a href="$url$suffix" id="tt-$idx" data-bs-html="true" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>)
                      }gex;
   if (@img) {
     $args{footer} .= qq(\n<script type="text/javascript">\nvar elt, title;);
@@ -1032,11 +1030,11 @@ sub titleize_links {
       $args{footer} .= <<EOT;
 elt = document.querySelector('#tt-$_')
 title = elt.getAttribute("title")
-title = title.replace(/\\n/g,"<br>")
+title = title.replace(/\\n/,"</b><br>")
 if ("$img[$_-1]".length > 0)
-  elt.setAttribute("title", "<img src='$img[$_-1]' width='100'><br>" + title) 
+  elt.setAttribute("title", "<img src='$img[$_-1]' width='100'><br><b>" + title) 
 else
-  elt.setAttribute("title", title) 
+  elt.setAttribute("title", "<b>" + title + "</b>") 
 EOT
     }
     $args{footer} .= "</script>\n";
