@@ -18,6 +18,8 @@ package SunStarSys::View;
 #   'snippet', allow markdown files in source code repos to be imported to the website;
 # * a more flexible 'sitemap' that takes a 'nest' argument to nest directory links into a tree
 use v5.38;
+use threads;
+use threads::shared;
 use utf8;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
@@ -337,7 +339,34 @@ sub asymptote {
       rename "$file.html", "$file.html$lang";
       #push @sources, "$file.html$lang";
     }
-    my $rv = qq(\n<iframe id="$prefix" loading="lazy" class="asymptote" src="$base.page/$prefix.html$lang" frameborder="0"></iframe>\n);
+    my $rv = <<EOT;
+<div class="accordion" id="$prefix-container">
+  <div class="accordion-item" style="background-color: transparent !important; padding-bottom:0px">
+    <h2 class="accordion-header" id="$prefix-gfx-heading">
+      <button class="accordion-button" data-bs-toggle="collapse" data-bs-target="#$prefix-gfx-target" aria-expanded="true" aria-controls="$prefix-gfx-target">
+        Vector Graphics
+      </button>
+    </h2>
+    <div id="$prefix-gfx-target" class="accordion-collapse asy-fixme collapse show" aria-labelledby="$prefix-gfx-heading" data-bs-parent="#$prefix-container">
+      <iframe id="$prefix" loading="lazy" class="asymptote" src="$base.page/$prefix.html$lang" frameborder="0"></iframe>
+    </div>
+  </div>
+  <div class="accordion-item" style="padding-bottom:0px">
+    <h2 class="accordion-header" id="$prefix-src-heading">
+      <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#$prefix-src-target" aria-expanded="false" aria-controls="$prefix-src-target">
+        Asymptote Source Code
+      </button>
+    </h2>
+    <div id="$prefix-src-target" class="accordion-collapse collapse" aria-labelledby="$prefix-src-heading" data-bs-parent="#$prefix-container">
+
+```clike
+$body
+```
+
+</div>
+</div>
+</div>
+EOT
     ++$prefix;
     $rv;
   }msge;
@@ -808,6 +837,7 @@ sub snippet {
                          require SunStarSys::Value::Snippet; # see source for list of valid args
                          $args{$key} = SunStarSys::Value::Snippet->new(%a);
                          my $linenums = $a{numbers} ? "linenums" : "";
+                         my $fetch = $args{$key}->fetch;
                          my $uri = $args{$key}->pretty_uri;
                          my $offset = $args{$key}->{lines}->[0] - 1;
                          $offset = 0 if $offset < 0;
@@ -824,7 +854,7 @@ sub snippet {
       <div class="accordion-body" data-offset="$offset">
 
 \`\`\`$a{lang}
-{{ $key.fetch|safe }}
+$fetch
 \`\`\`
 
 </div>
@@ -842,7 +872,7 @@ EOT
                          }
                          ++$key;
                          $rv;
-                     }ge;
+                     }ge unless $SunStarSys::Value::Offline;
 
 
   my $view = next_view \%args;
@@ -933,25 +963,85 @@ sub titleize_links {
   my %args = @_;
   my $view = next_view \%args;
   read_text_file "content$args{path}", \%args unless exists $args{content};
-
+  my ($idx, @img); 
   no warnings 'uninitialized';
   $args{content} =~ s{                 # trim markdown links
-                         \[
+                         (?<!!)\[
                          ( [^\]]+ )
                          \]
                          \(
-                         ( (?!https?://|mailto://|\{)[^\)#?"]*? ) ([#?][^\)#?]+)?
+                         ( (?!mailto://|\{)[^\{\}\)#"]*? ) ([#][^\)"]+)?
                          \)
                      }{
-                       my ($title, $url, $suffix, $targ_title) = ($1, $2, $3, "");
-                       my $dir = $url =~ m!^/! ? "content" : dirname "content$args{path}";
-                       if (my ($file) = grep -f, "$dir/$url.md$args{lang}") {
-                         read_text_file $file, \my %d;
-                         $targ_title = qq/ "$d{headers}{title}"/;
+		       state %cache :shared;
+                       my ($title, $url, $suffix, $targ_title, $img) = ($1, $2, $3, "");
+		       if ($url =~ m!^https?://! and !$SunStarSys::Value::Offline) {
+			 $targ_title  = $cache{"$url$args{lang}"} //= do {
+			   require URI;
+                           require HTTP::Headers;
+			   my $hdr = HTTP::Headers->new;
+			   $hdr->header('Accept-Language', join ',', substr($args{lang}, 1), "en-US;q=0.9");
+			   $hdr->header('Accept-Charset', 'utf-8');
+			   local $@;
+                           my $response = eval {
+                             alarm 3;
+                             my $rv = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0}, agent=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36", timeout=>3, default_headers=>$hdr)->get(URI->new($url));
+			     alarm 0;
+			     $rv;
+			   };
+			   if ($response) {
+			     use utf8;
+			     warn "Can't fetch $url: " . $response->status_line . "\n" unless $response->is_success;
+			     ($response->is_success and $response->decoded_content =~ m!<title>(.*?)</title>!is) ? $1 : "";
+			   }
+			   else {
+			     "";
+			   }			     
+                         };
                        }
-                       "[$title]($url$suffix$targ_title)"
+                       else {
+                         my $dir = $url =~ m!^/! ? "content" : dirname "content$args{path}";
+                         if (my ($file) = grep -f, "$dir/$url.md$args{lang}") {
+                           read_text_file $file, \my %d;
+			   state $t = Template("{{content|lede|markdown|striptags}}");
+			   state $i = Template("{{content|img|safe}}");
+			   my $lede = $t->render(\%d);
+                           $img = $i->render(\%d);
+			   $img = "" if $img eq "&nbsp;"; # the false value for img filter
+			   if ($img =~ /\S/) {
+			     $img =~ /src=["'](.*?)["']|\((.*?)\)/ and $img = $+;
+			     y!/!!s for my $durl = dirname $file;
+			     $img = "$durl/$img" and $img =~ s!^content!! if $img !~ /^http/;
+			   }
+		           $lede =~ y/\n/ /; $lede = "\n$lede..." if $lede =~ /\S/;
+                           $targ_title = qq/$d{headers}{title}$lede/;
+                         }
+		       }
+		       if ($img =~ /\S/) {
+			 push @img, $img;
+			 ++$idx;
+			 qq(<a href="$url$suffix" id="tt-$idx" data-bs-html="true" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>)
+                       }
+		       else {
+			 qq(<a href="$url$suffix" data-bs-html="true" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>)
+		       }
                      }gex;
+  if (@img) {
+    $args{footer} .= qq(\n<script type="text/javascript">\nvar elt, title;);
+    for (1..$idx) {
+      $args{footer} .= <<EOT;
+elt = document.querySelector('#tt-$_')
+title = elt.getAttribute("title")
+title = title.replace(/\\n/g,"<br>")
+if ("$img[$_-1]".length > 0)
+  elt.setAttribute("title", "<img src='$img[$_-1]' width='100'><br>" + title) 
+else
+  elt.setAttribute("title", title) 
+EOT
+    }
+    $args{footer} .= "</script>\n";
 
+  }
   return view->can($view)->(%args);
 }
 
