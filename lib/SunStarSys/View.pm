@@ -967,10 +967,10 @@ sub titleize_links {
   no warnings;
   $args{content} =~ s{                 # trim markdown links
                          (?<!!)\[
-                         ( [^\]]+ )
+                         ( [^!\[\]]+ )
                          \]
                          \(
-                         ( (?!mailto://|\{)[^\{\}\)#"]*? ) ([#][^\)"]+)?
+                         ( (?!tel:|mailto:|javascript:)[^\{\}\)#"]*? ) ([#][^\)"]+)?
                          \)
                      }{
 		       state %cache :shared;
@@ -982,17 +982,11 @@ sub titleize_links {
 			   my $hdr = HTTP::Headers->new;
 			   $hdr->header('Accept-Language', join ',', substr($args{lang}, 1), "en-US;q=0.9");
 			   $hdr->header('Accept-Charset', 'utf-8');
-			   local $@;
-                           my $response = eval {
-                             alarm 3;
-                             my $rv = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0}, agent=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36", timeout=>3, default_headers=>$hdr)->get(URI->new($url));
-			     alarm 0;
-			     $rv;
-			   };
+                           my $response = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0}, agent=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36", timeout=>5, default_headers=>$hdr)->get(URI->new($url));
 			   if ($response) {
 			     state $t = Template("{{content|striptags}}");
-			     warn "Can't fetch $url: " . $response->status_line . "\n" unless $response->is_success;
-			     ($response->is_success and $response->decoded_content =~ m!<title>(.*?)</title>!is) ?
+			     warn "Can't fetch $url: " . $response->status_line . "\n" unless $response->is_success or $response->is_redirect;
+			     (($response->is_success or $response->is_redirect) and $response->decoded_content =~ m!<title>(.*?)</title>!is) ?
 			       $t->render({content => $1}) : "";
 			   }
 			   else {
@@ -1000,10 +994,16 @@ sub titleize_links {
 			   }			     
                          };
                        }
-                       else {
+                       elsif ($url =~ /\S/ and $url !~ m!^https?://!) {
                          my $dir = $url =~ m!^/! ? "content" : dirname "content$args{path}";
+			 if ($args{path} =~ m!^/x1/cms/wc/!) {
+			   $dir = dirname $args{path};
+			   $dir =~ s!content/.*$!content! if $url =~ m!^/!;
+			 }
+			 $dir = dirname $dir if $dir =~ /\.page$/;
+                         $url .= "index" if $url =~ m!/$!;
 			 my ($f, $d) = parse_filename "$dir/$url";
-                         if (my ($file) = grep -f, "$d/$f.md$args{lang}") {
+                         if (my ($file) = grep -f || (warn("Missing File: $_"), undef), "$d$f.md$args{lang}") {
                            read_text_file $file, \my %d;
 			   state $t = Template("{{content|lede|markdown|striptags}}");
 			   state $i = Template("{{content|img|safe}}");
@@ -1022,7 +1022,7 @@ sub titleize_links {
 		       }
                        push @img, $img;
 		       ++$idx;
-		       qq(<a href="$url$suffix" id="tt-$idx" data-bs-html="true" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>)
+		       qq(<a href="$url$suffix" id="tt-$idx" data-bs-html="true" data-bs-custom-class="custom-tooltip" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>)
                      }gex;
   if (@img) {
     $args{footer} .= qq(\n<script type="text/javascript">\nvar elt, title;);
