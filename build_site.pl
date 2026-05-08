@@ -251,13 +251,17 @@ sub process_file :Sealed {
           close $fh;
           #utime $mtime, $mtime, $dest if $mtime;
         }
+        alarm 0;
         syswrite_all "Built to $target_base/$target_file.$ext$lang in ${elapsed}s.\n";
+        alarm 30;
         return @new_sources;
     }
 
   COPY:
     my ($dest, $copied) = copy_if_newer $file, "$target_base/$file";
+    alarm 0;
     syswrite_all "Copied to $dest.\n" if $copied;
+    alarm 30;
 #api
     return;
 }
@@ -324,7 +328,7 @@ sub fork_runner :Sealed {
             warn "syswrite_all failed: $!";
         }
     }
-    die "Processing errors: $_" for @errors;
+    die "Processing errors: @errors" if @errors;
     $thread_queue->enqueue(undef) for 1 .. 2*$runners;
     # threads::join is fubar somehow for perl v5.38.2 on linux,
     # so we just wait for dust to settle...
