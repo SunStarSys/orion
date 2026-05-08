@@ -866,6 +866,15 @@ sub removeattrs {
 	return $val->set($value);
 }
 
+sub selectattr {
+	my $val=shift;
+	my $value=$val->repr();
+	my $attr=shift;
+	$attr=$attr->repr;
+	return $val->set($2) if $value =~ /\s\Q$attr\E=(["'])(.*?)\1/;
+	return $val->set(undef);
+}
+
 sub rjust {
 	my $value=shift;
 	my $length=shift;
@@ -953,7 +962,6 @@ sub stringformat {
 sub striptags {
 	my $value=shift;
 	my $val=$value->repr;
-	my $tags=shift;
 	$val=~s/<[^>]+>//g;
 	return $value->set($val);
 }
@@ -1265,7 +1273,7 @@ sub lede {
   my $value=shift;
   $value->safe(1);
   my $rv = "";
-  $rv = $1 if $value->repr =~ /\Q{# lede #}\E(.*?)\Q{# lede #}\E/s;
+  $rv = $1 if $value->repr =~ /\{#\s*lede\s*#\}(.*?)\{#\s*lede\s*#\}/s;
   return $value->set(ucfirst $rv);
 }
 
@@ -1273,7 +1281,7 @@ sub img {
   my $value=shift;
   $value->safe(1);
   my $rv = "&nbsp;";
-  $rv = $1 if $value->repr =~ /(<img [^>]+>|\!\[[^\]]+]\([^\)]+\))/;
+  $rv = $1 if $value->repr =~ /(<img [^>]+>|\!\[[^\]]+\]\([^\)]+\))/;
   return $value->set($rv);
 }
 
@@ -1646,16 +1654,16 @@ sub upper {
 sub urlencode {
 	my $val=shift;
 	my $value=$val->repr;
-	my $safe=$URIc;
+	my $unsafe=$URIc;
 	if (@_) {
-		$safe=shift;
-		$safe=$safe->repr() if ref $safe; # For internal use
+		$unsafe=shift;
+		$unsafe=$unsafe->repr() if ref $unsafe; # For internal use
 	}
 #	$safe="" unless $safe;
 #	$safe=quotemeta($safe);
 #	my $find=qr/([^\w$safe\.~-])/;
-       $value =~ /(.*)/;
-	$value = uri_escape_utf8($1, $safe);
+	$value =~ /(.*)/;
+	$value = uri_escape_utf8($1, $unsafe);
 	return $val->set($value);
 }
 
