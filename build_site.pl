@@ -194,8 +194,8 @@ sub process_dir {
             my $n = fileno $wtr;
             state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, "$_:$@" if $@};
             mkpath "$target_base/$root" unless $made_target_dir++;
-            $thread_queue->enqueue($_), next if ++$cache{$dir} % $runners >= $runners / 2 and $thread_queue->pending <= $runners / 2;
-            $s->();
+            $thread_queue->enqueue($_);# next if $thread_queue->pending <= $runners / 2;
+            #$s->();
         }
         else {
             warn "skipping unrecognized entry: $_\n";
@@ -287,7 +287,7 @@ sub fork_runner :Sealed {
       }
       threads->exit;
     };
-    push @threads, threads->create($s) for 1 .. $runners/4;
+    push @threads, threads->create($s) for 1 .. $runners;
     while (1) {
         my ($p) = $r->can_read();
         # minor race condition: this issue seems inherent to any attempts
@@ -325,21 +325,21 @@ sub fork_runner :Sealed {
         }
     }
     die "Processing errors: $_" for @errors;
-    #$thread_queue->enqueue(undef) for 1 .. $runners;
-    $thread_queue->end;
+    $thread_queue->enqueue(undef) for 1 .. 2*$runners;
     # threads::join is fubar somehow for perl v5.38.2 on linux,
     # so we just wait for dust to settle...
     eval {
-      alarm 100;
-      if ($] == 5.038002 and $^O eq "linux") {
-        sleep 1 while grep $_->is_running, @threads;
+      alarm 300;
+      if ($] == 5.038002) {
+	  sleep 1 and $thread_queue->enqueue(undef) while grep $_->is_running, @threads;
+	  $thread_queue->end;
       }
       else {
         $_->join for @threads;
       }
       alarm 0;
     };
-    warn $@ and _exit -1 if $@;
+    warn $@ and sleep 1 and  _exit -1 if $@;
     _exit 0; # skip process/pool cleanups
 }
 
