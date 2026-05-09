@@ -59,6 +59,7 @@ USAGE
 utf8::encode $dirq if defined $dirq;
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
 $runners ||= 2 * `nproc`; # 8 is arbitrary but educated guess
+$runners = 16 if $runners > 16;
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET} //= $target_base;
