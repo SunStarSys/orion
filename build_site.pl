@@ -19,6 +19,7 @@ use Time::HiRes qw/gettimeofday tv_interval/;
 use threads;
 use threads::shared;
 use Thread::Queue;
+use Fcntl qw/O_NONBLOCK F_SETFL F_GETFL/;
 
 BEGIN {
   my $script_path = dirname($0);
@@ -31,12 +32,11 @@ BEGIN {
 use utf8;
 use Getopt::Long;
 use File::Path;
-use SunStarSys::Util qw/copy_if_newer parse_filename unload_package/;
 use SunStarSys::View;
+use SunStarSys::Util qw/copy_if_newer parse_filename unload_package Load Dump/;
 use Data::Dumper ();
 use SunStarSys::ASF;
 use IO::Compress::Gzip qw/gzip/;
-use Fcntl;
 use base 'sealed';
 use sealed;
 
@@ -58,7 +58,7 @@ Usage: $0 --source-base /path/to/trunk/or/a/branch --target-base /path/to/target
 USAGE
 utf8::encode $dirq if defined $dirq;
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
-$runners ||= 2 * `nproc`; # 8 is arbitrary but educated guess
+$runners ||= 2*`nproc`; # 8 is arbitrary but educated guess
 $runners = 16 if $runners > 16;
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
@@ -85,6 +85,7 @@ $SIG{__WARN__} = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, g
 $SIG{__DIE__}  = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_"; die $_};
 
 unshift @INC, "$source_base/lib";
+
 require path;
 require view;
 
@@ -96,6 +97,7 @@ require view;
 my $pattern_string = 'no strict "refs"; *path::patterns{ARRAY}';
 my $patterns = eval $pattern_string;
 my %seen;
+my @threads;
 
 sub main :Sealed {
   my $saw_error = 0;
@@ -163,10 +165,39 @@ sub main :Sealed {
   }
   shutdown $_, 1 for map $_->{socket}, @runners;
   syswrite_all "Waiting for kids...\n";
+
+  my %new;
+  do {
+    for my $p ($sockets->can_read) {
+      local $_ = "";
+      1 while read $p, $_, 4096, length;
+      $sockets->remove($p);
+      close $p;
+      eval {
+	my $links = Load $_;
+	while (my ($k, $v) = each %$links) {
+	  no warnings 'uninitialized';
+	  utf8::decode $v;
+	  if (exists $new{$k}) {
+	    my ($title, $img, $new_count)  = split '%%', $v;
+	    my (undef, undef, $old_count)  = split '%%', $new{$k};
+	    my (undef, undef, $orig_count) = split '%%', $SunStarSys::View::links{$k};
+	    $new{$k} = join '%%', $title, $img, $old_count + $new_count - $orig_count;
+	  }
+	  else {
+	    $new{$k} = $v;
+	  }
+	}
+      };
+      warn $@ if $@;
+    }
+  } while $sockets->handles;
+  %SunStarSys::View::links = (%SunStarSys::View::links, %new);
+  
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
   syswrite_all "Build done.\n";
-  exit -1 if $saw_error;
-  exit 0; # avoid global cleanup segfault
+  exit 1 if $saw_error;
+  exit 0;
 }
 
 sub process_dir {
@@ -174,9 +205,7 @@ sub process_dir {
     utf8::decode $root unless utf8::is_utf8 $root;
     opendir my $dir, $root or warn "Can't open $root [skipping]: $!" and return;
     my $made_target_dir;
-    my @threads;
     no warnings 'uninitialized';
-
     for (map $_->[0], sort {$b->[1] <=> $a->[1]} map [$_, -d],# dirs first, schwartzian xform
          map "$root/$_", grep $_ ne "." && $_ ne ".." && $_ ne ".svn", readdir $dir) {
 
@@ -191,12 +220,10 @@ sub process_dir {
             next;
         }
         if (-f _) {
-            state %cache;
-            my $n = fileno $wtr;
-            state $s = sub {syswrite_all($wtr, "new: $_\n") for eval {process_file(@_)}; push @errors, "$_:$@" if $@};
             mkpath "$target_base/$root" unless $made_target_dir++;
-            $thread_queue->enqueue($_);# next if $thread_queue->pending <= $runners / 2;
-            #$s->();
+            $thread_queue->enqueue($_), next if $thread_queue->pending < 2 * @threads;
+	    syswrite_all($wtr, "new: $_\n") for eval {process_file($_)};
+	    push @errors, "$_:$@" if $@;
         }
         else {
             warn "skipping unrecognized entry: $_\n";
@@ -252,17 +279,13 @@ sub process_file :Sealed {
           close $fh;
           #utime $mtime, $mtime, $dest if $mtime;
         }
-        alarm 0;
         syswrite_all "Built to $target_base/$target_file.$ext$lang in ${elapsed}s.\n";
-        alarm 30;
         return @new_sources;
     }
 
   COPY:
     my ($dest, $copied) = copy_if_newer $file, "$target_base/$file";
-    alarm 0;
     syswrite_all "Copied to $dest.\n" if $copied;
-    alarm 30;
 #api
     return;
 }
@@ -283,12 +306,12 @@ sub fork_runner :Sealed {
     $r = $r->new;
     $r->add($parent);
     my $thread_queue = Thread::Queue->new;
-    my @threads;
     state $s = sub {
       $SIG{KILL} = sub {threads->exit};
       while (my $data = $thread_queue->dequeue()) {
-        syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
-        push @errors, "$data:$@" and warn $@ if $@;
+	local $@;
+	syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
+        push @errors, "$data:$@" if $@;
       }
       threads->exit;
     };
@@ -329,23 +352,45 @@ sub fork_runner :Sealed {
             warn "syswrite_all failed: $!";
         }
     }
-    die "Processing errors: @errors" if @errors;
-    $thread_queue->enqueue(undef) for 1 .. 2*$runners;
-    # threads::join is fubar somehow for perl v5.38.2 on linux,
+    warn "Processing errors: @errors" if @errors;
+    $thread_queue->enqueue(undef) for 1 .. $runners;
+    # threads::join is fubar somehow for perl v5.38.2
     # so we just wait for dust to settle...
-    eval {
-      alarm 300;
-      if ($] == 5.038002) {
-	  sleep 1 and $thread_queue->enqueue(undef) while grep $_->is_running, @threads;
-	  $thread_queue->end;
+    if ($] == 5.038002) {
+      my $maxcount = 11;
+      while (my $items = grep $_->is_running, @threads) {
+	state $last_items = $items;  
+	sleep 1;
+	if ($items < @threads) {
+	  --$maxcount, $maxcount % 10 or warn "$$ dequeueing: $items($maxcount)\n";
+	}
+	else {
+	  state $i;
+	  $thread_queue->enqueue(undef);
+	  if (++$i == 60) {
+	    warn "$$ thread killing: $items\n";
+	    $_->kill("KILL") for @threads;
+	    last;
+	  }
+	}
+	if (!$maxcount and $items == $last_items) {
+	  $_->kill("KILL") for grep $_->is_running, @threads;
+	  last;
+	}
+	elsif ($items < $last_items) {
+	  $last_items = $items;
+	  $maxcount += 10;
+	}
       }
-      else {
-        $_->join for @threads;
-      }
-      alarm 0;
-    };
-    warn $@ and sleep 1 and  _exit -1 if $@;
-    _exit 0; # skip process/pool cleanups
+    }
+    else {
+      $_->join for @threads;
+    }
+    utf8::is_utf8 $_ and utf8::encode $_ for values %SunStarSys::View::links;	
+    syswrite_all($parent, Dump \%SunStarSys::View::links);
+    shutdown $parent, 1;
+    _exit 1 if @errors;
+    _exit 0; # skip process/pool/END cleanups
 }
 
 sub syswrite_all {

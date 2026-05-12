@@ -1,4 +1,3 @@
-package view;
 package SunStarSys::View;
 
 # abstract base class for default view methods
@@ -18,12 +17,13 @@ package SunStarSys::View;
 #   'snippet', allow markdown files in source code repos to be imported to the website;
 # * a more flexible 'sitemap' that takes a 'nest' argument to nest directory links into a tree
 use v5.38;
-use threads;
-use threads::shared;
 use utf8;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
 use Dotiac::DTL::Addon::json;
+use threads;
+use threads::shared;
+our %links :shared;
 use SunStarSys::Util qw/read_text_file sort_tables parse_filename sanitize_relative_path Dump Load touch %action_en/;
 use Data::Dumper ();
 use File::Basename;
@@ -147,6 +147,8 @@ sub single_narrative :Sealed {
     }
   }
 
+  $args{description} //= $view->can("description")->(%args);
+
   if ($args{preprocess}) {
     $args{content} = sort_tables(Template($args{content})->render(\%args));
   }
@@ -263,6 +265,12 @@ EOT
   return @rv;
 }
 
+sub description {
+  my %args = @_;
+  state $t = Template("{{content|lede|markdown|striptags}}");
+  return $t->render(\%args);
+}
+
 sub comment :Sealed {
   my %args = @_;
   my $path = $args{path};
@@ -359,7 +367,7 @@ sub asymptote {
     </h2>
     <div id="$prefix-src-target" class="accordion-collapse collapse" aria-labelledby="$prefix-src-heading" data-bs-parent="#$prefix-container">
 
-```clike
+```asy
 $body
 ```
 
@@ -963,9 +971,9 @@ sub titleize_links {
   my %args = @_;
   my $view = next_view \%args;
   read_text_file "content$args{path}", \%args unless exists $args{content};
-  my ($idx, @img); 
+  my ($idx, @img);
   no warnings;
-  $args{content} =~ s{                 # trim markdown links
+  $args{content} =~ s{
                          (?<!!)\[
                          ( [^!\[\]]+ )
                          \]
@@ -973,26 +981,52 @@ sub titleize_links {
                          ( (?!tel:|mailto:|javascript:)[^\{\}\)#"]*? ) ([#][^\)"]+)?
                          \)
                      }{
-		       state %cache :shared;
                        my ($title, $url, $suffix, $targ_title, $lede, $img) = ($1, $2, $3, "", "");
-		       if ($url =~ m!^https?://! and !$SunStarSys::Value::Offline) {
-			 $targ_title  = $cache{"$url$args{lang}"} //= do {
+		       my $substitution;
+		     LOOP:
+		       while (1) {
+		       if ($url =~ m!^(https?://[^/]+)! and !$SunStarSys::Value::Offline) {
+			 my $base = $1;
+			 my $r = $links{"$url$args{lang}"} || do {
 			   require URI;
                            require HTTP::Headers;
+                           require LWP::Protocol::http;
+                           state $_foo = push @LWP::Protocol::http::EXTRA_SOCK_OPTS, MaxLineLength => 0;
 			   my $hdr = HTTP::Headers->new;
 			   $hdr->header('Accept-Language', join ',', substr($args{lang}, 1), "en-US;q=0.9");
 			   $hdr->header('Accept-Charset', 'utf-8');
                            my $response = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0}, agent=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36", timeout=>5, default_headers=>$hdr)->get(URI->new($url));
 			   if ($response) {
-			     state $t = Template("{{content|striptags}}");
-			     warn "Can't fetch $url: " . $response->status_line . "\n" unless $response->is_success or $response->is_redirect;
-			     (($response->is_success or $response->is_redirect) and $response->decoded_content =~ m!<title>(.*?)</title>!is) ?
-			       $t->render({content => $1}) : "";
+			     state $t = Template("{{content|striptags|safe}}");
+			     if ($response->is_success or $response->is_redirect) {
+			       local $_ = $response->decoded_content;
+                               if (m!<meta [^>]*property=["']og:title["'] content="(.*?)"!is or m!<title[^>]*>(.*?)</title>!is) {
+				 my $rv = $1;
+				 $rv =~ y/\n/ /;
+				 $rv =~ y/ //s;
+			         my $rv = $rv ? $t->render({content => $rv}) : "";
+				 my $img = $t->render({content => index($1,"http") == 0 ? $1 : index($1,"/")==0 ? $base.$1 : rindex($url,"/") == length($url) - 1 ? $url.$1 : dirname($url)."/$1"})
+				   if m!<meta [^>]*property=["']og:image["'] content="(.*?)"!is or /<img [^>]*src=["'](.*?)["']/is;
+			         $lede = $t->render({content => $1}) if m!<meta [^>]*property=["']og:description['"] content="(.*?)"!is;
+			         $lede =~ y/\n/ /; $lede = ":::$lede..." if $lede =~ /\S/;
+				 "$rv$lede%%$img%%0"
+                               }
+			       else {
+				 "%%%%0"
+			       }
+			     }
+			     else {
+			       warn "Can't fetch $url: " . $response->status_line . "\n";
+			       "%%%%0"
+			     }
 			   }
 			   else {
-			     "";
-			   }			     
+			     "%%%%0"
+			   }
                          };
+			 ($targ_title, $img, my $count) = split /%%/, $r;
+                         lock %links;
+			 $links{"$url$args{lang}"} = join "%%", $targ_title, $img, $count + 1;
                        }
                        elsif ($url =~ /\S/ and $url !~ m!^https?://!) {
                          my $dir = $url =~ m!^/! ? "content" : dirname "content$args{path}";
@@ -1003,9 +1037,9 @@ sub titleize_links {
 			 $dir = dirname $dir if $dir =~ /\.page$/;
                          $url .= "index" if $url =~ m!/$!;
 			 my ($f, $d) = parse_filename "$dir/$url";
-                         if (my ($file) = grep -f || (warn("Missing File: $_"), undef), "$d$f.md$args{lang}") {
+                         if (my ($file) = grep -f, "$d$f.md$args{lang}") {
                            read_text_file $file, \my %d;
-			   state $t = Template("{{content|lede|markdown|striptags}}");
+			   state $t = Template("{{content|lede|markdown|striptags|safe}}");
 			   state $i = Template("{{content|img|safe}}");
 			   $lede = $t->render(\%d);
                            $img = $i->render(\%d);
@@ -1016,25 +1050,31 @@ sub titleize_links {
 			     y!/!!s for my $durl = dirname $file;
 			     $img = "$durl/$img" and $img =~ s!^content!! if $img !~ /^http/;
 			   }
-		           $lede =~ y/\n/ /; $lede = "\n$lede..." if $lede =~ /\S/;
+		           $lede =~ y/\n/ /; $lede = ":::$lede..." if $lede =~ /\S/;
                            $targ_title = qq/$d{headers}{title}$lede/;
                          }
+                         elsif ($dir =~ s!^.*content!!) {
+			   $url = "https://$ENV{WEBSITE}$dir/$url";
+			   redo LOOP;
+			 }
 		       }
                        push @img, $img;
 		       ++$idx;
-		       qq(<a href="$url$suffix" id="tt-$idx" data-bs-html="true" data-bs-custom-class="custom-tooltip" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>)
-                     }gex;
+		       s/\@/&#64;/g for $url, $title, $targ_title;
+		       $substitution = qq(<a href="$url$suffix" id="tt-$idx" data-bs-html="true" data-bs-custom-class="custom-tooltip" data-bs-toggle="tooltip" data-bs-placement="bottom" title="$targ_title">$title</a>);
+		       last;
+                     }$substitution}gex;
   if (@img) {
     $args{footer} .= qq(\n<script type="text/javascript">\nvar elt, title;);
     for (1..$idx) {
       $args{footer} .= <<EOT;
 elt = document.querySelector('#tt-$_')
 title = elt.getAttribute("title")
-title = title.replace(/\\n/,"</b><br>")
+title = title.replace(':::',"</b><br>")
 if ("$img[$_-1]".length > 0)
-  elt.setAttribute("title", "<img src='$img[$_-1]' width='100'><br><b>" + title) 
+  elt.setAttribute("title", "<img src='$img[$_-1]' width='100'><br><b>" + title)
 else
-  elt.setAttribute("title", "<b>" + title + "</b>") 
+  elt.setAttribute("title", "<b>" + title)
 EOT
     }
     $args{footer} .= "</script>\n";

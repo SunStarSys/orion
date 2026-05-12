@@ -13,6 +13,8 @@ use APR::Pool;
 use SVN::Repos;
 use v5.38;
 use utf8;
+use constant MAX_LINK_COUNT => 256;
+use constant MAX_LINK_RAND  => 10;
 
 our @EXPORT_OK = qw/sanitize_relative_path read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename
@@ -402,11 +404,16 @@ my $dependencies;
 my $acl_string = 'no strict "refs"; *path::acl{ARRAY}';
 my $acl;
 
+my $link_string = 'no strict "refs"; *SunStarSys::View::links{HASH}';
+my $links;
+my %links_orig;
+
 sub walk_content_tree :prototype(&) {
   my $wanted = shift;
   $dependencies = eval $dep_string;
   $acl = eval $acl_string;
-
+  $links = eval $link_string;
+  
   if (-f "$ENV{TARGET}/.deps") {
       # use the cached .deps file if the incremental build system deems it appropriate
       open my $deps, "<:raw", "$ENV{TARGET}/.deps" or die "Can't open .deps for reading: $!";
@@ -417,6 +424,14 @@ sub walk_content_tree :prototype(&) {
       open my $fh, "<:raw", "$ENV{TARGET}/.acl" or die "Can't open .acl for reading: $!";
       eval '*path::acl = Load join "", <$fh>';
       $acl = eval $acl_string;
+      #utf8::decode $_ for map {$_->{path}, values %{$_->{rules}}} @$acl;
+  }
+  if (-f "$ENV{TARGET}/.links") {
+      open my $fh, "<:raw", "$ENV{TARGET}/.links" or die "Can't open .links for reading: $!";
+      %SunStarSys::View::links = %{Load join "", <$fh>};
+      $links = eval $link_string;
+      utf8::decode $_ for values %$links;
+      %links_orig = %$links; 
   }
   return if eval '$path::use_cache';
 
@@ -444,12 +459,27 @@ END {
     utf8::is_utf8($_) and utf8::encode $_ for map {$_->{path}, values %{$_->{rules}}} @$acl;
     print $fh Dump $acl;
   }
+  if (keys %$links) {
+    open my $fh, ">:raw", "$ENV{TARGET}/.links" or die "Can't open '.links' for writing: $!";
+    for my $k (keys %$links) {
+      no warnings 'uninitialized';
+      utf8::is_utf8 $_ and utf8::encode $_ for $$links{$k};
+      my $v = $$links{$k};
+      my ($title, $img, $count) = split /%%/, $v;
+      my (undef, undef, $orig_count) = split /%%/, $links_orig{$k};
+      $count += int rand(MAX_LINK_RAND),
+	$$links{$k} = join '%%', $title, $img, $count
+	if $count == $orig_count;
+      delete $$links{$k} if $count > MAX_LINK_COUNT;
+    }
+    print $fh Dump $links;
+  }
 }
 
 sub archived {
   my ($path) = (@_, $_);
   my $file = "content$path";
-  return 1 unless -T $file;
+  return unless -T $file;
   read_text_file $file, \ my %data;
   no warnings 'uninitialized';
   return $action_en{lc($data{headers}{status})} eq "archived";
