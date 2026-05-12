@@ -307,16 +307,12 @@ sub fork_runner :Sealed {
     $r->add($parent);
     my $thread_queue = Thread::Queue->new;
     state $s = sub {
-      $SIG{KILL} = sub {alarm 0;threads->exit};
-      $SIG{ALRM} = sub {alarm 0;threads->exit};
+      $SIG{KILL} = sub {threads->exit};
       while (my $data = $thread_queue->dequeue()) {
 	local $@;
-        alarm 0;
 	syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
         push @errors, "$data:$@" if $@;
-        alarm 2;
       }
-      alarm 0;
       threads->exit;
     };
     push @threads, threads->create($s) for 1 .. $runners;
