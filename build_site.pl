@@ -193,7 +193,7 @@ sub main :Sealed {
     }
   } while $sockets->handles;
   %SunStarSys::View::links = (%SunStarSys::View::links, %new);
-  
+
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
   syswrite_all "Build done.\n";
   exit 1 if $saw_error;
@@ -359,7 +359,7 @@ sub fork_runner :Sealed {
     if ($] == 5.038002) {
       my $maxcount = 11;
       while (my $items = grep $_->is_running, @threads) {
-	state $last_items = $items;  
+	state $last_items = $items;
 	sleep 1;
 	if ($items < @threads) {
 	  --$maxcount, $maxcount % 10 or warn "$$ dequeueing: $items($maxcount)\n";
@@ -386,7 +386,7 @@ sub fork_runner :Sealed {
     else {
       $_->join for @threads;
     }
-    utf8::is_utf8 $_ and utf8::encode $_ for values %SunStarSys::View::links;	
+    utf8::is_utf8 $_ and utf8::encode $_ for values %SunStarSys::View::links;
     syswrite_all($parent, Dump \%SunStarSys::View::links);
     shutdown $parent, 1;
     _exit 1 if @errors;
@@ -402,6 +402,7 @@ sub syswrite_all {
       my ($x) = map {my $x = $_; utf8::encode $x if utf8::is_utf8 $x; $x} $data;
       syswrite $build_log, $x;
     }
+    no warnings 'uninitialized';
     while (($bytes = syswrite($fh, substr($data, $total))) > 0) {
       $total += $bytes;
       return $total if $total == length $data;
