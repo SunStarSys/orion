@@ -307,12 +307,16 @@ sub fork_runner :Sealed {
     $r->add($parent);
     my $thread_queue = Thread::Queue->new;
     state $s = sub {
-      $SIG{KILL} = sub {threads->exit};
+      $SIG{KILL} = sub {alarm 0;threads->exit};
+      $SIG{ALRM} = sub {alarm 0;threads->exit};
       while (my $data = $thread_queue->dequeue()) {
 	local $@;
+        alarm 0;
 	syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
         push @errors, "$data:$@" if $@;
+        alarm 2;
       }
+      alarm 0;
       threads->exit;
     };
     push @threads, threads->create($s) for 1 .. $runners;
@@ -354,38 +358,36 @@ sub fork_runner :Sealed {
     }
     warn "Processing errors: @errors" if @errors;
     $thread_queue->enqueue(undef) for 1 .. $runners;
-    # threads::join is fubar somehow for perl v5.38.2
+
+    # threads::join is fubar somehow
     # so we just wait for dust to settle...
-    if ($] == 5.038002) {
-      my $maxcount = 11;
-      while (my $items = grep $_->is_running, @threads) {
-	state $last_items = $items;
-	sleep 1;
-	if ($items < @threads) {
-	  --$maxcount, $maxcount % 10 or warn "$$ dequeueing: $items($maxcount)\n";
-	}
-	else {
-	  state $i;
-	  $thread_queue->enqueue(undef);
-	  if (++$i == 60) {
-	    warn "$$ thread killing: $items\n";
-	    $_->kill("KILL") for @threads;
-	    last;
-	  }
-	}
-	if (!$maxcount and $items == $last_items) {
-	  $_->kill("KILL") for grep $_->is_running, @threads;
-	  last;
-	}
-	elsif ($items < $last_items) {
-	  $last_items = $items;
-	  $maxcount += 10;
-	}
+
+    while (my $items = grep $_->is_running, @threads) {
+      state $maxcount = 11;
+      state $last_items = $items;
+      sleep 1;
+      if ($items < @threads) {
+        --$maxcount, $maxcount % 10 or warn "$$ dequeueing: $items($maxcount)\n";
+      }
+      else {
+        state $i;
+        $thread_queue->enqueue(undef);
+        if (++$i == 60) {
+          warn "$$ thread killing: $items\n";
+          $_->kill("KILL") for @threads;
+          last;
+        }
+      }
+      if (!$maxcount and $items == $last_items) {
+        $_->kill("KILL") for grep $_->is_running, @threads;
+        last;
+      }
+      elsif ($items < $last_items) {
+        $last_items = $items;
+        $maxcount += 10;
       }
     }
-    else {
-      $_->join for @threads;
-    }
+
     utf8::is_utf8 $_ and utf8::encode $_ for values %SunStarSys::View::links;
     syswrite_all($parent, Dump \%SunStarSys::View::links);
     shutdown $parent, 1;
