@@ -40,6 +40,7 @@ sub new {
 		else {
                   require File::Basename;
                   my $path = substr $name, 1, -1;
+                  s/\+/ /g for $path;
                   sanitize_relative_path $path;
                   my $ok = 0;
                   read_text_file "content/$path", \ my %data;
@@ -73,7 +74,7 @@ sub new {
 		}
 	}
 	else {
-                die "\$Dotiac::DTL::ALLOWED_INCLUDE_ROOTS is not set, can't use this tag";# unless $Dotiac::DTL::ALLOWED_INCLUDE_ROOTS;
+                die "Invalid ssi path $name: probably screwed up because of spaces.";# unless $Dotiac::DTL::ALLOWED_INCLUDE_ROOTS;
 		$self->{var}=$name[0];
 	}
 	bless $self,$class;

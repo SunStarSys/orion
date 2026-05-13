@@ -354,7 +354,7 @@ sub fork_runner :Sealed {
     }
     warn "Processing errors: @errors" if @errors;
     $thread_queue->enqueue(undef) for 1 .. $runners;
-
+    $thread_queue->end;
     # threads::join is fubar somehow
     # so we just wait for dust to settle...
 
@@ -367,7 +367,6 @@ sub fork_runner :Sealed {
       }
       else {
         state $i;
-        $thread_queue->enqueue(undef);
         if (++$i == 60) {
           warn "$$ thread killing: $items\n";
           $_->kill("KILL") for @threads;

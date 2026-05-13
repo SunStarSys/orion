@@ -175,6 +175,7 @@ sub single_narrative :Sealed {
 
   utf8::decode $_ for grep defined, $archive_headers, $headers, $categories, $status, $keywords;
   no warnings;
+  $path =~ s/ /+/g;
   if (exists $args{archive_root}
       and exists $args{headers}
       and defined $status
