@@ -40,7 +40,7 @@ require.extensions['.html'] = function (module, filename) {
 global.IN_GLOBAL_SCOPE  = false;
 global.navigator        = require("navigator");
 const jsdom             = require('jsdom');
-const { JSDOM }         = jsdom;
+const { JSDOM, VirtualConsole }         = jsdom;
 const { window }        = new JSDOM("");
 const { jQueryFactory } = require("jquery/factory");
 global.jQueryFactory    = jQueryFactory;
@@ -67,7 +67,7 @@ const HTML = `<!doctype html>
 </html>
 `;
 
-const virtualConsole = new jsdom.VirtualConsole();
+const virtualConsole = new VirtualConsole();
 virtualConsole.sendTo(console);
 
 if (cluster.isMaster) {
