@@ -42,7 +42,7 @@
     /* Require.js assignment replace */
     "use strict";
 
-    var $ = w ? jQuery(w, 1) : jQuery;
+    var $ = w ? jQueryFactory(w) : jQuery;
     w = w || window;
     var document = w.document;
     if (typeof (jQuery_flowchart) !== "undefined") {
