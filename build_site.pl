@@ -318,7 +318,7 @@ sub fork_runner :Sealed {
       threads->exit;
     };
     push @threads, threads->create($s) for 1 .. $runners;
-    while (my ($p) = $r->can_read(60)) {
+    while (my ($p) = $r->can_read()) {
         # minor race condition: this issue seems inherent to any attempts
         # to communicate process state via sockets, and since we aren't
         # building software, but websites, the bang-for-the-buck tradeoff is

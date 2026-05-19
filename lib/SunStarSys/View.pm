@@ -145,7 +145,7 @@ sub single_narrative :Sealed {
 	if ($is_csv) {
 	  no warnings 'uninitialized';
 	  my Text::CSV $csv;
-	  $csv = $csv->new(my %options = (skip_emtpy_rows => 1, detect_datetime => 1, $args{$key}->{headers}->{headers} && (headers => "auto")));  
+	  $csv = $csv->new(my %options = (skip_emtpy_rows => 1, detect_datetime => 1, $args{$key}->{headers}->{headers} && (headers => "auto")));
 	  my $content = $args{preprocess} ? Template($args{$key}{content})->render($args{$key}) : $args{$key}{content};
 	  my $lines = $content =~ y/\n//;
 	  $args{$key}{content} = $csv->csv(in => \$content);
@@ -744,7 +744,7 @@ sub ssi {
   my @important = split /\s*[;,]\s*/, $args{headers}{important} // "";
 
   no warnings 'uninitialized';
-  
+
   1 while $args{content} =~ s{(\{%\s*ssi\s+\`([^\`]+)\`\s*%\})}{
     my $match = $1;
     my $target = $2;
@@ -1014,6 +1014,7 @@ sub titleize_links {
   read_text_file "content$args{path}", \%args unless exists $args{content};
   my ($idx, @img);
   no warnings;
+  local $_;
   $args{content} =~ s{
                          (?<!!)\[
                          ( [^!\[\]]+ )
@@ -1024,6 +1025,7 @@ sub titleize_links {
                      }{
                        my ($title, $url, $suffix, $targ_title, $lede, $img) = ($1, $2, $3, "", "");
 		       my $substitution;
+
 		     LOOP:
 		       while (1) {
 		       if ($url =~ m!^(https?://[^/]+)!i and !$SunStarSys::Value::Offline) {
