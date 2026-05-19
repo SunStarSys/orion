@@ -59,7 +59,7 @@ USAGE
 utf8::encode $dirq if defined $dirq;
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
 $runners ||= 2*`nproc`; # 8 is arbitrary but educated guess
-$runners = 16 if $runners > 16;
+$runners = 8 if $runners > 8;
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET} //= $target_base;
@@ -258,6 +258,8 @@ sub process_file :Sealed {
         }
         my $s = $method_cache{$method} //= view->can($method) or die "Can't locate method: $method\n";
         my $start_call = [gettimeofday];
+	no warnings 'once';
+	$view::path = $path;
         my ($content, $ext, undef, @new_sources) = $s->(nonce => rand, website => $ENV{WEBSITE}, repos => $ENV{REPOS}, path => $path, lang => $lang, %$args);
         my $elapsed = tv_interval($start_call);
         if ($$args{compress}) {
@@ -316,8 +318,7 @@ sub fork_runner :Sealed {
       threads->exit;
     };
     push @threads, threads->create($s) for 1 .. $runners;
-    while (1) {
-        my ($p) = $r->can_read();
+    while (my ($p) = $r->can_read(60)) {
         # minor race condition: this issue seems inherent to any attempts
         # to communicate process state via sockets, and since we aren't
         # building software, but websites, the bang-for-the-buck tradeoff is
@@ -357,6 +358,7 @@ sub fork_runner :Sealed {
     $thread_queue->end;
     # threads::join is fubar somehow
     # so we just wait for dust to settle...
+    warn "$$: waiting for threads to complete...\n";
 
     while (my $items = grep $_->is_running, @threads) {
       state $maxcount = 11;
@@ -366,26 +368,27 @@ sub fork_runner :Sealed {
         --$maxcount, $maxcount % 10 or warn "$$ dequeueing: $items($maxcount)\n";
       }
       else {
-        state $i;
+        state $i = 0;
         if (++$i == 60) {
-          warn "$$ thread killing: $items\n";
+          warn "$$: thread killing all: $items\n";
           $_->kill("KILL") for @threads;
           last;
         }
       }
       if (!$maxcount and $items == $last_items) {
+        warn "$$: thread killing remaining: $items\n";
         $_->kill("KILL") for grep $_->is_running, @threads;
         last;
       }
       elsif ($items < $last_items) {
         $last_items = $items;
-        $maxcount += 10;
+        $maxcount += 5;
       }
     }
 
     utf8::is_utf8 $_ and utf8::encode $_ for values %SunStarSys::View::links;
     syswrite_all($parent, Dump \%SunStarSys::View::links);
-    shutdown $parent, 1;
+    close $parent;
     _exit 1 if @errors;
     _exit 0; # skip process/pool/END cleanups
 }

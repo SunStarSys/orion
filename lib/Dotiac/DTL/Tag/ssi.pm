@@ -40,7 +40,7 @@ sub new {
 		else {
                   require File::Basename;
                   my $path = substr $name, 1, -1;
-                  s/\+/ /g for $path;
+                  y/+/ / for $path;
                   sanitize_relative_path $path;
                   my $ok = 0;
                   read_text_file "content/$path", \ my %data;
@@ -57,24 +57,83 @@ sub new {
 		    my $author;
 		    state $pool = bless APR::Pool->new, "_p_apr_pool_t";
 		    state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
+		    my $subdir = "trunk";
+		    if ($ENV{TARGET} =~ m!^/x1/httpd/websites/!) {
+			require Cwd;
+			state $pwd = Cwd::getcwd;
+			$subdir = "branches/" . File::Basename::basename $pwd;
+		    }
 		    $ok = $args->{category_root} || $args->{archive_root} || !($svn->client and eval {
-			$svn->info("content/$path", sub {$author = $_[1]->last_changed_author}) unless $author;
+			$svn->info($view::path, sub {$author = $_[1]->last_changed_author}) unless $author;
 			SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
-		          "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content/$path", "--username" => $author,
+		          "--path" => "/cms-sites/$ENV{WEBSITE}/$subdir/content/$path", "--username" => $author,
 		          "--groups-file" => "$ENV{TARGET}/group-svn.conf",
 		          "$ENV{TARGET}/authz-svn.conf", $pool)});
 		    warn "$author:content/$path:$ENV{TARGET}" if $author and not $ok;
                     last;
                   }
-                  die "Inadmissible ssi target: /$path" unless $ok or not eval '@path::patterns';
+		  if ($ENV{MOD_PERL}) {
+		    $ok = !eval {
+			require SunStarSys::SVN::Client;
+			require Apache2::RequestUtil;
+			require Apache2::RequestRec;
+			my $r = Apache2::RequestRec->request;
+			s!/content/.*!!s for my $prefix = $r->uri;
+			my $subdir = File::Basename::basename $prefix;
+			$subdir = "branches/$subdir" unless $subdir eq "trunk";
+			my ($website, $repos, $author) = @{$r->pnotes("mapped")}{qw/website repos svnuser/};
+			SVN::_Repos::svn_repos_authz("accessof", "--repository" => $repos,
+		          "--path" => "/cms-sites/$website/$subdir/content/$path", "--username" => $author,
+		          "--groups-file" => "/x1/repos/svn-auth/$repos/group-svn.conf",
+		          "/x1/repos/svn-auth/$repos/authz-svn.conf", $r->pool);
+		    };
+		  }
+		  die "Inadmissible ssi target: /$path\n" unless $ok;
                   my $dir = File::Basename::dirname "/$path";
-                  $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|/|mailto://|\{)(.*?)\2#$1=$2$dir/$3$2#g;
-                  $data{content} =~ s#(\[[^\]]*\])\((?!https?://|/|\{|mailto://)([^\)]+)\)#$1($dir/$2)#g;
-                  $self->{content}=Dotiac::DTL::Tag->new($data{content});
+		  my %d;
+		  $dir = File::Basename::dirname $dir if $dir =~ /\.page$/;
+                  $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|/|mailto://|\{|javascript:)(.*?)\2#$1=$2$dir/$3$2#g;
+                  $data{content} =~ s#(\[[^\[\]]*\])\((?!https?://|/|\{|mailto://|javascript:)([^\)]+)\)#$1($dir/$2)#g;
+		  $data{content} =~ s#^.*\n## if $data{headers}{headers} and $data{content} !~ /^.*\{%\s+ssi\s+/ and do {
+		    read_text_file $view::path, \%d;
+		    $d{headers}{headers} and (split /\n/, $data{content})[0] ne (split /\n/, $d{content})[0]
+		      and ((split /\n/, $d{content})[0] !~ /^.*\{%\s+ssi\s+\`(\S+?)\`\s+%\}/ or "$1" ne "/$path")
+		  };
+		  # binary recursion: ssi tag invokes ssi filter on content which invokes ssi tags in that content
+		  state $t = Dotiac::DTL::Template("{{content|ssi|safe}}");
+		  state %cache;
+                  $self->{content}=Dotiac::DTL::Tag->new($cache{$path} //= do {$cache{$path} = $data{content}; $t->render(\%data)});
+		  # disallow laundered read access of target ssi data to denied personnel on the target; denials passed thru to original document
+		  my @no_read_acl;
+		  if ($d{headers}{acl}) {
+		    for (split /,?\s+/, $d{headers}{acl}) {
+		      my ($name, $val) = split /=/;
+		      push @no_read_acl, "$name=" if $val !~ y/r//;
+		    }
+		    if (@no_read_acl) {
+		      state %rules;
+		      if (local $_ = $rules{$view::path}) {
+			# prior find
+			my %seen;
+			@{$_->{rules}} = grep !$seen{$_}++, @{$_->{rules}}, @no_read_acl;
+		      }
+		      else {
+			# search for it
+			  no warnings 'once';
+			  for (eval '@path::acls') {
+			  $_->{path} eq $view::path or next;		      
+			  my %seen;
+			  @{$_->{rules}} = grep !$seen{$_}++, @{$_->{rules}}, @no_read_acl;
+			  $rules{$view::path} = $_;
+			  last;
+			}
+		      }
+		    }
+		  }		  
 		}
 	}
 	else {
-                die "Invalid ssi path $name: probably screwed up because of spaces.";# unless $Dotiac::DTL::ALLOWED_INCLUDE_ROOTS;
+                die "Invalid ssi name $name.\n";
 		$self->{var}=$name[0];
 	}
 	bless $self,$class;

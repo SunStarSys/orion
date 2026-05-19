@@ -19,6 +19,7 @@ use strict;
 use warnings;
 use utf8;
 use DB_File;
+use PDL ();
 use POSIX qw/:fcntl_h/;
 use URI::Escape;
 use APR::Request qw/encode/;
@@ -30,6 +31,9 @@ use Time::timegm 'timegm';
 use List::Util ();
 use locale ':time';
 no warnings 'experimental';
+use base 'sealed';
+use sealed;
+
 
 sub add {
 	my $value=shift;
@@ -898,10 +902,15 @@ sub safe {
 
 sub slice {
 	my $value=shift;
-	return $value unless $value->hash or $value->array;
+	return $value unless $value->hash or $value->array or $value->object;
 	my $slice=shift;
 	return $value unless $slice;
 	$slice=$slice->repr;
+	if ($value->object and $value->content->isa("PDL")) {
+	  my $pdl = $value->content;
+	  return $value->set($pdl->slice($slice));
+	}
+
 	my @slice=split /:/,$slice,2;
 
 	my @value;
@@ -1289,7 +1298,8 @@ sub ssi {
   my $value=shift;
   $value->safe;
   my $content = $value->repr;
-  1 while $content =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Dotiac::DTL::Template($1)->render({})/ge;
+  # binary recursion (ssi tag invokes ssi filter)
+  $content =~ s/(\{%\s*ssi\s+\`[^\`]+\`\s*%\})/Dotiac::DTL::Template($1)->render({})/ge;
   return $value->set($content);
 }
 
@@ -1755,6 +1765,32 @@ sub yesno {
 	return Dotiac::DTL::Value->safe($undef) if $value->undef;
 	return Dotiac::DTL::Value->safe($no);
 }
+
+sub AUTOLOAD :Sealed {
+  no strict 'refs';
+  our $AUTOLOAD;
+  my ($method_name) = (split /::/, $AUTOLOAD)[-1];
+  return if $method_name eq "DESTROY"; 
+  $method_name =~ s/^pdl_// and my $method = PDL->can($method_name) or die "Can't locate PDL->$method_name\n";
+  *$AUTOLOAD = sub :Sealed (Dotiac::DTL::Value $value) {
+    shift;
+    my PDL $pdl = $value->content;
+    die "NOT A PDL object: " . $value->content unless $value->object and $pdl->isa("PDL");
+    my Dotiac::DTL::Value $arg = shift;
+    if ($arg and ($arg->object or $arg->hash)) {
+      return $value->set($method->($pdl, $arg->content));
+    }
+    elsif ($arg and $arg->array) {
+      return $value->set($method->($pdl, @{$arg->content}));
+    }
+    elsif ($arg) {
+      return $value->set($method->($pdl, $arg->repr)); 
+    }
+    return $value->set($method->($pdl));
+  };
+  goto &{*{$AUTOLOAD}{CODE}};
+}
+
 
 
 =head1 SEE ALSO

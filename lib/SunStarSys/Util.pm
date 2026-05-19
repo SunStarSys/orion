@@ -11,13 +11,16 @@ use Fcntl ":flock";
 use Time::HiRes qw/gettimeofday tv_interval/;
 use APR::Pool;
 use SVN::Repos;
+use Apache2::RequestRec;
+use Apache2::RequestUtil;
 use v5.38;
 use utf8;
-use constant MAX_LINK_COUNT => 256;
-use constant MAX_LINK_RAND  => 10;
+use constant MAX_LINK_COUNT => 1024;
+use constant MAX_LINK_RAND  => 16;
+our @HDR_FIELDS = qw/status title keywords categories acl type/;
 
 our @EXPORT_OK = qw/sanitize_relative_path read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
-                    unload_package purge_from_inc touch normalize_svn_path parse_filename
+                    unload_package purge_from_inc touch normalize_svn_path parse_filename get_lucy_indexer
                     walk_content_tree archived seed_file_deps seed_file_acl Load Dump %action_en/;
 
 our $VERSION = "3.2";
@@ -60,6 +63,12 @@ our $RTF_RING_SIZE_MAX = 1_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;
+
+  if ($ENV{MOD_PERL} and $file =~ m!^content/!) {
+    s!/content/.*!!s for my $prefix = Apache2::RequestUtil->request->uri;
+    $file = "$prefix/$file";
+  }
+
   utf8::is_utf8 $file or utf8::decode $file unless ref $file;
   $out->{mtime} = $_->mtime for map File::stat::populate(CORE::stat(_)), grep -f, $file;
   $out->{mtime} //= -1;
@@ -398,6 +407,46 @@ sub fixup_code {
   }
 }
 
+sub get_lucy_indexer {
+  local $@;
+  eval <<'EOT';
+use Lucy::Plan::Schema;
+use Lucy::Plan::FullTextType;
+use Lucy::Plan::StringType;
+use Lucy::Analysis::EasyAnalyzer;
+use Lucy::Index::Indexer;
+
+package LightMergeManager;
+use base qw/Lucy::Index::IndexManager/;
+sub recycle {
+    my $self = shift;
+    my $seg_readers = $self->SUPER::recycle(@_);
+    @$seg_readers = grep { $_->doc_max < 25 } @$seg_readers;
+    return $seg_readers;
+}
+package NoMergeManager;
+use base qw/Lucy::Index::IndexManager/;
+sub recycle {[]}
+EOT
+  return if $@;
+  my $truncate = shift;
+  my %analyzer = map +($_ => eval{Lucy::Analysis::EasyAnalyzer->new(language => $_)} // undef), map m#\.([^./]+)$#, </x1/cms/build/fields.yml.*>;
+  my %indexer;
+  while (my ($k, $v) = each %analyzer) {
+    delete($analyzer{$k}), next unless $v;
+    $indexer{$k} = Lucy::Index::Indexer->new(index => ".lucy.$k", manager => LightMergeManager->new) and next unless $truncate;
+
+    my $schema = Lucy::Plan::Schema->new;
+    $schema->spec_field(name => "path", type => Lucy::Plan::StringType->new(sortable => 1));
+
+    my $type = Lucy::Plan::FullTextType->new(analyzer => $v);
+    $schema->spec_field(name => $_, type => $type) for content => @HDR_FIELDS;
+    $indexer{$k} = Lucy::Index::Indexer->new(index => ".lucy.$k", schema => $schema, create => 1, truncate => 1);
+  }
+  return %indexer;
+}
+
+
 my $dep_string = 'no strict "refs"; *path::dependencies{HASH}';
 my $dependencies;
 
@@ -413,7 +462,7 @@ sub walk_content_tree :prototype(&) {
   $dependencies = eval $dep_string;
   $acl = eval $acl_string;
   $links = eval $link_string;
-  
+
   if (-f "$ENV{TARGET}/.deps") {
       # use the cached .deps file if the incremental build system deems it appropriate
       open my $deps, "<:raw", "$ENV{TARGET}/.deps" or die "Can't open .deps for reading: $!";
@@ -431,17 +480,40 @@ sub walk_content_tree :prototype(&) {
       %SunStarSys::View::links = %{Load join "", <$fh>};
       $links = eval $link_string;
       utf8::decode $_ for values %$links;
-      %links_orig = %$links; 
+      %links_orig = %$links;
   }
   return if eval '$path::use_cache';
 
   my $cwd = cwd;
   local $_; # filepath that $wanted sub should inspect, rooted in content/ dir
   my $start_time = [gettimeofday];
+  my %indexer = get_lucy_indexer(1);
+  my $nproc = `nproc` + 0;
   find({ wanted => sub {
            s!^\Q$cwd/content!!;
+	   my (undef, undef, $ext) = parse_filename;
+	   s/^[^.]+\.// for my $lang = $ext;
+
+	   my $s = sub {
+	     read_text_file "content$_", \ my %args;
+	     my $h = delete $args{headers};
+	     %$h = map +($_ => $$h{$_} // ""), @HDR_FIELDS;
+	     require Dotiac::DTL;
+	     state $t = Dotiac::DTL::Template("{{content|striptags|safe}}");
+	     state $r = $t->can("render");
+	     1 while $args{content} =~ s/!?\[([^\[\]]+)]\([^\)]+\)/$1/g; # poor man markdown link/img demunger
+	     %args = (%$h, content => $r->($t,\%args), path => $_);
+	     if (exists $indexer{$lang}) {
+	       state $add_doc = $indexer{$lang}->can("add_doc");
+	       $add_doc->($indexer{$lang},\%args);
+	     }
+	   };
+
+	   $s->() if $ext =~ /^(md|ya?ml|csv)\b/;
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
+  $_->join for threads->list;
+  $_->commit for values %indexer;
   my $elapsed = tv_interval $start_time;
   warn "Walked content tree in ${elapsed}s.\n";
   return 1;
@@ -514,6 +586,7 @@ sub seed_file_deps {
     if ($ssi or index($src, "./") == 0 or index($src, "../") == 0) {
       $src = "$dir/$src", $src = s(/[.]/)(/)g unless $ssi;
       sanitize_relative_path $src; $src = "/$src";
+      y/+/ / for $src;
       push @{$$dependencies{$path}}, $src unless archived $src or $seen{$src}++;
     }
   }

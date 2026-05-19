@@ -38,6 +38,9 @@ use File::stat;
 use List::Util qw/max/;
 use File::Copy;
 use Data::Dumper;
+use Text::CSV;
+use PDL ();
+use PDL::IO::CSV qw/rcsv2D/;
 use base 'sealed';
 use sealed;
 
@@ -130,19 +133,40 @@ sub single_narrative :Sealed {
           push @{$args{comments}}, $args{$key};
         }
       }
-      elsif ($f =~ m!/([^/]+)\.(?:ya?ml|json)\Q$args{lang}\E$!) {
+      elsif ($f =~ m!/([^/]+)\.(ya?ml|json|csv)(?:\Q$args{lang}\E)?$!) {
         my $key = $1;
-        $args{$key} = {};
+	my $is_csv = $2 eq "csv";
+	$args{$key} = {};
         read_text_file $f, $args{$key};
-        utf8::encode $args{$key}{content};
         $args{$key}->{key} = $key;
         $args{$key}->{facts} = $args{facts} if exists $args{facts};
         $args{$key}->{deps} = $args{deps} if exists $args{deps};
-        $args{$key}{content} = Load $args{preprocess} ? Template($args{$key}{content})->render($args{$key}) : $args{$key}{content};
+	local $view::path = $f;
+	if ($is_csv) {
+	  no warnings 'uninitialized';
+	  my Text::CSV $csv;
+	  $csv = $csv->new(my %options = (skip_emtpy_rows => 1, detect_datetime => 1, $args{$key}->{headers}->{headers} && (headers => "auto")));  
+	  my $content = $args{preprocess} ? Template($args{$key}{content})->render($args{$key}) : $args{$key}{content};
+	  my $lines = $content =~ y/\n//;
+	  $args{$key}{content} = $csv->csv(in => \$content);
+	  $options{reshape_inc} = $lines;
+	  $options{header} = $options{headers} if exists $options{headers};
+	  $options{type} = [$args{$key}{headers}{type} =~ /\w+/g] if $args{$key}{headers}{type};
+	  $options{detect_datetime} = $args{$key}{headers}{datetime} if $args{$key}{headers}{datetime};
+	  $options{encoding} = ":" . ($args{$key}{headers}{encoding} || "raw");
+	  my @column_ids = $args{$key}{headers}{column_ids} =~ m/\d+/g;
+	  utf8::encode $content if utf8::is_utf8 $content;
+	  $args{$key}{pdl} = rcsv2D(\$content, @column_ids ? \@column_ids : (), \%options);
+	  $args{$key}{csv} = $csv;
+	}
+	else {
+	  utf8::encode $args{$key}{content};
+	  $args{$key}{content} = Load $args{preprocess} ? Template($args{$key}{content})->render($args{$key}) : $args{$key}{content};
+	}
       }
       elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b|\.ya?ml\b)[^\/]*$/) {
-	  $f =~ s!\.[^/]+$!!;
-	  push @{$args{attachments}}, "$root/" . basename $f if !$seen{+basename $f}++;
+	$f =~ s!\.[^/]+$!!;
+	push @{$args{attachments}}, "$root/" . basename $f if !$seen{+basename $f}++;
       }
     }
   }
@@ -175,7 +199,7 @@ sub single_narrative :Sealed {
 
   utf8::decode $_ for grep defined, $archive_headers, $headers, $categories, $status, $keywords;
   no warnings;
-  $path =~ s/ /+/g;
+  $path =~ y/ /+/;
   if (exists $args{archive_root}
       and exists $args{headers}
       and defined $status
@@ -645,9 +669,22 @@ sub yml2ext {
   my $path = "content$args{path}";
   my $filter = $args{filter} // "json_raw";
   read_text_file $path, \%args unless exists $args{content} and defined $args{headers};
-  my $template = $args{template} // '{{content|' . $filter . '|safe}}';
+  my $template = $args{template} // "{{content|$filter|safe}}";
   utf8::encode $args{content};
-  $args{content} = Load $args{content};
+  $args{content} = Load $args{preprocess} ? Template($args{content})->render(\%args) : $args{content};
+
+  return Template($template)->render(\%args), $args{ext} // "json", \%args;
+}
+
+sub csv2ext {
+  my %args = @_;
+  my $path = "content$args{path}";
+  my $filter = $args{filter} // "json_raw";
+  read_text_file $path, \%args unless exists $args{content} and defined $args{headers};
+  my $template = $args{template} // "{{content|$filter|safe}}";
+  $args{content} = Text::CSV::csv in => \($args{preprocess} ? Template($args{content})->render(\%args) : $args{content}),
+    skip_empty_rows => 1, $args{headers}->{headers} && (headers => "auto");
+
   return Template($template)->render(\%args), $args{ext} // "json", \%args;
 }
 
@@ -706,9 +743,12 @@ sub ssi {
   my @muted = split /\s*[;,]\s*/, $args{headers}{muted} // "";
   my @important = split /\s*[;,]\s*/, $args{headers}{important} // "";
 
+  no warnings 'uninitialized';
+  
   1 while $args{content} =~ s{(\{%\s*ssi\s+\`([^\`]+)\`\s*%\})}{
     my $match = $1;
     my $target = $2;
+    $target =~ y/+/ /;
     my $page_path = "content$target";
     read_text_file $page_path, \my %a;
     $args{headers} = $a{headers};
@@ -986,7 +1026,7 @@ sub titleize_links {
 		       my $substitution;
 		     LOOP:
 		       while (1) {
-		       if ($url =~ m!^(https?://[^/]+)! and !$SunStarSys::Value::Offline) {
+		       if ($url =~ m!^(https?://[^/]+)!i and !$SunStarSys::Value::Offline) {
 			 my $base = $1;
 			 my $r = $links{"$url$args{lang}"} || do {
 			   require URI;
@@ -1029,7 +1069,7 @@ sub titleize_links {
                          lock %links;
 			 $links{"$url$args{lang}"} = join "%%", $targ_title, $img, $count + 1;
                        }
-                       elsif ($url =~ /\S/ and $url !~ m!^https?://!) {
+                       elsif ($url =~ /\S/ and $url !~ m!^https?://!i) {
                          my $dir = $url =~ m!^/! ? "content" : dirname "content$args{path}";
 			 if ($args{path} =~ m!^/x1/cms/wc/!) {
 			   $dir = dirname $args{path};
