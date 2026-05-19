@@ -25,5 +25,5 @@ jobs:
 
         run: |
           git clone -b $GITHUB_REF_NAME https://github.com/$GITHUB_REPOSITORY .
-          [ -f package.json ] && npm install
+          rm -rf .git
           LANG=en_US.UTF-8 ./test.sh || LANG=en_US.UTF-8 ./test.sh
