@@ -40,7 +40,7 @@ require.extensions['.html'] = function (module, filename) {
 global.IN_GLOBAL_SCOPE  = false;
 global.navigator        = require("navigator");
 const jsdom             = require('jsdom');
-const { JSDOM, VirtualConsole }         = jsdom;
+const { JSDOM, VirtualConsole } = jsdom;
 const { window }        = new JSDOM("");
 const { jQueryFactory } = require("jquery/factory");
 global.jQueryFactory    = jQueryFactory;
@@ -50,11 +50,8 @@ global.marked           = require(EDITOR_MD + "/lib/marked.min.js");
 global.CodeMirror       = require(EDITOR_MD + "/lib/codemirror/codemirror.min.node.js");
 global.CodeMirrorAddOns = require(EDITOR_MD + "/lib/codemirror/addons.min.js");
 global.CodeMirrorModes  = require(EDITOR_MD + "/lib/codemirror/modes.min.js");
-//global.jQuery_flowchart = require(EDITOR_MD + "/lib/jquery.flowchart.min.js");
 global.prettify         = require(EDITOR_MD + "/lib/prettify.js");
 global.katex            = require(EDITOR_MD + "/lib/katex.min.js");
-//global.Raphael          = require(EDITOR_MD + "/lib/raphael.min.js");
-//global.flowchart        = require(EDITOR_MD + "/lib/flowchart.min.js");
 global.mhchem           = require(EDITOR_MD + "/lib/mhchem.js");
 global.macros_physics   = require(EDITOR_MD + "/lib/katex-physics.js");
 global.WEBSITE          = process.env.WEBSITE;
@@ -68,7 +65,19 @@ const HTML = `<!doctype html>
 `;
 
 const virtualConsole = new VirtualConsole();
-virtualConsole.sendTo(console);
+if (
+      'forwardTo' in virtualConsole &&
+      typeof virtualConsole.forwardTo === 'function'
+    ) {
+      // JSDOM 27+ uses `forwardTo`
+      virtualConsole.forwardTo(console);
+    } else if (
+      'sendTo' in virtualConsole &&
+      typeof virtualConsole.sendTo === 'function'
+    ) {
+      // JSDOM 26 uses `sendTo`
+        virtualConsole.sendTo(console);
+    }
 
 if (cluster.isMaster) {
   console.log(`Master ${process.pid} is running`);
