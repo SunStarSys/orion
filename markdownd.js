@@ -41,9 +41,9 @@ global.IN_GLOBAL_SCOPE  = false;
 global.navigator        = require("navigator");
 const jsdom             = require('jsdom');
 const { JSDOM }         = jsdom;
-const { window }        = new JSDOM( "");
+const { window }        = new JSDOM("");
 const { jQueryFactory } = require("jquery/factory");
-global.jQueryFactory = jQueryFactory;
+global.jQueryFactory    = jQueryFactory;
 
 const EMD               = require(EDITOR_MD + "/editormd.js");
 global.marked           = require(EDITOR_MD + "/lib/marked.min.js");
