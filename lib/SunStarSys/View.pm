@@ -121,7 +121,7 @@ sub _process_data :Sealed {
     open $fh, "<", \$copy_content or die "Can't open SCALARREF: $!";
     $$args{$key}{pdl} = rcsv2D($fh, @column_ids ? \@column_ids : (), \%options);
     $$args{$key}{csv} = $csv;
-    $$args{$key}{headers} = \@headers;
+    $$args{$key}{csv_headers} = \@headers;
   }
   else {
     utf8::encode $$args{$key}{content};
