@@ -67,7 +67,7 @@ $ENV{DISPLAY} = ":0";
 our $URIc     = '^:/?=&;#A-Za-z0-9.~_-';        # complement of class of characters to uri_escape
 
 push our @TEMPLATE_DIRS, "templates";
-our $VERSION = "3.00";
+our $VERSION = "4.00";
 
 # This is most widely used view.  It takes a 'template' argument and a 'path' argument.
 # Assuming the path ends in foo.mdtext, any files like foo.page/bar.mdtext will be parsed and
@@ -79,6 +79,55 @@ our $VERSION = "3.00";
 #
 #
 #
+
+package MyText::CSV {
+  use base 'Text::CSV';
+  sub column_names {
+    my $self = shift;
+    my @rv = $self->SUPER::column_names(@_);
+    return wantarray ? @rv : \@rv;
+  }
+}
+
+sub _process_data :Sealed {
+  my ($f, $args) = @_;
+  my $key = $1;
+  my $is_csv = $2 eq "csv";
+  $$args{$key} = {};
+  read_text_file $f, $$args{$key};
+  $$args{$key}->{key} = $key;
+  $$args{$key}->{facts} = $$args{facts} if exists $$args{facts};
+  $$args{$key}->{deps} = $$args{deps} if exists $$args{deps};
+  local $view::path = $f;
+  if ($is_csv) {
+    no warnings 'uninitialized';
+    my MyText::CSV $csv;
+    my %options = (skip_empty_rows => 1, binary => 1);
+    $csv = $csv->new(\%options) or die "Can't create Text::CSV obj";
+    my $content = $$args{preprocess} ? Template($$args{$key}{content})->render($$args{$key}) : $$args{$key}{content};
+    my $lines = $content =~ y/\n//;
+    utf8::encode $content if utf8::is_utf8 $content;
+    my $copy_content = $content;
+    open my $fh, "<", \$content or die "Can't open SCALARREF: $!";
+    my @headers;
+    $csv->header($fh, {munge_column_names => sub { push @headers, $_; $_ = lc; s/[^[:alnum:]]/_/g; $_ }}) if $$args{$key}{headers}{headers};
+    $$args{$key}{content} = $$args{$key}{headers}{headers} ? $csv->getline_hr_all($fh) : $csv->getline_all($fh);
+    $options{reshape_inc} = $lines;
+    $options{header} = 1 if exists $$args{$key}{headers}{headers};
+    $options{type} = [$$args{$key}{headers}{type} =~ /\w+/g] if $$args{$key}{headers}{type};
+    $options{detect_datetime} = $$args{$key}{headers}{datetime} // 1;
+    $options{encoding} = ":" . ($$args{$key}{headers}{encoding} || "raw");
+    my @column_ids = $$args{$key}{headers}{column_ids} =~ m/\d+/g;
+    open $fh, "<", \$copy_content or die "Can't open SCALARREF: $!";
+    $$args{$key}{pdl} = rcsv2D($fh, @column_ids ? \@column_ids : (), \%options);
+    $$args{$key}{csv} = $csv;
+    $$args{$key}{headers} = \@headers;
+  }
+  else {
+    utf8::encode $$args{$key}{content};
+    $$args{$key}{content} = Load $$args{preprocess} ? Template($$args{$key}{content})->render($$args{$key}) : $$args{$key}{content};
+  }
+}
 
 sub single_narrative :Sealed {
   my %args = @_;
@@ -134,43 +183,14 @@ sub single_narrative :Sealed {
         }
       }
       elsif ($f =~ m!/([^/]+)\.(ya?ml|json|csv)(?:\Q$args{lang}\E)?$!) {
-        my $key = $1;
-	my $is_csv = $2 eq "csv";
-	$args{$key} = {};
-        read_text_file $f, $args{$key};
-        $args{$key}->{key} = $key;
-        $args{$key}->{facts} = $args{facts} if exists $args{facts};
-        $args{$key}->{deps} = $args{deps} if exists $args{deps};
-	local $view::path = $f;
-	if ($is_csv) {
-	  no warnings 'uninitialized';
-	  my Text::CSV $csv;
-	  $csv = $csv->new(my %options = (skip_emtpy_rows => 1, detect_datetime => 1, $args{$key}->{headers}->{headers} && (headers => "auto")));
-	  my $content = $args{preprocess} ? Template($args{$key}{content})->render($args{$key}) : $args{$key}{content};
-	  my $lines = $content =~ y/\n//;
-	  $args{$key}{content} = $csv->csv(in => \$content);
-	  $options{reshape_inc} = $lines;
-	  $options{header} = $options{headers} if exists $options{headers};
-	  $options{type} = [$args{$key}{headers}{type} =~ /\w+/g] if $args{$key}{headers}{type};
-	  $options{detect_datetime} = $args{$key}{headers}{datetime} if $args{$key}{headers}{datetime};
-	  $options{encoding} = ":" . ($args{$key}{headers}{encoding} || "raw");
-	  my @column_ids = $args{$key}{headers}{column_ids} =~ m/\d+/g;
-	  utf8::encode $content if utf8::is_utf8 $content;
-	  $args{$key}{pdl} = rcsv2D(\$content, @column_ids ? \@column_ids : (), \%options);
-	  $args{$key}{csv} = $csv;
-	}
-	else {
-	  utf8::encode $args{$key}{content};
-	  $args{$key}{content} = Load $args{preprocess} ? Template($args{$key}{content})->render($args{$key}) : $args{$key}{content};
-	}
+        _process_data $f, \%args;
       }
       elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b|\.ya?ml\b)[^\/]*$/) {
-	$f =~ s!\.[^/]+$!!;
-	push @{$args{attachments}}, "$root/" . basename $f if !$seen{+basename $f}++;
+        $f =~ s!\.[^/]+$!!;
+        push @{$args{attachments}}, "$root/" . basename $f if !$seen{+basename $f}++;
       }
     }
   }
-
   $args{description} //= $view->can("description")->(%args);
 
   if ($args{preprocess}) {
@@ -524,7 +544,7 @@ my %title = (
     sv => "Index för ",
     he => "אינדקס של ",
     ko => "색인 ",
-    jp => "目次 ",
+    ja => "目次 ",
     "zh-TW" => "指數",
   },
   sitemap => {
@@ -538,7 +558,7 @@ my %title = (
     sv => "Webbplatskarta för",
     he => "מפת אתר של ",
     ko => "사이트맵 ",
-    jp => "サイトマップ ",
+    ja => "サイトマップ ",
     "zh-TW" => "網站地圖",
   }
 );
@@ -682,7 +702,8 @@ sub csv2ext {
   my $filter = $args{filter} // "json_raw";
   read_text_file $path, \%args unless exists $args{content} and defined $args{headers};
   my $template = $args{template} // "{{content|$filter|safe}}";
-  $args{content} = Text::CSV::csv in => \($args{preprocess} ? Template($args{content})->render(\%args) : $args{content}),
+  utf8::encode $args{content} if utf8::is_utf8 $args{content};
+  $args{content} = Text::CSV::csv in => ($args{preprocess} ? \ Template($args{content})->render(\%args) : \ $args{content}),
     skip_empty_rows => 1, $args{headers}->{headers} && (headers => "auto");
 
   return Template($template)->render(\%args), $args{ext} // "json", \%args;
@@ -779,12 +800,8 @@ sub ssi {
             push @{$args{comments}}, $args{$key};
           }
         }
-        elsif ($f =~ m!/([^/]+)\.(?:ya?ml|json)\Q$args{lang}\E$!) {
-          my $key = $1;
-          $args{$key} = {};
-          read_text_file $f, $args{$key};
-          utf8::encode $args{$key}{content};
-          $args{$key}{content} = Load $args{$key}{content};
+        elsif ($f =~ m!/([^/]+)\.(ya?ml|json|csv)(?:\Q$args{lang}\E)?$!) {
+          _process_data $f, \%args;
         }
         elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b)[^\/]*$/) {
           push @{$args{attachments}}, "$root/" . basename $f;
@@ -1014,7 +1031,6 @@ sub titleize_links {
   read_text_file "content$args{path}", \%args unless exists $args{content};
   my ($idx, @img);
   no warnings;
-  local $_;
   $args{content} =~ s{
                          (?<!!)\[
                          ( [^!\[\]]+ )
@@ -1025,7 +1041,6 @@ sub titleize_links {
                      }{
                        my ($title, $url, $suffix, $targ_title, $lede, $img) = ($1, $2, $3, "", "");
 		       my $substitution;
-
 		     LOOP:
 		       while (1) {
 		       if ($url =~ m!^(https?://[^/]+)!i and !$SunStarSys::Value::Offline) {

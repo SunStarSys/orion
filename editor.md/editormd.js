@@ -44,7 +44,9 @@
 
     var $ = w ? jQueryFactory(w) : jQuery;
     w = w || window;
-    global.document = w.document;
+    var document = w.document;
+    if (typeof (jQueryFactory) !== "undefined")
+        global.document = document;
     if (typeof (jQuery_flowchart) !== "undefined") {
 	// AWAITING jsdom SVGMatrix implementation
 	jQuery_flowchart($, flowchart(w, Raphael(w)));
