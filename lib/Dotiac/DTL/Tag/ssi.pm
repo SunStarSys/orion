@@ -94,21 +94,28 @@ sub new {
 		  }
 		  die "Inadmissible ssi target: /$path\n" unless $ok;
                   my $dir = File::Basename::dirname "/$path";
-		  my %d;
 		  $dir = File::Basename::dirname $dir if $dir =~ /\.page$/;
                   $data{content} =~ s/^\s+//;
                   $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|/|mailto://|\{|javascript:)(.*?)\2#$1=$2$dir/$3$2#g;
                   $data{content} =~ s#(\[[^\[\]]*\])\((?!https?://|/|\{|mailto://|javascript:)([^\)]+)\)#$1($dir/$2)#g;
+		  read_text_file "${prefix}content/$view::path", \my %d;
+		  $d{content} =~ s/^\s+//;
+		  my $spacer;
+		  $d{content} =~/^(\s+)\{%\s+ssi\s+\`\/$path\`\s+%\}/m and $spacer = $1;
+		  $data{content} =~ s/^/$spacer/mg if $spacer;
 		  $data{content} =~ s#^.*\n## if $data{headers}{headers} and $data{content} !~ /^.*\{%\s+ssi\s+/ and do {
-		    read_text_file "${prefix}content/$view::path", \%d;
-                    $d{content} =~ s/^\s+//;
 		    $d{headers}{headers} and (split /\n/, $data{content})[0] ne (split /\n/, $d{content})[0]
-		      and ((split /\n/, $d{content})[0] !~ /^.*\{%\s+ssi\s+\`(\S+?)\`\s+%\}/ or "$1" ne "/$path")
+		      and ((split /\n/, $d{content})[0] !~ /\{%\s+ssi\s+\`(\S+?)\`\s+%\}/ or "$1" ne "/$path")
 		  };
 		  # binary recursion: ssi tag invokes ssi filter on content which invokes ssi tags in that content
 		  state $t = Dotiac::DTL::Template("{{content|ssi|safe}}");
 		  state %cache;
-                  $self->{content}=Dotiac::DTL::Tag->new($cache{$path} //= do {$cache{$path} = $data{content}; $t->render(\%data)});
+		  $self->{content}=Dotiac::DTL::Tag->new($cache{$path} //= do {
+		    $cache{$path} = $data{content};
+		    local $view::path = "/$path";
+		    utf8::encode $view::path if utf8::is_utf8 $view::path;
+		    $t->render(\%data);
+		  });
 		  # disallow laundered read access of target ssi data to denied personnel on the target; denials passed thru to original document
 		  my @no_read_acl;
 		  if ($d{headers}{acl}) {

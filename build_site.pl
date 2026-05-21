@@ -59,7 +59,7 @@ USAGE
 utf8::encode $dirq if defined $dirq;
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
 $runners ||= 2*`nproc`; # 8 is arbitrary but educated guess
-$runners = 8 if $runners > 8;
+$runners = 16 if $runners > 16;
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET} //= $target_base;
@@ -152,8 +152,11 @@ sub main :Sealed {
     push @dirqueue, grep length && $_ ne "working...", map /^new: (.+)$/ ? (push @new_sources, grep !$seen{$_}++, $1 and ()) : $_, split /\n/;
     $runners[$fd2rid[fileno $p]]->{wait} = /(?:^$)\Z/m;
   }
-
-  goto LOOP if @dirqueue or grep !$_->{wait}, @runners;
+  state $last_count = @runners;
+  state $are_equal = 0;
+  my $count = grep !$_->{wait}, @runners;
+  $last_count = $count, $are_equal = 0 if $count < $last_count and $last_count != @runners;
+  goto LOOP if @dirqueue or $count and ($last_count == @runners or ++$are_equal < 10);
 
   if (@new_sources) {
     syswrite_all "New content detected: $_\n" for @new_sources;
@@ -167,12 +170,16 @@ sub main :Sealed {
   syswrite_all "Waiting for kids...\n";
 
   my %new;
+  my @r;
   do {
-    for my $p ($sockets->can_read) {
+    for my $p ((@r = $sockets->can_read(60)) ? @r : $sockets->handles) {
       local $_ = "";
-      1 while read $p, $_, 4096, length;
+      if (@r) {
+	1 while read $p, $_, 4096, length
+      }
       $sockets->remove($p);
       close $p;
+      kill(TERM => $runners[$fd2rid[fileno $p]]->{pid}), next unless @r;
       eval {
 	my $links = Load $_;
 	while (my ($k, $v) = each %$links) {

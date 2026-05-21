@@ -100,7 +100,6 @@ sub _process_data :Sealed {
   $$args{$key}->{facts} = $$args{facts} if exists $$args{facts};
   $$args{$key}->{deps} = $$args{deps} if exists $$args{deps};
   s/^.*content// for local $view::path = $f;
-
   if ($is_csv) {
     no warnings 'uninitialized';
     my MyText::CSV $csv;
