@@ -1294,6 +1294,14 @@ sub img {
   return $value->set($rv);
 }
 
+sub code {
+  my $value = shift;
+  my $type = shift->repr;
+  my $content = $value->repr;
+  my @rv = $content =~ /\s*\`\`\`$type\n.*?\`\`\`\n/sg;
+  return $value->set(\@rv);
+}
+
 sub ssi {
   my $value=shift;
   $value->safe;
@@ -1770,8 +1778,9 @@ sub AUTOLOAD :Sealed {
   no strict 'refs';
   our $AUTOLOAD;
   my ($method_name) = (split /::/, $AUTOLOAD)[-1];
-  return if $method_name eq "DESTROY"; 
-  $method_name =~ s/^pdl_// and my $method = PDL->can($method_name) or die "Can't locate PDL->$method_name\n";
+  return if $method_name eq "DESTROY";
+  $method_name =~ s/^pdl_// or die "Invalid filter name: $method_name\n";
+  my $method = PDL->can($method_name) or die "Can't locate PDL->$method_name\n";
   *$AUTOLOAD = sub :Sealed (Dotiac::DTL::Value $value) {
     shift;
     my PDL $pdl = $value->content;
@@ -1784,7 +1793,7 @@ sub AUTOLOAD :Sealed {
       return $value->set($method->($pdl, @{$arg->content}));
     }
     elsif ($arg) {
-      return $value->set($method->($pdl, $arg->repr)); 
+      return $value->set($method->($pdl, $arg->repr));
     }
     return $value->set($method->($pdl));
   };
