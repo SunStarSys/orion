@@ -149,7 +149,7 @@ sub main :Sealed {
       $saw_error++;
       next;
     }
-    push @dirqueue, grep length && $_ ne "working...", map /^new: (.+)$/ ? (push @new_sources, grep !$seen{$_}++, $1 and ()) : $_, split /\n/;
+    push @dirqueue, grep length && $_ ne "working...", map /^new: (.+)$/ ? (push(@new_sources, grep !$seen{$_}++, $1) and ()) : $_, split /\n/;
     $runners[$fd2rid[fileno $p]]->{wait} = /(?:^$)\Z/m;
   }
   state $last_count = @runners;
@@ -229,7 +229,7 @@ sub process_dir {
         if (-f _) {
             mkpath "$target_base/$root" unless $made_target_dir++;
             $thread_queue->enqueue($_), next if $thread_queue->pending < 2 * @threads;
-	    syswrite_all($wtr, "new: $_\n") for eval {process_file($_)};
+	    syswrite_all($wtr, "new: $_\n") for eval {alarm 60; my @rv=process_file($_); alarm 0; @rv};
 	    push @errors, "$_:$@" if $@;
         }
         else {

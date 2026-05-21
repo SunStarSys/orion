@@ -431,7 +431,7 @@ package NoMergeManager;
 use base qw/Lucy::Index::IndexManager/;
 sub recycle {[]}
 EOT
-  return if $@;
+  return if $@ or not @path::patterns;
   my $truncate = shift;
   my %analyzer = map +($_ => eval{Lucy::Analysis::EasyAnalyzer->new(language => $_)} // undef), map m#\.([^./]+)$#, </x1/cms/build/fields.yml.*>;
   my %indexer;
@@ -512,7 +512,7 @@ sub walk_content_tree :prototype(&) {
 	     }
 	   };
 
-	   $s->() if $ext =~ /^(md|ya?ml|csv)\b/;
+	   $s->() if -f and $ext =~ /^(md|ya?ml|csv)\b/;
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
   $_->join for threads->list;

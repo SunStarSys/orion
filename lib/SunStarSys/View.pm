@@ -45,6 +45,8 @@ use base 'sealed';
 use sealed;
 no warnings 'once';
 
+$PDL::no_clone_skip_warning = 1;
+
 our %LANG = (
   ".ar" => "ar_SA.UTF-8",
   ".de" => "de_DE.UTF-8",
