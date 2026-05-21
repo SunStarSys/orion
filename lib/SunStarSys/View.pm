@@ -43,6 +43,7 @@ use PDL ();
 use PDL::IO::CSV qw/rcsv2D/;
 use base 'sealed';
 use sealed;
+no warnings 'once';
 
 our %LANG = (
   ".ar" => "ar_SA.UTF-8",
@@ -98,16 +99,17 @@ sub _process_data :Sealed {
   $$args{$key}->{key} = $key;
   $$args{$key}->{facts} = $$args{facts} if exists $$args{facts};
   $$args{$key}->{deps} = $$args{deps} if exists $$args{deps};
-  local $view::path = $f;
+  s/^.*content// for local $view::path = $f;
+
   if ($is_csv) {
     no warnings 'uninitialized';
     my MyText::CSV $csv;
     my %options = (skip_empty_rows => 1, binary => 1);
-    $csv = $csv->new(\%options) or die "Can't create Text::CSV obj";
+    $csv = $csv->new(\%options) or die "Can't create MyText::CSV obj";
     my $content = $$args{preprocess} ? Template($$args{$key}{content})->render($$args{$key}) : $$args{$key}{content};
+    $content =~ s/^\s+//;
     my $lines = $content =~ y/\n//;
     utf8::encode $content if utf8::is_utf8 $content;
-    my $copy_content = $content;
     open my $fh, "<", \$content or die "Can't open SCALARREF: $!";
     my @headers;
     $csv->header($fh, {munge_column_names => sub { push @headers, $_; $_ = lc; s/[^[:alnum:]]/_/g; $_ }}) if $$args{$key}{headers}{headers};
@@ -118,7 +120,7 @@ sub _process_data :Sealed {
     $options{detect_datetime} = $$args{$key}{headers}{datetime} // 1;
     $options{encoding} = ":" . ($$args{$key}{headers}{encoding} || "raw");
     my @column_ids = $$args{$key}{headers}{column_ids} =~ m/\d+/g;
-    open $fh, "<", \$copy_content or die "Can't open SCALARREF: $!";
+    seek $fh, 0, 0;
     $$args{$key}{pdl} = rcsv2D($fh, @column_ids ? \@column_ids : (), \%options);
     $$args{$key}{csv} = $csv;
     $$args{$key}{csv_headers} = \@headers;
@@ -702,9 +704,11 @@ sub csv2ext {
   my $filter = $args{filter} // "json_raw";
   read_text_file $path, \%args unless exists $args{content} and defined $args{headers};
   my $template = $args{template} // "{{content|$filter|safe}}";
-  utf8::encode $args{content} if utf8::is_utf8 $args{content};
-  $args{content} = Text::CSV::csv in => ($args{preprocess} ? \ Template($args{content})->render(\%args) : \ $args{content}),
-    skip_empty_rows => 1, $args{headers}->{headers} && (headers => "auto");
+  my $content = $args{preprocess} ? Template($args{content})->render(\%args) : $args{content};
+  $content =~ s/^\s+//;
+  utf8::is_utf8 $_ and utf8::encode $_ for $content;
+  $args{content} = Text::CSV::csv(in => \$content,
+    binary => 1, skip_empty_rows => 1, $args{headers}->{headers} && (headers => "auto"));
 
   return Template($template)->render(\%args), $args{ext} // "json", \%args;
 }
@@ -808,7 +812,7 @@ sub ssi {
         }
       }
     }
-    Template($match)->render({})
+    Template($match)->render(\%args)
   }ge;
   my $view = next_view \%args;
   return view->can($view)->(%args);

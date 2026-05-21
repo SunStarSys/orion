@@ -22,6 +22,7 @@ our @HDR_FIELDS = qw/status title keywords categories acl type/;
 our @EXPORT_OK = qw/sanitize_relative_path read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename get_lucy_indexer
                     walk_content_tree archived seed_file_deps seed_file_acl Load Dump %action_en/;
+no warnings 'once';
 
 our $VERSION = "3.2";
 
@@ -70,6 +71,8 @@ sub read_text_file {
   }
 
   utf8::is_utf8 $file or utf8::decode $file unless ref $file;
+  utf8::is_utf8 $$file and utf8::encode $$file if ref $file;
+
   $out->{mtime} = $_->mtime for map File::stat::populate(CORE::stat(_)), grep -f, $file;
   $out->{mtime} //= -1;
   warn "$file not a text file nor a reference" and return unless -T _ or ref $file;
