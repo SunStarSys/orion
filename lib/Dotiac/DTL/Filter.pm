@@ -2656,8 +2656,6 @@ Also see C<escape>.
 
 If you find any, please report them.
 
-=cut
-
 =head2 slice :POSITION
 
 Extracts a sublist out of a list from a POSITION. POSITION is a string of two number seperated by a ":"
@@ -2679,8 +2677,6 @@ Also allows you to get a single item:
 	{{ var|slice:"3" }} {# 4 #} Same as: {{ var.3 }}
 
 Also works on hashes. Then it slices the value list orderd by their keys.
-
-=cut
 
 =head2 slugify
 
@@ -3054,8 +3050,6 @@ The returned value is always safe.
 =head3 Bugs and Differences to Django
 
 If you find any, please report them.
-
-=cut
 
 =head2 wordwrap :AMOUNT_OF_CHARACTERS
 
