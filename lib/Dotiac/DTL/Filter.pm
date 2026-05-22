@@ -1298,8 +1298,18 @@ sub code {
   my $value = shift;
   my $type = shift->repr;
   my $content = $value->repr;
-  my @rv = $content =~ /\s*\`\`\`$type\n.*?\`\`\`\n/sg;
+  my @rv;
+  push @rv, $1 while $content =~ /\s*\`\`\`$type\n(.*?)\s+\`\`\`\n/sg;
   return $value->set(\@rv);
+}
+
+sub grep {
+  my $value = shift;
+  my $pattern = shift->repr;
+  $pattern =~ y/{}//d; # poor man's code-free regex
+  my @rv = CORE::grep /$pattern/i, $value->array ? @{$value->content} : $value->repr;
+  return $value->set(\@rv) if @rv > 1;
+  return $value->set(shift @rv);
 }
 
 sub ssi {
@@ -1453,7 +1463,7 @@ sub vcs_date {
   $args[0] -= 1900;
   $args[1] -= 1;
   my $locale = setlocale LC_TIME, $LANG{$lang};
-  my ($rv) = grep {utf8::decode($_); 1} strftime '%a, %d %b %Y', gmtime timegm reverse @args[0..5];
+  my ($rv) = CORE::grep {utf8::decode($_); 1} strftime '%a, %d %b %Y', gmtime timegm reverse @args[0..5];
   setlocale LC_TIME, $locale;
   return $value->set($rv);
 }

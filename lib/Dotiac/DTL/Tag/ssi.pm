@@ -101,8 +101,10 @@ sub new {
 		  read_text_file "${prefix}content/$view::path", \my %d;
 		  $d{content} =~ s/^\s+//;
 		  my $spacer;
-		  $d{content} =~/^(\s+)\{%\s+ssi\s+\`\/$path\`\s+%\}/m and $spacer = $1;
-		  $data{content} =~ s/^/$spacer/mg if $spacer;
+		  while ($d{content} =~/^(\s+)\{%\s+ssi\s+\`\/$path\`\s+%\}/mg) {
+		    $spacer = $1;
+		    s/^/$spacer/mg, s/^$spacer//, s/^$spacer$//mg for $data{content};
+		  }
 		  $data{content} =~ s#^.*\n## if $data{headers}{headers} and $data{content} !~ /^.*\{%\s+ssi\s+/ and do {
 		    $d{headers}{headers} and (split /\n/, $data{content})[0] ne (split /\n/, $d{content})[0]
 		      and ((split /\n/, $d{content})[0] !~ /\{%\s+ssi\s+\`(\S+?)\`\s+%\}/ or "$1" ne "/$path")

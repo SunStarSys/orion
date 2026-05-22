@@ -375,8 +375,9 @@ sub asymptote {
   read_text_file $page_path, \%args unless exists $args{content} and exists $args{headers};
   my $prefix = "asyA";
   my @sources;
+
   $args{content} =~ s{^\`{3}asy(?:mptote)?\s+(.*?)^\`{3}$}{
-    s/^\s+settings.*\n//msg for my $body = $1;
+    s/^\s+settings.*\n//msg for my $body = Template($1)->render(\%args);
     my $cached = 0;
     -d $attachments_dir or do { local $_ = $attachments_dir; utf8::encode $_; mkpath $_ };
     my $file = "$attachments_dir/$prefix";
@@ -390,10 +391,10 @@ sub asymptote {
       open my $fh, ">:utf8", "$file.asy$lang" or die "Can't open '$file.asy$lang' for writing: $!";
       print $fh $body;
       close $fh;
-      #push @sources, "$file.asy$lang";
+      push @sources, "$file.asy$lang";
       system "time asy -noglobalread -f html -o '$file' '$file.asy$lang'" and die "asy html rendering of '$prefix' failed: $?";
       rename "$file.html", "$file.html$lang";
-      #push @sources, "$file.html$lang";
+      push @sources, "$file.html$lang";
     }
     my $rv = <<EOT;
 <div class="accordion" id="$prefix-container">
@@ -771,7 +772,7 @@ sub ssi {
 
   no warnings 'uninitialized';
 
-  1 while $args{content} =~ s{(\{%\s*ssi\s+\`([^\`]+)\`\s*%\})}{
+  1 while $args{content} =~ s{(^\s*\{%\s*ssi\s+\`([^\`]+)\`\s*%\})}{
     my $match = $1;
     my $target = $2;
     $target =~ y/+/ /;
@@ -814,7 +815,7 @@ sub ssi {
       }
     }
     Template($match)->render(\%args)
-  }ge;
+  }mge;
   my $view = next_view \%args;
   return view->can($view)->(%args);
 }
