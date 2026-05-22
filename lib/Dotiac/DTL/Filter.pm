@@ -1233,7 +1233,7 @@ sub truncate {
 
 =pod
 
-=head1 SunStar Systems Added Filters
+=head2 SunStar Systems Added Filters
 
 =over4
 
@@ -1812,7 +1812,7 @@ sub AUTOLOAD :Sealed {
 
 
 
-=head1 SEE ALSO
+=head2 SEE ALSO
 
 L<http://www.djangoproject.com>, L<Dotiac::DTL>
 
