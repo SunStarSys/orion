@@ -46,7 +46,7 @@
     w = w || window;
     var document = w.document;
     if (typeof (jQueryFactory) !== "undefined")
-        global.document = document;
+	global.document = document;
     if (typeof (jQuery_flowchart) !== "undefined") {
 	// AWAITING jsdom SVGMatrix implementation
 	jQuery_flowchart($, flowchart(w, Raphael(w)));
@@ -4364,7 +4364,7 @@
         var script    = null;
         script        = document.createElement("script");
         script.id     = fileName.replace(/[\./]+/g, "-");
-        script.type   = fileName.match("mermaid") ? "module" : "text/javascript";
+        script.type   = "text/javascript";
         script.src    = fileName + ".js";
 
         if (editormd.isIE8)
