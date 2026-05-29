@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use YAML::XS;
 $| = 1;
-return 1 unless -f "www/.deps";
+exit 1 unless -f "www/.deps";
 open my $fh, "<:encoding(UTF-8)", "www/.deps", or die "Can't open www/.deps: $!";
 read $fh, my $content, -s $fh or die "WTF?";
 utf8::encode $content if utf8::is_utf8 $content;
