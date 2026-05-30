@@ -1,3 +1,11 @@
+name: Analyze
+
+strategy:
+  fail-fast: false
+  matrix:
+    include:
+      - language: javascript-typescript
+        build-mode: none
 on:
   push:
     branches: [main, protected]
@@ -5,17 +13,18 @@ on:
     branches: [main]
     paths-ignore:
       - ooo-site
-jobs:
-  analyze:
-    name: Analyze
-    runs-on: [ubuntu-latest]
-  strategy:
-    fail-fast: false
-    matrix:
-      include:
-        - language: javascript-typescript
-          build-mode: none
-  steps:
-    - uses: github/codeql-action/init@v4
-      with:
-        languages: ${{ matrix.language }}
+
+steps:
+  - uses: github/codeql-action/init@v4
+    paths:
+      - editor.md
+      - fontawesome
+    with:
+      languages: ${{ matrix.language }}
+      build-mode: ${{ matrix.build-mode }}
+  - uses: github/codeql-action/analyze@v4
+    paths:
+      - editor.md
+      - fontawesome
+    with:
+      category: "/language:${{ matrix.language }}"
