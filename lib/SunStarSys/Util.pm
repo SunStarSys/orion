@@ -449,7 +449,6 @@ EOT
   return %indexer;
 }
 
-
 my $dep_string = 'no strict "refs"; *path::dependencies{HASH}';
 my $dependencies;
 
@@ -492,6 +491,7 @@ sub walk_content_tree :prototype(&) {
   my $start_time = [gettimeofday];
   my %indexer = get_lucy_indexer(1);
   my $nproc = `nproc` + 0;
+
   find({ wanted => sub {
            s!^\Q$cwd/content!!;
 	   my (undef, undef, $ext) = parse_filename;
@@ -515,7 +515,7 @@ sub walk_content_tree :prototype(&) {
 	   $s->() if -f and $ext =~ /^(md|ya?ml|csv)\b/;
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
-  $_->join for threads->list;
+
   $_->commit for values %indexer;
   my $elapsed = tv_interval $start_time;
   warn "Walked content tree in ${elapsed}s.\n";

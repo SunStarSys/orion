@@ -27,6 +27,37 @@ BEGIN {
   $script_path =~ /(.*)/;
   $script_path = $1;
   unshift @INC, "$script_path/lib";
+
+  package Thread::Queue;
+  # Indicate that no more data will enter the queue
+  sub enqueue
+  {
+    my $self = shift;
+    lock(%$self);
+
+    if ($$self{'ENDED'}) {
+        require Carp;
+        Carp::croak("'enqueue' method called on queue that has been 'end'ed");
+    }
+
+    # Block if queue size exceeds any specified limit
+    my $queue = $$self{'queue'};
+    cond_wait(%$self) while ($$self{'LIMIT'} && (@$queue >= $$self{'LIMIT'}));
+
+    # Add items to queue, and then signal other threads
+    push @$queue, map { shared_clone($_) } @_;
+    cond_signal(%$self) for @_;
+
+  }
+  sub end
+  {
+      my $self = shift;
+      lock(%$self);
+      # No more data is coming
+      $$self{'ENDED'} = 1;
+
+      cond_broadcast(%$self);  # Unblock ALL waiting threads
+  }
 }
 
 use utf8;
@@ -115,7 +146,7 @@ sub main :Sealed {
  LOOP: while (@dirqueue) {
     my $would_block = 1;
 
-    for my $p (shuffle $sockets->can_write(0)) {
+    for my $p (shuffle $sockets->can_write(3)) {
       $would_block = 0;
       my $dir = shift @dirqueue or last;
 
@@ -133,7 +164,7 @@ sub main :Sealed {
     last if $would_block;
   }
 
-  for my $p ($sockets->can_read(3)) {
+  for my $p ($sockets->can_read(60)) {
     local $_ = '';
     my $bytes;
     no warnings 'uninitialized';
@@ -161,11 +192,14 @@ sub main :Sealed {
   if (@new_sources) {
     syswrite_all "New content detected: $_\n" for @new_sources;
     syswrite_all "Rebuilding site...\n";
-    syswrite_all $_, "[flush]\n" for $sockets->can_write(0);
+    syswrite_all $_, "[flush]\n" for map $_->{socket}, @runners;
     @new_sources = ();
     @dirqueue = $dirq // ("cgi-bin", "templates", "content");
     $are_equal = 0;
     $last_count = @runners;
+    unload_package("path") or die "Can't unload package path\n";
+    require "path.pm";
+    syswrite_all "reloaded path.pm\n";
     goto LOOP;
   }
   shutdown $_, 1 for map $_->{socket}, @runners;
@@ -320,6 +354,7 @@ sub fork_runner :Sealed {
     state $s = sub {
       $SIG{KILL} = sub {threads->exit};
       while (my $data = $thread_queue->dequeue()) {
+        last unless defined $data;
 	local $@;
 	syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
         push @errors, "$data:$@" if $@;
@@ -341,15 +376,11 @@ sub fork_runner :Sealed {
         local $_ = '';
         my $bytes;
         while (($bytes = sysread $p, $_, 4096, length) > 0) {
-            last if substr($_, -1, 1) eq "\n";
-          }
+          last if substr($_, -1, 1) eq "\n";
+        }
         for (split /\n/) {
           if ($_ eq "[flush]") {
             SunStarSys::View::flush_memoize_cache;
-            unload_package("path") or die "Can't unload package path\n";
-            require "path.pm";
-            $patterns = eval $pattern_string;
-            die "ZOMG\n" unless @$patterns;
           }
           else {
             process_dir($_, $parent, $thread_queue);
@@ -363,7 +394,6 @@ sub fork_runner :Sealed {
         }
     }
     warn "Processing errors: @errors" if @errors;
-    $thread_queue->enqueue(undef) for 1 .. $runners;
     $thread_queue->end;
     # threads::join is fubar somehow
     # so we just wait for dust to settle...
