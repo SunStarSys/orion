@@ -2,17 +2,19 @@ name: Analyze
 
 on:
   push:
-    branches: [main, protected]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
     paths-ignore:
       - ooo-site
+  workflow_dispatch:
+
 jobs:
   analyze:
     runs-on: [ubuntu-latest]
     name: Analyze
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - language: javascript-typescript
@@ -22,6 +24,8 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
       - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+          config-file: ./.github/codeql/codeql-config.yml

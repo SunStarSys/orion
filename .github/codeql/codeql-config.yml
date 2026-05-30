@@ -1,0 +1,8 @@
+paths:
+  - editor.md
+  - fontawesome
+query-filters:
+  - exclude:
+      problem.severity:
+        - warning
+        - recommendation
