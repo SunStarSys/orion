@@ -158,12 +158,14 @@ sub main :Sealed {
   $last_count = $count, $are_equal = 0 if $count < $last_count and $last_count != @runners;
   goto LOOP if @dirqueue or $count and ($last_count == @runners or ++$are_equal < 10);
 
-  if (0 && @new_sources) {
+  if (@new_sources) {
     syswrite_all "New content detected: $_\n" for @new_sources;
     syswrite_all "Rebuilding site...\n";
     syswrite_all $_, "[flush]\n" for $sockets->can_write(0);
     @new_sources = ();
     @dirqueue = $dirq // ("cgi-bin", "templates", "content");
+    $are_equal = 0;
+    $last_count = @runners;
     goto LOOP;
   }
   shutdown $_, 1 for map $_->{socket}, @runners;
