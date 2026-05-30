@@ -9,7 +9,7 @@ on:
       - ooo-site
 jobs:
   analyze:
-    runs-on: ubuntu-latest
+    runs-on: [ubuntu-latest]
     name: Analyze
     strategy:
       fail-fast: true
