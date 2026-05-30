@@ -1,0 +1,21 @@
+on:
+  push:
+    branches: [main, protected]
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - ooo-site
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: [ubuntu-latest]
+  strategy:
+    fail-fast: false
+    matrix:
+      include:
+        - language: javascript-typescript
+          build-mode: none
+  steps:
+    - uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ matrix.language }}
