@@ -627,13 +627,26 @@ sub seed_file_acl {
   my ($path) = (@_, $_);
   utf8::decode $path unless utf8::is_utf8 $path;
   read_text_file "content$path", \ my %d;
+  my @restrictions;
+  my @p = $path;
+  my %seen;
+  # no laundering
+  while (@p) { 
+    my $p = shift @p;
+    for (grep !$seen{$_}++, @{$$dependencies{$p}}) {
+      read_text_file "content$_", \ my %d;
+      push(@restrictions, map /\S+\s*=\s*[^rw\s]/g, $d{headers}{acl}),
+        push @p, $_
+	if $d{headers}{acl}; 
+    }
+  }
   no strict 'refs';
   my ($prior) = grep $acl->[$_]{path} eq "content$path", 0..$#$acl;
   if (defined $prior) {
     return unless $acl->[$prior]{unlocked};
     splice @$acl, $prior, 1 and return unless $d{headers}{acl};
     $acl->[$prior]{rules} = ref $d{headers}{acl}
-      ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /[,;]?\s+/, $d{headers}{acl}};
+      ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} @restrictions, split /[,;]?\s+/, $d{headers}{acl}};
     $acl->[$prior]{rules}{'@svnadmin'} = 'rw';
   }
   elsif (exists $d{headers}{acl}) {
@@ -641,10 +654,11 @@ sub seed_file_acl {
       path     => "content$path",
       unlocked => 1,
       rules    => ref $d{headers}{acl}
-        ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} split /[;,]?\s+/, $d{headers}{acl}}
+        ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} @restrictions, split /[;,]?\s+/, $d{headers}{acl}}
     };
     $$acl[-1]{rules}{'@svnadmin'} = 'rw';
   }
+
   return 1;
 }
 
