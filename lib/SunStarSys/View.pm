@@ -907,13 +907,14 @@ sub snippet {
                          my $argspec = $1;
                          my %a = (%args, map {split /=/, $_, 2} split /:/, $argspec);
                          require SunStarSys::Value::Snippet; # see source for list of valid args
-                         $args{$key} = SunStarSys::Value::Snippet->new(%a);
+                         $args{$key}  = SunStarSys::Value::Snippet->new(%a);
                          my $linenums = $a{numbers} ? "linenums" : "";
-                         my $fetch = $args{$key}->fetch;
-                         my $uri = $args{$key}->pretty_uri;
-                         my $offset = $args{$key}->{lines}->[0] - 1;
-                         $offset = 0 if $offset < 0;
-                         my $filter = exists $a{lang} ? "markdown" : "safe";
+                         s/\{/\&#123;/g, s/\}/&#125;/g for my $fetch = $args{$key}->fetch;
+			 my $lang     = $args{$key}{lang};
+                         my $uri      = $args{$key}->pretty_uri;
+                         my $offset   = $args{$key}->{lines}->[0] - 1;
+                         $offset      = 0 if $offset < 0;
+                         my $filter   = exists $a{lang} ? "markdown" : "safe";
                          my $rv = <<EOT;
 <div class="accordion" id="$key-container">
   <div class="accordion-item">
@@ -925,7 +926,7 @@ sub snippet {
     <div id="$key-target" class="accordion-collapse collapse show" aria-labelledby="$key-heading" data-bs-parent="#$key-container">
       <div class="accordion-body" data-offset="$offset">
 
-\`\`\`$a{lang}
+\`\`\`$lang
 $fetch
 \`\`\`
 
