@@ -20,11 +20,16 @@ jobs:
           - language: javascript-typescript
             build-mode: none
     steps:
+      - name: Fetch code
+        run: |
+          git clone -b $GITHUB_REF_NAME https://github.com/$GITHUB_REPOSITORY .
       - uses: github/codeql-action/init@v4
+        name: Init CodeQL
         with:
           config-file: .github/codeql/codeql-config.yml
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
       - uses: github/codeql-action/analyze@v4
+        name: Analyze w/ CodeQL
         with:
           category: "/language:${{ matrix.language }}"
