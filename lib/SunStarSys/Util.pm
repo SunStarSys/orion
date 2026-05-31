@@ -635,9 +635,8 @@ sub seed_file_acl {
     my $p = shift @p;
     for (grep !$seen{$_}++, @{$$dependencies{$p}}) {
       read_text_file "content$_", \ my %d;
-      push(@restrictions, map /\S+\s*=\s*[^rw\s]/g, $d{headers}{acl}),
-        push @p, $_
-	if $d{headers}{acl}; 
+      push(@restrictions, map /\S+\s*=\s*[^rw\s]/g, $d{headers}{acl}) if $d{headers}{acl}; 
+      push @p, $_;
     }
   }
   no strict 'refs';
@@ -645,16 +644,14 @@ sub seed_file_acl {
   if (defined $prior) {
     return unless $acl->[$prior]{unlocked};
     splice @$acl, $prior, 1 and return unless $d{headers}{acl};
-    $acl->[$prior]{rules} = ref $d{headers}{acl}
-      ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} @restrictions, split /[,;]?\s+/, $d{headers}{acl}};
+    $acl->[$prior]{rules} = {map {split /\s*=\s*/, $_, 2} split(/[,;]?\s+/, $d{headers}{acl}), @restrictions};
     $acl->[$prior]{rules}{'@svnadmin'} = 'rw';
   }
   elsif (exists $d{headers}{acl}) {
     push @$acl, {
       path     => "content$path",
       unlocked => 1,
-      rules    => ref $d{headers}{acl}
-        ? $d{headers}{acl} : {map {split /\s*=\s*/, $_, 2} @restrictions, split /[;,]?\s+/, $d{headers}{acl}}
+      rules    => {map {split /\s*=\s*/, $_, 2} split(/[;,]?\s+/, $d{headers}{acl}), @restrictions}
     };
     $$acl[-1]{rules}{'@svnadmin'} = 'rw';
   }
