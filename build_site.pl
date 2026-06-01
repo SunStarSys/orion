@@ -58,6 +58,35 @@ BEGIN {
 
       cond_broadcast(%$self);  # Unblock ALL waiting threads
   }
+
+  sub dequeue
+  {
+    my $self = shift;
+    lock(%$self);
+    my $queue = $$self{'queue'};
+
+    my $count = @_ ? $self->_validate_count(shift) : 1;
+
+    # Wait for requisite number of items
+    cond_wait(%$self) while (eval q/@$queue < $count && ! $$self{'ENDED'}/);
+
+    # If no longer blocking, try getting whatever is left on the queue
+    return $self->dequeue_nb($count) if (eval q/$$self{'ENDED'}/);
+
+    # Return single item
+    if ($count == 1) {
+        my $item = shift(@$queue);
+        cond_signal(%$self);  # Unblock possibly waiting threads
+        return $item;
+    }
+
+    # Return multiple items
+    my @items;
+    push(@items, shift(@$queue)) for (1..$count);
+    cond_signal(%$self);  # Unblock possibly waiting threads
+    return @items;
+  }
+
 }
 
 use utf8;
@@ -90,7 +119,7 @@ USAGE
 utf8::encode $dirq if defined $dirq;
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
 $runners ||= 2*`nproc`; # 8 is arbitrary but educated guess
-$runners = 16 if $runners > 16;
+$runners = 8 if $runners > 8;
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 $ENV{TARGET} //= $target_base;

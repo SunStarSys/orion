@@ -28,6 +28,8 @@ our $VERSION = "3.2";
 
 sub parse_filename;
 sub read_text_file;
+sub seed_file_deps;
+sub seed_file_acl;
 
 our $p;
 
@@ -498,6 +500,7 @@ sub walk_content_tree :prototype(&) {
 	   s/^[^.]+\.// for my $lang = $ext;
 
 	   my $s = sub {
+             seed_file_deps, seed_file_acl;
 	     read_text_file "content$_", \ my %args;
 	     my $h = delete $args{headers};
 	     %$h = map +($_ => $$h{$_} // ""), @HDR_FIELDS;
@@ -512,7 +515,7 @@ sub walk_content_tree :prototype(&) {
 	     }
 	   };
 
-	   $s->() if -f and $ext =~ /^(md|ya?ml|csv)\b/;
+	   $s->() if -f and $ext =~ /^(?:md|ya?ml|csv)\b/;
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
 
@@ -631,11 +634,11 @@ sub seed_file_acl {
   my @p = $path;
   my %seen;
   # no laundering
-  while (@p) { 
+  while (@p) {
     my $p = shift @p;
     for (grep !$seen{$_}++, @{$$dependencies{$p}}) {
       read_text_file "content$_", \ my %d;
-      push(@restrictions, map /\S+\s*=\s*[^rw\s]/g, $d{headers}{acl}) if $d{headers}{acl}; 
+      push(@restrictions, map /\S+\s*=\s*[^rw\s]/g, $d{headers}{acl}) if $d{headers}{acl};
       push @p, $_;
     }
   }
