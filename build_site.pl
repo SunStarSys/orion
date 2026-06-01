@@ -29,6 +29,7 @@ BEGIN {
   unshift @INC, "$script_path/lib";
 
   package Thread::Queue;
+  no warnings 'redefine';
   # Indicate that no more data will enter the queue
   sub enqueue
   {
