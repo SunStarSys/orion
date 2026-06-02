@@ -41,7 +41,7 @@ else
   git clone "$GIT_URL" trunk
 fi
 
-export WEBSITE="${GIT_URL##*/}" REPOS=public
+export WEBSITE="${GIT_URL##*/}" REPOS=public DEBUG_THREADS=1
 
 (
   trap time EXIT

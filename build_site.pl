@@ -21,7 +21,7 @@ use threads::shared;
 use Thread::Queue;
 use Fcntl qw/O_NONBLOCK F_SETFL F_GETFL/;
 
-use constant DEBUG_THREADS => 1;
+use constant DEBUG_THREADS => $ENV{DEBUG_THREADS} // 0;
 
 BEGIN {
   my $script_path = dirname($0);
@@ -168,8 +168,8 @@ for (\*STDOUT, \*STDERR, $build_log) {
   $|=1, select $_ for select $_;
 }
 
-$SIG{__WARN__} = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_" unless /^Can't find/; warn $_};
-$SIG{__DIE__}  = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_" unless /^Can't find/; die $_};
+$SIG{__WARN__} = sub { local $_ = $_[0]; utf8::encode $_ if utf8::is_utf8 $_; syswrite $build_log, gmtime . ":$_" unless /^Can't find/; warn $_};
+$SIG{__DIE__}  = sub { local $_ = $_[0]; utf8::encode $_ if utf8::is_utf8 $_; syswrite $build_log, gmtime . ":$_" unless /^Can't find/; die $_};
 $SIG{HUP}      = sub {1};
 
 unshift @INC, "$source_base/lib";
@@ -328,7 +328,7 @@ sub process_dir {
       warn "skipping unrecognized entry: $_\n";
     }
   }
-  if (DEBUG_THREADS) {
+  if (DEBUG_THREADS > 1) {
    $_->kill("HUP") for @threads;
  }
 }

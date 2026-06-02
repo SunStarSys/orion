@@ -51,7 +51,7 @@ sub new {
 		      s!content/.*!!s for $prefix = $r->filename;
 		  }
 		  utf8::is_utf8 $_ and utf8::encode $_ for $path, $view::path;
-		  read_text_file "${prefix}content/$path", \ my %data or die "NOT FOUND: $view::path\n";
+		  read_text_file "${prefix}content/$path", \ my %data or die "NOT FOUND: '/$path' for '$view::path'\n";
                   for my $p (eval '@path::patterns') {
                     no warnings 'uninitialized';
                     my ($re, $method, $args) = @$p;
@@ -64,7 +64,7 @@ sub new {
 		    }
 		    my $author;
 		    state $pool = bless APR::Pool->new, "_p_apr_pool_t";
-		    state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
+		    state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} // undef, pool => $pool }, "SunStarSys::SVN::Client";
 		    my $subdir = "trunk";
 		    if ($ENV{TARGET} =~ m!^/x1/httpd/websites/!) {
 			require Cwd;
