@@ -21,6 +21,8 @@ use threads::shared;
 use Thread::Queue;
 use Fcntl qw/O_NONBLOCK F_SETFL F_GETFL/;
 
+use constant DEBUG_THREADS => 1;
+
 BEGIN {
   my $script_path = dirname($0);
   $script_path = abs_path($script_path);
@@ -30,7 +32,7 @@ BEGIN {
 
   package Thread::Queue;
   no warnings 'redefine';
-  # Indicate that no more data will enter the queue
+
   sub enqueue
   {
     my $self = shift;
@@ -48,31 +50,30 @@ BEGIN {
     # Add items to queue, and then signal other threads
     push @$queue, map { shared_clone($_) } @_;
     cond_signal(%$self) for @_;
-
   }
+
   sub end
   {
       my $self = shift;
       lock(%$self);
       # No more data is coming
       $$self{'ENDED'} = 1;
-
       cond_broadcast(%$self);  # Unblock ALL waiting threads
   }
 
   sub dequeue
   {
-    my $self = shift;
+    my ($self, $count) = @_;
     lock(%$self);
+
+    $count = $count ? $self->_validate_count($count) : 1;
     my $queue = $$self{'queue'};
 
-    my $count = @_ ? $self->_validate_count(shift) : 1;
-
     # Wait for requisite number of items
-    cond_wait(%$self) while (eval q/@$queue < $count && ! $$self{'ENDED'}/);
+    cond_wait(%$self) while @$queue < $count && ! $self->{'ENDED'};
 
     # If no longer blocking, try getting whatever is left on the queue
-    return $self->dequeue_nb($count) if (eval q/$$self{'ENDED'}/);
+    return $self->dequeue_nb($count) if $self->{'ENDED'};
 
     # Return single item
     if ($count == 1) {
@@ -84,10 +85,35 @@ BEGIN {
     # Return multiple items
     my @items;
     push(@items, shift(@$queue)) for (1..$count);
-    cond_signal(%$self);  # Unblock possibly waiting threads
+    cond_signal(%$self) for 1..$count;  # Unblock possibly waiting threads
     return @items;
   }
 
+  #Return items from the head of a queue with no blocking
+  sub dequeue_nb
+  {
+      my $self = shift;
+      #warn "GOT HERE\n";
+      lock(%$self);
+      my $queue = $$self{'queue'};
+
+      my $count = @_ ? $self->_validate_count(shift) : 1;
+      # Return single item
+      if ($count == 1) {
+	  my $item = shift(@$queue);
+	  cond_signal(%$self);  # Unblock possibly waiting threads
+	  return $item;
+      }
+
+      # Return multiple items
+      my @items;
+      for (1..$count) {
+	  last if (! @$queue);
+	  push(@items, shift(@$queue));
+      }
+      cond_signal(%$self);  # Unblock possibly waiting threads
+      return @items;
+  }
 }
 
 use utf8;
@@ -115,7 +141,7 @@ GetOptions ( "target-base=s", \$target_base,
 );
 
 die <<USAGE unless defined $target_base and -d $source_base;
-Usage: $0 --source-base /path/to/trunk/or/a/branch --target-base /path/to/target [ --runners N ] [--offline]
+Usage: $0 --source-base /path/to/trunk/or/a/branch --target-base /path/to/target --revision N [ --runners N ] [--offline]
 USAGE
 utf8::encode $dirq if defined $dirq;
 $_ = abs_path($_) and s!/+$!! for $source_base, $target_base;
@@ -142,8 +168,9 @@ for (\*STDOUT, \*STDERR, $build_log) {
   $|=1, select $_ for select $_;
 }
 
-$SIG{__WARN__} = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_"; warn $_};
-$SIG{__DIE__}  = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_"; die $_};
+$SIG{__WARN__} = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_" unless /^Can't find/; warn $_};
+$SIG{__DIE__}  = sub { local $_ = $_[0]; utf8::encode $_; syswrite $build_log, gmtime . ":$_" unless /^Can't find/; die $_};
+$SIG{HUP}      = sub {1};
 
 unshift @INC, "$source_base/lib";
 
@@ -176,7 +203,7 @@ sub main :Sealed {
  LOOP: while (@dirqueue) {
     my $would_block = 1;
 
-    for my $p (shuffle $sockets->can_write(3)) {
+    for my $p (shuffle $sockets->can_write(0)) {
       $would_block = 0;
       my $dir = shift @dirqueue or last;
 
@@ -194,30 +221,29 @@ sub main :Sealed {
     last if $would_block;
   }
 
-  for my $p ($sockets->can_read(60)) {
+  state $cannot_read = 0;
+  for my $p ($sockets->can_read(2)) {
+    $cannot_read = 0;
     local $_ = '';
     my $bytes;
     no warnings 'uninitialized';
     while (($bytes = sysread $p, $_, 4096, length) > 0) {
       last if substr($_, -1, 1) eq "\n";
     }
-    if ($bytes <= 0) {
+    if (!length) {
       my $err = $!;
       warn "sysread failed: $err ", fileno $p;
+      $saw_error++;
       $runners[$fd2rid[fileno $p]]->{wait} = 1;
       $sockets->remove($p);
-      close $p;
-      $saw_error++;
+      shutdown $p, 1;
       next;
     }
     push @dirqueue, grep length && $_ ne "working...", map /^new: (.+)$/ ? (push(@new_sources, grep !$seen{$_}++, $1) and ()) : $_, split /\n/;
     $runners[$fd2rid[fileno $p]]->{wait} = /(?:^$)\Z/m;
   }
-  state $last_count = @runners;
-  state $are_equal = 0;
   my $count = grep !$_->{wait}, @runners;
-  $last_count = $count, $are_equal = 0 if $count < $last_count and $last_count != @runners;
-  goto LOOP if @dirqueue or $count and ($last_count == @runners or ++$are_equal < 10);
+  goto LOOP if @dirqueue or $count or ++$cannot_read < 5;
 
   if (@new_sources) {
     syswrite_all "New content detected: $_\n" for @new_sources;
@@ -225,14 +251,13 @@ sub main :Sealed {
     syswrite_all $_, "[flush]\n" for map $_->{socket}, @runners;
     @new_sources = ();
     @dirqueue = $dirq // ("cgi-bin", "templates", "content");
-    $are_equal = 0;
-    $last_count = @runners;
+    $cannot_read = 0;
     unload_package("path") or die "Can't unload package path\n";
     require "path.pm";
     syswrite_all "reloaded path.pm\n";
     goto LOOP;
   }
-  shutdown $_, 1 for map $_->{socket}, @runners;
+  shutdown $_, 1 for $sockets->handles;
   syswrite_all "Waiting for kids...\n";
 
   my %new;
@@ -269,39 +294,43 @@ sub main :Sealed {
 
   $? && ++$saw_error while wait > 0; # if our assumptions are wrong, we'll know here
   syswrite_all "Build done.\n";
-  exit 1 if $saw_error;
+  exit 255 if $saw_error;
   exit 0;
 }
+my $count :shared = 0;
 
 sub process_dir {
-    my ($root, $wtr, $thread_queue, $final) = @_;
-    utf8::decode $root unless utf8::is_utf8 $root;
-    opendir my $dir, $root or warn "Can't open $root [skipping]: $!" and return;
-    my $made_target_dir;
-    no warnings 'uninitialized';
-    for (map $_->[0], sort {$b->[1] <=> $a->[1]} map [$_, -d],# dirs first, schwartzian xform
-         map "$root/$_", grep $_ ne "." && $_ ne ".." && $_ ne ".svn", readdir $dir) {
+  my ($root, $wtr, $thread_queue, $final) = @_;
+  utf8::decode $root unless utf8::is_utf8 $root;
+  opendir my $dir, $root or warn "Can't open $root [skipping]: $!" and return;
+  my $made_target_dir;
+  no warnings 'uninitialized';
+  for (map $_->[0], sort {$b->[1] <=> $a->[1]} map [$_, -d],# dirs first, schwartzian xform
+       map "$root/$_", grep $_ ne "." && $_ ne ".." && $_ ne ".svn", readdir $dir) {
 
-        if (-d and not $final) {
-            if (m!\.page$!) {
-                process_dir($_, $wtr, $thread_queue, "final");
-                next;
-            }
-            if (syswrite_all($wtr, "$_\n") <= 0) {
-                warn "syswrite_all failed: $!";
-            }
-            next;
-        }
-        if (-f _) {
-            mkpath "$target_base/$root" unless $made_target_dir++;
-            $thread_queue->enqueue($_), next if $thread_queue->pending < 2 * @threads;
-	    syswrite_all($wtr, "new: $_\n") for eval {alarm 60; my @rv=process_file($_); alarm 0; @rv};
-	    push @errors, "$_:$@" if $@;
-        }
-        else {
-            warn "skipping unrecognized entry: $_\n";
-        }
+    if (-d and not $final) {
+      if (m!\.page$!) {
+	process_dir($_, $wtr, $thread_queue, "final");
+	next;
+      }
+      if (syswrite_all($wtr, "$_\n") <= 0) {
+	warn "syswrite_all failed: $!";
+      }
+      next;
     }
+    if (-f _) {
+      mkpath "$target_base/$root" unless $made_target_dir++;
+      $thread_queue->enqueue($_), next if $count < @threads;
+      syswrite_all($wtr, "new: $_\n") for eval {alarm 60; my @rv = process_file($_); alarm 0; @rv};
+      push @errors, "$_:$@" if $@;
+    }
+    else {
+      warn "skipping unrecognized entry: $_\n";
+    }
+  }
+  if (DEBUG_THREADS) {
+   $_->kill("HUP") for @threads;
+ }
 }
 
 my %method_cache;
@@ -380,18 +409,32 @@ sub fork_runner :Sealed {
     my IO::Select $r;
     $r = $r->new;
     $r->add($parent);
-    my $thread_queue = Thread::Queue->new;
-    state $s = sub {
-      $SIG{KILL} = sub {threads->exit};
-      while (my $data = $thread_queue->dequeue()) {
-        last unless defined $data;
-	local $@;
-	syswrite_all($parent, "new: $_\n") for eval {process_file($data)};
-        push @errors, "$data:$@" if $@;
+
+    my Thread::Queue $thread_queue :shared = Thread::Queue->new;
+    $thread_queue->limit = 128;
+
+    state $s = sub :Sealed {
+      my $idx = shift;
+      my ($data, $entered);
+
+      $SIG{TERM} = sub {lock $count; $count++; no warnings 'uninitialized'; warn "$$ THREAD TERMINATED: $data: $idx: $count\n"};
+      $SIG{HUP}  = sub {no warnings 'uninitialized'; $entered //= 0; warn "$$ THREAD PROCESSING: $data: $idx: $entered\n"};
+
+      local $@;
+      while (defined($data = $thread_queue->dequeue())) {
+	++$entered;
+	my $timeout = $data =~ /\.tex\b/ ? 60 : 10;
+	syswrite_all($parent, "new: $_\n") for eval {alarm $timeout; my @rv = process_file($data); alarm 0; @rv};
+	push @errors, "$data:$@" if $@;
       }
-      threads->exit;
+      lock $count;
+      ++$count;
+      warn "$$ THREAD DONE: $idx: $count: $@\n" if DEBUG_THREADS;
     };
-    push @threads, threads->create($s) for 1 .. $runners;
+
+    push @threads, threads->create($s, $_) for 1 .. $runners;
+    $_->detach for @threads;
+
     while (my ($p) = $r->can_read()) {
         # minor race condition: this issue seems inherent to any attempts
         # to communicate process state via sockets, and since we aren't
@@ -424,30 +467,38 @@ sub fork_runner :Sealed {
         }
     }
     warn "Processing errors: @errors" if @errors;
+    $thread_queue->enqueue((undef)x@threads);
     $thread_queue->end;
     # threads::join is fubar somehow
     # so we just wait for dust to settle...
     warn "$$: waiting for threads to complete...\n";
+
+    if (DEBUG_THREADS) {
+      $_->kill("HUP") for @threads;
+    }
 
     while (my $items = grep $_->is_running, @threads) {
       state $maxcount = 11;
       state $last_items = $items;
       sleep 1;
       if ($items < @threads) {
-        --$maxcount, $maxcount % 10 or warn "$$ dequeueing: $items($maxcount)\n";
+	if (--$maxcount % 10 == 0) {
+	  warn "$$ dequeueing: $items($maxcount)\n";
+	  $_->kill("HUP") for @threads;
+	}
       }
       else {
         state $i = 0;
         if (++$i == 60) {
-          warn "$$: thread killing all: $items\n";
-          $_->kill("KILL") for @threads;
-          last;
+          warn "$$: thread terminating all: $items\n";
+          $_->kill("TERM") for @threads;
+          last; # WHY IS THIS NECESSARY IF THREAD TERMINATION ACTUALLY WORKS?
         }
       }
       if (!$maxcount and $items == $last_items) {
-        warn "$$: thread killing remaining: $items\n";
-        $_->kill("KILL") for grep $_->is_running, @threads;
-        last;
+        warn "$$: thread terminating remaining: $items\n";
+        $_->kill("TERM") for grep $_->is_running, @threads;
+	last; # WHY IS THIS NECESSARY IF THREAD TERMINATION ACTUALLY WORKS?
       }
       elsif ($items < $last_items) {
         $last_items = $items;

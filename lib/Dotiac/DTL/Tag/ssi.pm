@@ -50,16 +50,17 @@ sub new {
 		      my $r = Apache2::RequestUtil->request;
 		      s!content/.*!!s for $prefix = $r->filename;
 		  }
-		  read_text_file "${prefix}content/$path", \ my %data;
-		  warn "content/$path: $!" unless defined $data{content};
+		  utf8::is_utf8 $_ and utf8::encode $_ for $path, $view::path;
+		  read_text_file "${prefix}content/$path", \ my %data or die "NOT FOUND: $view::path\n";
                   for my $p (eval '@path::patterns') {
                     no warnings 'uninitialized';
                     my ($re, $method, $args) = @$p;
                     next unless "/$path" =~ $re;
 		    local $@;
 		    {
-		      local $SIG{__WARN__} = sub {};
-		      state $_foo = eval 'BEGIN{require SunStarSys::SVN::Client}';
+		      local $SIG{__DIE__} = sub {1};
+		      local $SIG{__WARN__} = sub {1};
+		      state $_foo = eval 'use SunStarSys::SVN::Client';
 		    }
 		    my $author;
 		    state $pool = bless APR::Pool->new, "_p_apr_pool_t";
@@ -98,7 +99,7 @@ sub new {
                   $data{content} =~ s/^\s+//;
                   $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|/|mailto://|\{|javascript:)(.*?)\2#$1=$2$dir/$3$2#g;
                   $data{content} =~ s#(\[[^\[\]]*\])\((?!https?://|/|\{|mailto://|javascript:)([^\)]+)\)#$1($dir/$2)#g;
-		  read_text_file "${prefix}content/$view::path", \my %d;
+		  read_text_file "${prefix}content/$view::path", \my %d or die "Not Found!\n";
 		  $d{content} =~ s/^\s+//;
 		  my $spacer;
 		  while ($d{content} =~/^(\s+)\{%\s+ssi\s+\`\/$path\`\s+%\}/mg) {
