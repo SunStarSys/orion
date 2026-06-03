@@ -20,7 +20,6 @@ use threads;
 use threads::shared;
 use Thread::Queue;
 use Fcntl qw/O_NONBLOCK F_SETFL F_GETFL/;
-use Net::SSLeay; #must clone this, not load per-thread, due to locking bugs
 
 use constant DEBUG_THREADS => $ENV{DEBUG_THREADS} // 0;
 
@@ -410,6 +409,7 @@ sub fork_runner :Sealed {
     my IO::Select $r;
     $r = $r->new;
     $r->add($parent);
+    require Net::SSLeay;
 
     my Thread::Queue $thread_queue :shared = Thread::Queue->new;
     $thread_queue->limit = 128;
