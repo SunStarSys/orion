@@ -20,6 +20,7 @@ use threads;
 use threads::shared;
 use Thread::Queue;
 use Fcntl qw/O_NONBLOCK F_SETFL F_GETFL/;
+use Net::SSLeay; #must clone this, not load per-thread, due to locking bugs
 
 use constant DEBUG_THREADS => $ENV{DEBUG_THREADS} // 0;
 
