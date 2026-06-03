@@ -111,7 +111,7 @@ BEGIN {
 	  last if (! @$queue);
 	  push(@items, shift(@$queue));
       }
-      cond_signal(%$self);  # Unblock possibly waiting threads
+      cond_signal(%$self) for 1..@items;  # Unblock possibly waiting threads
       return @items;
   }
 }

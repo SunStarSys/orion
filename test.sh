@@ -16,7 +16,7 @@ for d in trunk www; do
   fi
 done
 
-: "${TIMEOUT:=1000}"
+: "${TIMEOUT:=500}"
 
 [[ -n "$LAUNCH_APACHE2" && -n "$MOZILLA" ]] && (
   sleep 3
