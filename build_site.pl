@@ -111,7 +111,7 @@ BEGIN {
 	  last if (! @$queue);
 	  push(@items, shift(@$queue));
       }
-      cond_signal(%$self) for 1..@items;  # Unblock possibly waiting threads
+      cond_signal(%$self);  # Unblock possibly waiting threads
       return @items;
   }
 }
@@ -409,7 +409,7 @@ sub fork_runner :Sealed {
     my IO::Select $r;
     $r = $r->new;
     $r->add($parent);
-    require Net::SSLeay;
+    require Net::SSLeay; #wtf? must clone this, not load per-thread, due to locking bugs
 
     my Thread::Queue $thread_queue :shared = Thread::Queue->new;
     $thread_queue->limit = 128;
@@ -418,7 +418,7 @@ sub fork_runner :Sealed {
       my $idx = shift;
       my ($data, $entered);
 
-      $SIG{TERM} = sub {lock $count; $count++; no warnings 'uninitialized'; warn "$$ THREAD TERMINATED: $data: $idx: $count\n"};
+      $SIG{TERM} = sub {lock $count; $count++; no warnings 'uninitialized'; warn "$$ THREAD TERMINATED: $data: $idx: $count\n"; threads->exit};
       $SIG{HUP}  = sub {no warnings 'uninitialized'; $entered //= 0; warn "$$ THREAD PROCESSING: $data: $idx: $entered\n"};
 
       local $@;

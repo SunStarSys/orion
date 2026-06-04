@@ -51,7 +51,7 @@ export WEBSITE="${GIT_URL##*/}" REPOS=public DEBUG_THREADS=1
 mkdir -p www/.build-log
 perl -V | grep -i thread
 sleep 3 #wait for markdown daemon to crank up
-time timeout $TIMEOUT perl build_site.pl --source-base=trunk --target-base=www --revision=0
+time timeout $TIMEOUT perl build_site.pl --source-base=trunk --target-base=www --revision=0 --offline
 rv=$?
 pkill -U $USER -f markdownd.js
 wait
