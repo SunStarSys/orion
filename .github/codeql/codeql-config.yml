@@ -8,3 +8,5 @@ query-filters:
         - recommendation
   - exclude:
       id: js/useless-regexp-character-escape
+  - exclude:
+      id: js/inefficient-regexp
