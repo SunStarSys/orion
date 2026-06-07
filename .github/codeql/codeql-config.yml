@@ -9,4 +9,4 @@ query-filters:
   - exclude:
       id: js/useless-regexp-character-escape
   - exclude:
-      id: js/inefficient-regexp
+      id: js/inefficient-regular-expression
