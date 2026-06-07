@@ -6,3 +6,5 @@ query-filters:
       problem.severity:
         - warning
         - recommendation
+  - exclude:
+      id: js/useless-regexp-character-escape
