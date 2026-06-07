@@ -297,6 +297,7 @@ sub main :Sealed {
   exit 255 if $saw_error;
   exit 0;
 }
+
 my $count :shared = 0;
 
 sub process_dir {
@@ -321,7 +322,8 @@ sub process_dir {
     if (-f _) {
       mkpath "$target_base/$root" unless $made_target_dir++;
       $thread_queue->enqueue($_), next if $count < @threads;
-      syswrite_all($wtr, "new: $_\n") for eval {alarm 60; my @rv = process_file($_); alarm 0; @rv};
+      warn "BUILDING IT: $_\n";
+      syswrite_all($wtr, "new: $_\n") for eval {alarm 0; my @rv = process_file($_); alarm 0; @rv};
       push @errors, "$_:$@" if $@;
     }
     else {
@@ -409,6 +411,7 @@ sub fork_runner :Sealed {
     my IO::Select $r;
     $r = $r->new;
     $r->add($parent);
+
     require Net::SSLeay; #wtf? must clone this, not load per-thread, due to locking bugs
 
     my Thread::Queue $thread_queue :shared = Thread::Queue->new;
@@ -420,11 +423,11 @@ sub fork_runner :Sealed {
 
       $SIG{TERM} = sub {lock $count; $count++; no warnings 'uninitialized'; warn "$$ THREAD TERMINATED: $data: $idx: $count\n"; threads->exit};
       $SIG{HUP}  = sub {no warnings 'uninitialized'; $entered //= 0; warn "$$ THREAD PROCESSING: $data: $idx: $entered\n"};
-
+      $SIG{ALRM} = sub {die @_};
       local $@;
       while (defined($data = $thread_queue->dequeue())) {
 	++$entered;
-	my $timeout = $data =~ /\.tex\b/ ? 60 : 10;
+	my $timeout = $data =~ /\.tex\b/ ? 0 : 0;
 	syswrite_all($parent, "new: $_\n") for eval {alarm $timeout; my @rv = process_file($data); alarm 0; @rv};
 	push @errors, "$data:$@" if $@;
       }

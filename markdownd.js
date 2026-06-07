@@ -109,13 +109,14 @@ if (cluster.isMaster) {
         const editormd = EMD(new JSDOM(HTML, { virtualConsole }).window);
         if (!markdown) { return c.end("\n"); }
         markdown = markdown.toString();
+        markdown = markdown.replace(/\&#123;/g,"{").replace(/\&#125;/g,"}");
         /* look for nul character in first 3-11 chars */
         const m  = markdown.match(/^(.{2,20})\x00(.+)$/s);
         if (m) {
           /* data-spec'd mode */
           mode     = m[1];
-          markdown = m[2];
-        }
+	  markdown = m[2];
+	}
         const options = {
           autoLoadModules: false,
           readOnly:        true,
@@ -156,7 +157,9 @@ if (cluster.isMaster) {
               const to = setTimeout(() => {c.end();throw new Error("processing timed out")}, TIMEOUT);
               const div = editormd.markdownToHTML("editor", options);
               clearTimeout(to);
-              c.end(div.html());
+	      var data = div.html();
+	      data = data.replace(/&amp;/g, '&');
+              c.end(data);
           }
       });
     }
