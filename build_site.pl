@@ -149,6 +149,12 @@ $runners ||= 2*`nproc`; # 8 is arbitrary but educated guess
 $runners = 8 if $runners > 8;
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
+%ENV = (
+    PATH => "/usr/local/bin:/usr/bin:/sbin",
+    LANG => "en_US.UTF-8",
+    PERL_PERTURB_KEYS => "NO",
+    PERL_HASH_SEED => 987654321
+);
 $ENV{TARGET} //= $target_base;
 
 my ($repos, $website) = $source_base =~ m!/([^/]+)/([^/]+)/(?:trunk|branches)\b!;
@@ -203,7 +209,7 @@ sub main :Sealed {
  LOOP: while (@dirqueue) {
     my $would_block = 1;
 
-    for my $p (shuffle $sockets->can_write(0)) {
+    for my $p ($sockets->can_write(0)) {
       $would_block = 0;
       my $dir = shift @dirqueue or last;
 

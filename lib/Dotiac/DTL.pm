@@ -140,7 +140,7 @@ sub flush_cache {
 				delete $cache{$t};
 			}
 			unless ($cache{$t})  {
-				open my $fh,"<:encoding(UTF-8)",$data or croak "Can't open template $data: $!";
+				open my $fh,"<:utf8",$data or croak "Can't open template $data: $!";
 				my $a=do {local $/,<$fh>};
 				close $fh;
 				$filename="\"$data\"";
@@ -176,7 +176,7 @@ sub flush_cache {
 			};
 		}
 		if ($compile and $compile > 0) {
-			if (open my $cp,">:encoding(UTF-8)","$t.pm") {
+			if (open my $cp,">:utf8","$t.pm") {
 				eval {
 					require Data::Dumper;
 					$Data::Dumper::Indent=2;

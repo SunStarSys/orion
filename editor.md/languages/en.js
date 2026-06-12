@@ -42,8 +42,9 @@
                 clear            : "Clear",
                 search           : "Search",
                 help             : "Help",
-                info             : "About " + exports.title
+                info             : "About" + ' ' + exports.title
             },
+
             buttons : {
                 enter  : "Enter",
                 cancel : "Cancel",
@@ -66,6 +67,7 @@
                     idEmpty  : "Error: Please fill in reference link id.",
                     urlEmpty : "Error: Please fill in reference link url address."
                 },
+
                 image : {
                     title    : "Image",
                     url      : "Address",
@@ -128,3 +130,4 @@
 	}
 
 })();
+

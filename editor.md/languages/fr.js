@@ -1,99 +1,102 @@
 (function(){
     var factory = function (exports) {
         var lang = {
-            name : "en",
-            description : "Open source online Markdown editor.",
-            tocTitle    : "Table of Contents",
+            name : "fr",
+            description : "Editeur Markdown en ligne open source.",
+            tocTitle    : "Table des matières",
             toolbar : {
-                undo             : "Undo(Ctrl+Z)",
-                redo             : "Redo(Ctrl+Y)",
-                bold             : "Bold",
-                del              : "Strikethrough",
-                italic           : "Italic",
-                quote            : "Block quote",
-                ucwords          : "Words first letter convert to uppercase",
-                uppercase        : "Selection text convert to uppercase",
-                lowercase        : "Selection text convert to lowercase",
-                h1               : "Heading 1",
-                h2               : "Heading 2",
-                h3               : "Heading 3",
-                h4               : "Heading 4",
-                h5               : "Heading 5",
-                h6               : "Heading 6",
-                "list-ul"        : "Unordered list",
-                "list-ol"        : "Ordered list",
-                hr               : "Horizontal rule",
-                link             : "Link",
-                "reference-link" : "Reference link",
+                undo             : "Annuler(Ctrl+Z)",
+                redo             : "Rétablir(Ctrl+Y)",
+                bold             : "Gras",
+                del              : "Barré",
+                italic           : "Italique",
+                quote            : "Guillemet de blocage",
+                ucwords          : "Première lettre des mots convertie en majuscules",
+                uppercase        : "Texte de sélection converti en majuscules",
+                lowercase        : "Texte de sélection converti en minuscules",
+                h1               : "Titre 1",
+                h2               : "Titre 2",
+                h3               : "Titre 3",
+                h4               : "Titre 4",
+                h5               : "Titre 5",
+                h6               : "Titre 6",
+                "list_ul"        : "Liste non triée",
+                "list_ol"        : "Liste triée",
+                hr               : "Règle horizontale",
+                link             : "Lien",
+                "reference_link" : "Lien de référence",
                 image            : "Image",
-                code             : "Code inline",
-                "preformatted-text" : "Preformatted text / Code block (Tab indent)",
-                "code-block"     : "Code block (Multi-languages)",
+                comment          : "Sélection de devis pour commentaire",
+                code             : "Code incorporé",
+                "preformatted_text" : "Texte préformaté / Bloc de code (indentation tabulaire)",
+                "code_block"     : "Bloc de code (multi-langues)",
                 table            : "Tables",
-                datetime         : "Datetime",
+                datetime         : "Date/Heure",
                 emoji            : "Emoji",
-                "html-entities"  : "HTML Entities",
-                pagebreak        : "Page break",
-                watch            : "Unwatch",
-                unwatch          : "Watch",
-                preview          : "HTML Preview (Press Shift + ESC exit)",
-                fullscreen       : "Fullscreen (Press ESC exit)",
-                clear            : "Clear",
-                search           : "Search",
-                help             : "Help",
-                info             : "About " + exports.title
+                "html_entities"  : "Entités HTML",
+                pagebreak        : "Saut de page",
+                watch            : "Déverrouiller",
+                unwatch          : "Regarder",
+                preview          : "Aperçu HTML (Appuyez sur Maj + Sortie ESC)",
+                fullscreen       : "Plein écran (appuyez sur la sortie ESC)",
+                clear            : "Effacer",
+                search           : "Rechercher",
+                help             : "Aide",
+                info             : "À propos" + ' ' + exports.title
             },
+
             buttons : {
-                enter  : "Enter",
-                cancel : "Cancel",
-                close  : "Close"
+                enter  : "Entrer",
+                cancel : "Annuler",
+                close  : "Fermer"
             },
             dialog : {
                 link : {
-                    title    : "Link",
-                    url      : "Address",
-                    urlTitle : "Title",
-                    urlEmpty : "Error: Please fill in the link address."
+                    title    : "Lien",
+                    url      : "Adresse",
+                    urlTitle : "Titre",
+                    urlEmpty : "Erreur : veuillez remplir l'adresse du lien."
                 },
                 referenceLink : {
-                    title    : "Reference link",
-                    name     : "Name",
-                    url      : "Address",
+                    title    : "Lien de référence",
+                    name     : "Nom",
+                    url      : "Adresse",
                     urlId    : "ID",
-                    urlTitle : "Title",
-                    nameEmpty: "Error: Reference name can't be empty.",
-                    idEmpty  : "Error: Please fill in reference link id.",
-                    urlEmpty : "Error: Please fill in reference link url address."
+                    urlTitle : "Titre",
+                    nameEmpty: "Erreur : le nom de référence ne peut pas être vide.",
+                    idEmpty  : "Erreur : Renseignez l'ID lien de référence.",
+                    urlEmpty : "Erreur : renseignez l'adresse URL du lien de référence."
                 },
+
                 image : {
                     title    : "Image",
-                    url      : "Address",
-                    link     : "Link",
-                    alt      : "Title",
-                    uploadButton     : "Upload",
-                    imageURLEmpty    : "Error: picture url address can't be empty.",
-                    uploadFileEmpty  : "Error: upload pictures cannot be empty!",
-                    formatNotAllowed : "Error: only allows to upload pictures file, upload allowed image file format:"
+                    url      : "Adresse",
+                    link     : "Lien",
+                    alt      : "Titre",
+                    uploadButton     : "Charger",
+                    imageURLEmpty    : "Erreur : l'adresse d'URL de l'image ne peut pas être vide.",
+                    uploadFileEmpty  : "Erreur : le chargement des images ne peut pas être vide.",
+                    formatNotAllowed : "Erreur : autorise uniquement le téléchargement de fichier d'images, format de fichier d'image autorisé pour le téléchargement :"
                 },
                 preformattedText : {
-                    title             : "Preformatted text / Codes",
-                    emptyAlert        : "Error: Please fill in the Preformatted text or content of the codes.",
-                    placeholder       : "coding now...."
+                    title             : "Texte / Codes préformatés",
+                    emptyAlert        : "Erreur : veuillez remplir le texte ou le contenu préformaté des codes.",
+                    placeholder       : "coder maintenant..."
                 },
                 codeBlock : {
-                    title             : "Code block",
-                    selectLabel       : "Languages: ",
-                    selectDefaultText : "select a code language...",
-                    otherLanguage     : "Other languages",
-                    unselectedLanguageAlert : "Error: Please select the code language.",
-                    codeEmptyAlert    : "Error: Please fill in the code content.",
-                    placeholder       : "coding now...."
+                    title             : "Bloc de code",
+                    selectLabel       : "Langues : ",
+                    selectDefaultText : "sélectionner une langue de code...",
+                    otherLanguage     : "Autres langues",
+                    unselectedLanguageAlert : "Erreur : Sélectionnez la langue du code.",
+                    codeEmptyAlert    : "Erreur : renseignez le contenu du code.",
+                    placeholder       : "coder maintenant..."
                 },
                 htmlEntities : {
-                    title : "HTML Entities"
+                    title : "Entités HTML"
                 },
                 help : {
-                    title : "Help"
+                    title : "Aide"
                 }
             }
         };
@@ -102,21 +105,21 @@
     };
 
 	// CommonJS/Node.js
-	if (typeof require === "function" && typeof exports === "object" && typeof module === "object")
+	if (typeof require === "fonction" && typeof exports === "objet" && typeof module === "objet")
     {
         module.exports = factory;
     }
-	else if (typeof define === "function")  // AMD/CMD/Sea.js
+	else if (typeof define === "fonction")  // AMD/CMD/Sea.js
     {
 		if (define.amd) { // for Require.js
 
-			define(["editormd"], function(editormd) {
+			define(["modificationorm"], function(editormd) {
                 factory(editormd);
             });
 
 		} else { // for Sea.js
 			define(function(require) {
-                var editormd = require("../editormd");
+                var editormd = require("../modifier");
                 factory(editormd);
             });
 		}
@@ -127,3 +130,4 @@
 	}
 
 })();
+

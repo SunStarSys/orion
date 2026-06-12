@@ -72,7 +72,7 @@ sub new {
 			$subdir = "branches/" . File::Basename::basename $pwd;
 		    }
 		    $ok = $args->{category_root} || $args->{archive_root} || !($svn->client and eval {
-			$svn->info("${prefix}content/$view::path", sub {$author = $_[1]->last_changed_author}) unless $author;
+			$svn->info("${prefix}content$view::path", sub {$author = $_[1]->last_changed_author}) unless $author;
 			SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
 		          "--path" => "/cms-sites/$ENV{WEBSITE}/$subdir/content/$path", "--username" => $author,
 		          "--groups-file" => "$ENV{TARGET}/group-svn.conf",
@@ -97,9 +97,9 @@ sub new {
                   my $dir = File::Basename::dirname "/$path";
 		  $dir = File::Basename::dirname $dir if $dir =~ /\.page$/;
                   $data{content} =~ s/^\s+//;
-                  $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|/|mailto://|\{|javascript:)(.*?)\2#$1=$2$dir/$3$2#g;
+                  $data{content} =~ s#(<[^>]*?\b(?:src|href))=(['"])(?!https?://|mailto://|[/\{\#]|javascript:)(.*?)\2#$1=$2$dir/$3$2#g;
                   $data{content} =~ s#(\[[^\[\]]*\])\((?!https?://|/|\{|mailto://|javascript:)([^\)]+)\)#$1($dir/$2)#g;
-		  read_text_file "${prefix}content/$view::path", \my %d or die "Not Found!\n";
+		  read_text_file "${prefix}content$view::path", \my %d or die "Not Found!\n";
 		  $d{content} =~ s/^\s+//;
 		  my $spacer;
 		  while ($d{content} =~/^(\s+)\{%\s+ssi\s+\`\/$path\`\s+%\}/mg) {

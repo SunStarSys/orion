@@ -150,9 +150,10 @@ our $currentdir="";
 sub safenew {
 	my $class=shift;
 	my $file=shift;
-	unless ($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS and int($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS) > 2) {
+#	unless ($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS and int($Dotiac::DTL::ALLOWED_INCLUDE_ROOTS) > 2) {
           sanitize_relative_path $file;
-        }
+	  $file =~ y/+/ /;
+#        }
         my $found = 0;
         my $rfile;
         foreach my $dir (@Dotiac::DTL::TEMPLATE_DIRS) {

@@ -15,7 +15,7 @@ use Apache2::RequestRec;
 use Apache2::RequestUtil;
 use v5.38;
 use utf8;
-use constant MAX_LINK_COUNT => 1024;
+use constant MAX_LINK_COUNT => 4096;
 use constant MAX_LINK_RAND  => 16;
 our @HDR_FIELDS = qw/status title keywords categories acl type/;
 

@@ -15,9 +15,9 @@
 ###############################################################################
 
 package Dotiac::DTL::Filter;
-use strict;
-use warnings;
+use v5.38;
 use utf8;
+use Safe;
 use DB_File;
 use PDL ();
 use POSIX qw/:fcntl_h/;
@@ -34,6 +34,27 @@ no warnings 'experimental';
 use base 'sealed';
 use sealed;
 
+$PDL::no_clone_skip_warning = 1;
+
+state @opcodes = qw/
+    const padany lineseq rv2gv rv2sv gvsv concat multiconcat match leaveeval
+    null stub scalar pushmark wantarray const defined undef
+    rv2sv sassign padsv_store
+    cond_expr flip flop andassign orassign dorassign and or dor xor helemexistsor
+    preinc i_preinc predec i_predec postinc i_postinc
+    postdec i_postdec int hex oct abs pow multiply i_multiply
+    divide i_divide modulo i_modulo add i_add subtract i_subtract
+    left_shift right_shift bit_and bit_xor bit_or nbit_and
+    nbit_xor nbit_or sbit_and sbit_xor sbit_or negate i_negate not
+    complement ncomplement scomplement
+    lt i_lt gt i_gt le i_le ge i_ge eq i_eq ne i_ne ncmp i_ncmp
+    slt sgt sle sge seq sne scmp
+    substr vec stringify study pos length index
+    rindex ord chr pos
+    /;
+
+my $safe = Safe->new;
+$safe->permit_only(@opcodes);
 
 sub add {
 	my $value=shift;
@@ -122,7 +143,7 @@ sub date {
 	else {
 		@t=@{$value->content};
 	}
-	my @s=split //,$string;
+	my @s=CORE::split '',$string;
 	my $res;
 	while (my $s=shift(@s)) {
 		if ($s eq '\\') {
@@ -374,8 +395,10 @@ sub dictsort {
 
 sub split {
   my $value = shift;
-  my $pattern = shift;
-  $value->set([split $pattern->repr(), $value->repr()]);
+  my $pattern = shift->repr;
+  local $_;
+  $safe->reval(qq{m{$pattern}}); die $@ if $@;	 
+  $value->set([CORE::split $pattern, $value->repr()]);
   return $value;
 }
 
@@ -751,9 +774,9 @@ sub make_list {
 	my $by=shift;
 	if ($by) {
 		$by=quotemeta $by->repr;
-		$value->set([split /$by/,$val]);
+		$value->set([CORE::split /$by/,$val]);
 	}
-	return $value->set([split //,$val]);
+	return $value->set([CORE::split //,$val]);
 }
 
 #No locale for now
@@ -787,7 +810,7 @@ sub pluralize {
 		$p=$p->repr();
 	}
 	else {
-		($o,$p) = split /,/,$s,2;
+		($o,$p) = CORE::split /,/,$s,2;
 	}
 	unless ($p) {
 		$p=$o;
@@ -850,7 +873,7 @@ sub removetags {
 	my $tags=shift;
 	$tags=$tags->repr;
 	if ($tags) {
-		my @t=split /[\s,]+/,$tags;
+		my @t=CORE::split /[\s,]+/,$tags;
 		my $t=CORE::join("|",map {quotemeta $_} @t);
 		$value=~s/<\/?(?:$t)(?:\/?>|\s[^>]+>)//g;
 	}
@@ -863,7 +886,7 @@ sub removeattrs {
 	my $tags=shift;
 	$tags=$tags->repr;
 	if ($tags) {
-		my @t=split /\s+/,$tags;
+		my @t=CORE::split /\s+/,$tags;
 		my $t=CORE::join("|",@t);
 		$value=~s/(?<=<[^>]{1,250})(?:$t)\s*=\s*(['"])(?:\\.|.)*\1//g;
 	}
@@ -911,7 +934,7 @@ sub slice {
 	  return $value->set($pdl->slice($slice));
 	}
 
-	my @slice=split /:/,$slice,2;
+	my @slice=CORE::split /:/,$slice,2;
 
 	my @value;
 	@value=@{$value->content} if $value->array;
@@ -996,7 +1019,7 @@ sub time {
 	else {
 		@t=@{$value->content};
 	}
-	my @s=split //,$string;
+	my @s=CORE::split //,$string;
 	my $res;
 	while (my $s=shift(@s)) {
 		if ($s eq '\\') {
@@ -1294,7 +1317,7 @@ sub img {
   return $value->set($rv);
 }
 
-sub code {
+sub fenced {
   my $value = shift;
   my $type = shift->repr;
   my $content = $value->repr;
@@ -1306,7 +1329,8 @@ sub code {
 sub grep {
   my $value = shift;
   my $pattern = shift->repr;
-  $pattern =~ y/{}//d; # poor man's code-free regex
+  local $_;
+  $safe->reval(qq{m{$pattern}}); die $@ if $@;	 
   my @rv = CORE::grep /$pattern/i, $value->array ? @{$value->content} : $value->repr;
   return $value->set(\@rv) if @rv > 1;
   return $value->set(shift @rv);
@@ -1459,7 +1483,7 @@ sub vcs_date {
   my $lang = @_ ? shift->repr : ".en";
   $content =~ /\$Date: ([\d: +-]+) \(/
     or return $value->set("");
-  my @args = split /\D/, $1;
+  my @args = CORE::split /\D/, $1;
   $args[0] -= 1900;
   $args[1] -= 1;
   my $locale = setlocale LC_TIME, $LANG{$lang};
@@ -1493,8 +1517,8 @@ sub vcs_author {
     my $svnuser = $1;
     tie my %pw, DB_File => "$ENV{TARGET}/user+group", O_RDONLY or return $value->set($svnuser);
     no warnings 'uninitialized';
-    my ($comment) = (split /:/, $pw{$svnuser})[2] =~ /^([^<]+)/;
-    my $data = (split /:/, $pw{$svnuser})[3];
+    my ($comment) = (CORE::split /:/, $pw{$svnuser})[2] =~ /^([^<]+)/;
+    my $data = (CORE::split /:/, $pw{$svnuser})[3];
     $data //= "";
     my $name = substr($comment // "Unknown ", 0, -1);
     my $urlencname = encode($name);
@@ -1544,7 +1568,7 @@ sub truncatewords {
 	my $value=shift;
 	my $words=shift;
 	return $value unless $words and $words->number;
-	my @val = split /(\s+)/,$value->repr;
+	my @val = CORE::split /(\s+)/,$value->repr;
 	$words=($words->content-1)*2;
 	return $value if $words >= $#val;
 	#$words=$#val if $words > $#val;
@@ -1729,7 +1753,7 @@ sub wordcount {
 
 sub wordwrap {
 	my $val=shift;
-	my @value = split /(\s+)/,$val->repr;
+	my @value = CORE::split /(\s+)/,$val->repr;
 	my $len=shift;
 	if ($len and $len->number) {
 		$len=int($len->content);
@@ -1776,7 +1800,7 @@ sub yesno {
 	else {
 		$yes="";
 	}
-	my ($y,$no,$undef) = split /,/,$yes,3;
+	my ($y,$no,$undef) = CORE::split /,/,$yes,3;
 	$no="" unless $no;
 	$undef=$no unless $undef;
 	return Dotiac::DTL::Value->safe($y) if $value->true;
@@ -1787,7 +1811,7 @@ sub yesno {
 sub AUTOLOAD :Sealed {
   no strict 'refs';
   our $AUTOLOAD;
-  my ($method_name) = (split /::/, $AUTOLOAD)[-1];
+  my ($method_name) = (CORE::split /::/, $AUTOLOAD)[-1];
   return if $method_name eq "DESTROY";
   $method_name =~ s/^pdl_// or die "Invalid filter name: $method_name\n";
   my $method = PDL->can($method_name) or die "Can't locate PDL->$method_name\n";

@@ -5,6 +5,8 @@ use SunStarSys::Util qw/fixup_code/;
 use APR::Request 'encode';
 use strict;
 use warnings;
+use threads;
+use threads::shared;
 
 sub new {
     my $class = shift;
@@ -34,11 +36,10 @@ sub new {
         numbers => $args{numbers},
     }, $class;
 
-    $obj->fetch;
     return $obj;
 }
 
-my %cache;
+my %cache :shared;
 
 sub fetch {
     return if $SunStarSys::Value::Offline;
@@ -52,12 +53,31 @@ sub fetch {
     };
 
     if (defined $self->{token}) {
-        $content =~ /^(.*?)^\Q$self->{token}\E.*?\n(.*?)^\Q$self->{token}/ms
-            or die "Can't find $self->{token} block at $self->{uri}";
-        $content = $2;
-	my $preamble = $1;
+      my ($start, $end) = split /,/, $self->token;
+      $end = $start unless $end;
+      $content =~ /^(.*?)^\Q$start\E.*?\n(.*?)^\Q$end/ms
+	or die "Can't find $self->{token} block at $self->{uri}";
+      $content = $2;
+      my $preamble = $1;
+      while (1) {
 	$_[0]->{lines}->[1] = $_[0]->{lines}->[0] = ($preamble =~ y/\n//) + 2;
 	$_[0]->{lines}->[1] += ($content =~ tr/\n/\n/) - 1;
+	if ($_[0]->{lang} eq "perl" and $self->{token} =~ /^=/) {
+	  $_[0]->{lang} = "pod";
+	  require Pod::PlainText;
+	  local (*STDIN, *STDOUT);
+	  my $p = Pod::PlainText->new(sentence => 0); 
+	  my ($start) = split /,/, $self->{token};
+	  $content = "$start\n$content";
+	  open  *STDIN, "<", \$content;
+	  open *STDOUT, "+>", undef;
+	  $p->parse_from_filehandle;
+	  seek *STDOUT, 0, 0;
+	  read *STDOUT, $content, -s *STDOUT;
+	  redo;
+	}
+	last;
+      }
     }
     elsif ($self->{lines}) {
         $content = join "\n", grep {defined || ! warn "Missing lines from $self->{uri}"}
@@ -80,7 +100,9 @@ sub pretty_uri {
         $uri .= "#L" . join "-L", @{$self->{lines}};
       }
       elsif ($token) {
-        $uri .= "#:~:text=$token,,$token";
+	my ($start, $end) = split /,/, $token;
+	$end = $start unless $end;
+	$uri .= "#:~:text=$start,,$end";
       }
     }
     return $uri;
