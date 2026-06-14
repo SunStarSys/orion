@@ -19,6 +19,7 @@ use v5.38;
 use utf8;
 use Safe;
 use DB_File;
+use File::Basename ();
 use PDL ();
 use POSIX qw/:fcntl_h/;
 use URI::Escape;
@@ -886,9 +887,9 @@ sub removeattrs {
 	my $tags=shift;
 	$tags=$tags->repr;
 	if ($tags) {
-		my @t=CORE::split /\s+/,$tags;
+		my @t=CORE::split /[\s,]+/,$tags;
 		my $t=CORE::join("|",@t);
-		$value=~s/(?<=<[^>]{1,250})(?:$t)\s*=\s*(['"])(?:\\.|.)*\1//g;
+		$value=~s/(<[^>]+)\b(?:$t)=(['"]).*?\2/$1/g;
 	}
 	return $val->set($value);
 }

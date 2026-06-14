@@ -21,7 +21,7 @@ our @HDR_FIELDS = qw/status title keywords categories acl type/;
 
 our @EXPORT_OK = qw/sanitize_relative_path read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
                     unload_package purge_from_inc touch normalize_svn_path parse_filename get_lucy_indexer
-                    walk_content_tree archived seed_file_deps seed_file_acl Load Dump %action_en/;
+                    walk_content_tree archived seed_file_deps seed_file_acl Load Dump %action_en nonce/;
 no warnings 'once';
 
 our $VERSION = "3.2";
@@ -451,6 +451,20 @@ EOT
   return %indexer;
 }
 
+my $nonce;
+
+sub nonce {
+  $nonce //= do {
+    if (open my $fh, "<:raw", "$ENV{TARGET}/.nonce") {
+      <$fh>
+    }
+    else {      
+      warn "initializing nonce...\n";
+      rand
+    }
+  }
+}
+
 my $dep_string = 'no strict "refs"; *path::dependencies{HASH}';
 my $dependencies;
 
@@ -500,7 +514,7 @@ sub walk_content_tree :prototype(&) {
 	   s/^[^.]+\.// for my $lang = $ext;
 
 	   my $s = sub {
-             seed_file_deps, seed_file_acl;
+             seed_file_deps;
 	     read_text_file "content$_", \ my %args;
 	     my $h = delete $args{headers};
 	     %$h = map +($_ => $$h{$_} // ""), @HDR_FIELDS;
@@ -517,6 +531,13 @@ sub walk_content_tree :prototype(&) {
 
 	   $s->() if -f and $ext =~ /^(?:md|ya?ml|csv)\b/;
            $wanted->();
+         }, no_chdir => 1 }, "$cwd/content");
+  # walk it again, now that deps are in sync
+  find({ wanted => sub {
+           s!^\Q$cwd/content!!;
+	   my (undef, undef, $ext) = parse_filename;
+	   s/^[^.]+\.// for my $lang = $ext;
+	   seed_file_acl if -f and $ext =~ /^(?:md|ya?ml|csv)\b/;
          }, no_chdir => 1 }, "$cwd/content");
 
   $_->commit for values %indexer;
@@ -552,6 +573,10 @@ END {
     }
     print $fh Dump $links;
   }
+  if ($nonce) {
+    open my $fh, ">:raw", "$ENV{TARGET}/.nonce" or die "Can't open '.nonce' for writing: $!";
+    print $fh $nonce;
+  }
 }
 
 sub archived {
@@ -570,6 +595,7 @@ sub seed_file_deps {
   my ($path) = (@_, $_);
   utf8::decode $path unless utf8::is_utf8 $path;
   my $dir = dirname($path);
+  delete $$dependencies{$path} and return unless -f "content$path";
   read_text_file "content$path", \ my %d;
   no strict 'refs';
   return if archived $path;
@@ -613,12 +639,12 @@ sub seed_file_deps {
 
   for my $dep_path (@{$$dependencies{$path}}) {
     splice @{$$dependencies{$path}}, $idx--, 1
-      if !(grep $dep_path eq $_, @$old_deps) and $svn->client and
+      if ! -f "content/$dep_path" or (!(grep $dep_path eq $_, @$old_deps) and $svn->client and
       eval { $svn->info("content$path", sub {$author = $_[1]->last_changed_author}) unless $author;
 	     SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
         "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content$dep_path", "--username" => $author // '*',
         "--groups-file" => "$ENV{TARGET}/group-svn.conf",
-        "$ENV{TARGET}/authz-svn.conf", $pool)};
+        "$ENV{TARGET}/authz-svn.conf", $pool)});
 
     ++$idx;
   }
@@ -633,12 +659,24 @@ sub seed_file_acl {
   my @restrictions;
   my @p = $path;
   my %seen;
-  # no laundering
+  my ($svnuser) = $d{content} =~ /\$Author:\s+([\w.@-]+)\s+\$/;
+
+  unless ($svnuser) {
+    {
+      local $SIG{__WARN__} = sub {};
+      state $_foo = eval 'BEGIN{require SunStarSys::SVN::Client}';
+    }
+    state $pool = bless APR::Pool->new, "_p_apr_pool_t";
+    state $svn = bless { client => eval {SVN::Client->new(pool => $pool)} || undef }, "SunStarSys::SVN::Client";
+    $svn->info("content$path", sub {$svnuser = $_[1]->last_changed_author})
+  }
+  $svnuser ||= "n/a";
+  # no laundering  
   while (@p) {
     my $p = shift @p;
     for (grep !$seen{$_}++, @{$$dependencies{$p}}) {
       read_text_file "content$_", \ my %d;
-      push(@restrictions, map /\S+\s*=\s*[^rw\s]/g, $d{headers}{acl}) if $d{headers}{acl};
+      push(@restrictions, grep !/\b\Q$svnuser\E\s*=/, map /\S+\s*=\s*[^rw\s]/g, $d{headers}{acl}) if $d{headers}{acl};
       push @p, $_;
     }
   }
