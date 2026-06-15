@@ -120,7 +120,7 @@ use utf8;
 use Getopt::Long;
 use File::Path;
 use SunStarSys::View;
-use SunStarSys::Util qw/copy_if_newer parse_filename unload_package Load Dump/;
+use SunStarSys::Util qw/copy_if_newer parse_filename unload_package Load Dump nonce/;
 use Data::Dumper ();
 use SunStarSys::ASF;
 use IO::Compress::Gzip qw/gzip/;
@@ -150,10 +150,9 @@ $runners = 8 if $runners > 8;
 
 chdir $source_base or die "Can't chdir to $source_base: $!\n";
 %ENV = (
-    PATH => "/usr/local/bin:/usr/bin:/sbin",
+    PATH => "/usr/local/bin:/usr/bin:/sbin:/usr/local/texlive/2023/bin/x86_64-solaris",
     LANG => "en_US.UTF-8",
-    PERL_PERTURB_KEYS => "NO",
-    PERL_HASH_SEED => 987654321
+    SHELL => "/usr/bin/bash",
 );
 $ENV{TARGET} //= $target_base;
 
@@ -182,6 +181,7 @@ unshift @INC, "$source_base/lib";
 
 require path;
 require view;
+my $nonce = nonce; # initialize before threading
 
 {
     no warnings 'once';
@@ -370,7 +370,7 @@ sub process_file :Sealed {
         my $start_call = [gettimeofday];
 	no warnings 'once';
 	$view::path = $path;
-        my ($content, $ext, undef, @new_sources) = $s->(nonce => rand, website => $ENV{WEBSITE}, repos => $ENV{REPOS}, path => $path, lang => $lang, %$args);
+        my ($content, $ext, undef, @new_sources) = $s->(nonce => $nonce, website => $ENV{WEBSITE}, repos => $ENV{REPOS}, path => $path, lang => $lang, %$args);
         my $elapsed = tv_interval($start_call);
         if ($$args{compress}) {
           $lang .= ".gz";
