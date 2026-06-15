@@ -41,7 +41,7 @@ $PDL::no_clone_skip_warning = 1;
 state @opcodes = qw/
     const padany lineseq rv2gv rv2sv gvsv concat multiconcat match leaveeval
     null stub scalar pushmark wantarray const defined undef
-    rv2sv sassign padsv_store
+    rv2sv sassign padsv_store list quotemeta qr regcmaybe regcreset regcomp 
     cond_expr flip flop andassign orassign dorassign and or dor xor helemexistsor
     preinc i_preinc predec i_predec postinc i_postinc
     postdec i_postdec int hex oct abs pow multiply i_multiply
@@ -401,7 +401,7 @@ sub split {
   my $pattern = decode shift->repr;
   utf8::encode $pattern;
   local $_;
-  $safe->reval(qr{$pattern}); die $@ if $@;	 
+  $safe->reval(q{qr{$pattern}}); die $@ if $@;	 
   $value->set([CORE::split /$pattern/, $value->repr]);
   return $value;
 }
@@ -414,7 +414,7 @@ sub admit {
   utf8::encode $pattern;
   my $cla = "[^" . $pattern . "]+";
   local $_;
-  $safe->reval(qr{$cla}); die $@ if $@;	   
+  $safe->reval(q{qr{$cla}}); die $@ if $@;	   
   $val =~ s/$cla//g if length($cla) > 3;
   $value->set($val);
   return $value;
@@ -901,7 +901,7 @@ sub removeattrs {
 	    my @t=CORE::split /[\s,]+/,$tags;
 	    my $t=CORE::join("|",@t);
 	    local $_;
-	    $safe->reval(qr{$t}); die $@ if $@;
+	    $safe->reval(q{qr{$t}}); die $@ if $@;
 	    $value=~s/(<[^>]+)\b(?:$t)=(['"]).*?\2/$1/g;
 	}
 	return $val->set($value);
@@ -1346,7 +1346,7 @@ sub grep {
   my $pattern = decode shift->repr;
   utf8::encode $pattern;
   local $_;
-  $safe->reval(qr{$pattern}); die $@ if $@;	 
+  $safe->reval(q{qr{$pattern}}); die $@ if $@;	 
   my @rv = CORE::grep /$pattern/, $value->array ? @{$value->content} : $value->repr;
   return $value->set(\@rv) if @rv > 1;
   return $value->set(shift @rv);
