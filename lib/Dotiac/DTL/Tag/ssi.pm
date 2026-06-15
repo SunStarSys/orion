@@ -26,7 +26,8 @@ sub new {
 	my $self={p=>shift()};
 	my $name=shift;
 	die "This ssi needs a filename or variable" unless $name;
-	#my $parsed=$name=~s/\s+parsed$//;
+	my $parsed=$name=~s/\+parsed`$/`/;
+	my $skipped = $name =~ s/\+skip`$/`/;
 	my @name=Dotiac::DTL::get_variables($name);
 	$self->{parsed}=1 if $name[-1] and $name[-1] eq "parsed";
 	my $f=substr $name[0],0,1;

@@ -23,7 +23,7 @@ use File::Basename ();
 use PDL ();
 use POSIX qw/:fcntl_h/;
 use URI::Escape;
-use APR::Request qw/encode/;
+use APR::Request qw/encode decode/;
 our $URIc = '^:/?=&;#A-Za-z0-9.~_-';        # complement of class of characters to uri_escape
 require Scalar::Util;
 our $VERSION = 1.0;
@@ -396,10 +396,11 @@ sub dictsort {
 
 sub split {
   my $value = shift;
-  my $pattern = shift->repr;
+  my $pattern = decode shift->repr;
+  utf8::encode $pattern;
   local $_;
   $safe->reval(qq{m{$pattern}}); die $@ if $@;	 
-  $value->set([CORE::split $pattern, $value->repr()]);
+  $value->set([CORE::split /$pattern/, $value->repr]);
   return $value;
 }
 
@@ -1329,10 +1330,11 @@ sub fenced {
 
 sub grep {
   my $value = shift;
-  my $pattern = shift->repr;
+  my $pattern = decode shift->repr;
+  utf8::encode $pattern;
   local $_;
   $safe->reval(qq{m{$pattern}}); die $@ if $@;	 
-  my @rv = CORE::grep /$pattern/i, $value->array ? @{$value->content} : $value->repr;
+  my @rv = CORE::grep /$pattern/, $value->array ? @{$value->content} : $value->repr;
   return $value->set(\@rv) if @rv > 1;
   return $value->set(shift @rv);
 }
@@ -1820,17 +1822,7 @@ sub AUTOLOAD :Sealed {
     shift;
     my PDL $pdl = $value->content;
     die "NOT A PDL object: " . $value->content unless $value->object and $pdl->isa("PDL");
-    my Dotiac::DTL::Value $arg = shift;
-    if ($arg and ($arg->object or $arg->hash)) {
-      return $value->set($method->($pdl, $arg->content));
-    }
-    elsif ($arg and $arg->array) {
-      return $value->set($method->($pdl, @{$arg->content}));
-    }
-    elsif ($arg) {
-      return $value->set($method->($pdl, $arg->repr));
-    }
-    return $value->set($method->($pdl));
+    return $value->set($method->($pdl, map $_->repr, @_));
   };
   goto &{*{$AUTOLOAD}{CODE}};
 }

@@ -376,7 +376,7 @@ sub asymptote {
   my $prefix = "asyA";
   my @sources;
 
-  $args{content} =~ s{^\`{3}asy(?:mptote)?\s+(.*?)^\`{3}$}{
+  $args{content} =~ s{^\s*\`{3}asy(?:mptote)?\s+(.*?)^\s*\`{3}$}{
     s/^\s+settings.*\n//msg for my $body = Template($1)->render(\%args);
     my $cached = 0;
     -d $attachments_dir or do { local $_ = $attachments_dir; utf8::encode $_; mkpath $_ };
@@ -772,49 +772,54 @@ sub ssi {
 
   no warnings 'uninitialized';
 
-  1 while $args{content} =~ s{(^\s*\{%\s*ssi\s+\`([^\`]+)\`\s*%\})}{
+  $args{content} =~ s{(^\s*\{%\s*ssi\s+\`([^\`]+)\`\s*%\})}{
+
     my $match = $1;
     my $target = $2;
-    $target =~ y/+/ /;
-    my $page_path = "content$target";
-    read_text_file $page_path, \my %a;
-    $args{headers} = $a{headers};
-    $page_path =~ s!\.[^/]+$!.page!;
-    my $root = basename $page_path;
-    if (-d $page_path) {
-      for my $f (grep -f, glob "'$page_path/'*") {
-        if ($f =~ m!/([^/]+)\.md(?:text)?\Q$args{lang}\E$!) {
-          my $key = $1;
-          $args{$key} = {};
-          read_text_file $f, $args{$key};
-          $args{$key}->{key} = $key;
-          $args{$key}->{facts} = $args{facts} if exists $args{facts};
-          $args{$key}->{deps} = $args{deps} if exists $args{deps};
-          $args{$key}->{content} = sort_tables($args{preprocess}
+    if ($target =~ s/\+skip$//) {
+      "{% ssi \`$target\` %}"
+    }
+    else {
+      $target =~ y/+/ /;
+      my $page_path = "content$target";
+      read_text_file $page_path, \my %a;
+      $page_path =~ s!\.[^/]+$!.page!;
+      my $root = basename $page_path;
+      if (-d $page_path) {
+	for my $f (grep -f, glob "'$page_path/'*") {
+	  if ($f =~ m!/([^/]+)\.md(?:text)?\Q$args{lang}\E$!) {
+	    my $key = $1;
+	    $args{$key} = {};
+	    read_text_file $f, $args{$key};
+	    $args{$key}->{key} = $key;
+	    $args{$key}->{facts} = $args{facts} if exists $args{facts};
+	    $args{$key}->{deps} = $args{deps} if exists $args{deps};
+	    $args{$key}->{content} = sort_tables($args{preprocess}
                                                  ? Template($args{$key}->{content})->render($args{$key})
                                                  : $args{$key}->{content});
-          if (index($key, "comment") == 0) {
-            for my $c (@closed) {
-              ++$args{$key}{closed} and last if index($key, $c) == 0;
-            }
-            for my $m (@muted) {
-              ++$args{$key}{muted} and last if index($key, $m) == 0;
-            }
-            for my $i (@important) {
-              ++$args{$key}{important} and last if $key eq $i;
-            }
-            push @{$args{comments}}, $args{$key};
-          }
-        }
-        elsif ($f =~ m!/([^/]+)\.(ya?ml|json|csv)(?:\Q$args{lang}\E)?$!) {
-          _process_data $f, \%args;
-        }
-        elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b)[^\/]*$/) {
-          push @{$args{attachments}}, "$root/" . basename $f;
-        }
+	    if (index($key, "comment") == 0) {
+	      for my $c (@closed) {
+		++$args{$key}{closed} and last if index($key, $c) == 0;
+	      }
+	      for my $m (@muted) {
+		++$args{$key}{muted} and last if index($key, $m) == 0;
+	      }
+	      for my $i (@important) {
+		++$args{$key}{important} and last if $key eq $i;
+	      }
+	      push @{$args{comments}}, $args{$key};
+	    }
+	  }
+	  elsif ($f =~ m!/([^/]+)\.(ya?ml|json|csv)(?:\Q$args{lang}\E)?$!) {
+	    _process_data $f, \%args;
+	  }
+	  elsif ($f !~ /(?:\.html\b|\.md\b|\.asy\b)[^\/]*$/) {
+	    push @{$args{attachments}}, "$root/" . basename $f;
+	  }
+	}
       }
+      Template($match)->render(\%args)
     }
-    Template($match)->render(\%args)
   }mge;
   my $view = next_view \%args;
   return view->can($view)->(%args);

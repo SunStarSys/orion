@@ -185,6 +185,7 @@ sub compiled {
 use APR::Request qw/encode decode/;
 BEGIN {
 *urlencode = \&encode;
+*escap = sub {local $_ = shift; s/\+/%2B/g; utf8::encode $_ if utf8::is_utf8 $_; '`' . encode($_) . '`'};
 *descap = \&decode;
 }
 
@@ -197,7 +198,6 @@ sub urlencode {
 	return $val;
 }
 
-=cut
 
 sub escap { #Escape is used too much these days.
 	my $string=shift;
@@ -216,8 +216,6 @@ sub escap { #Escape is used too much these days.
 	$string=~s/([\|\s\,\"\'\`\%\:;=])/sprintf("%%%02X",ord($1))/eg;
 	return "`$string`";
 }
-
-=pod
 
 sub descap {
 	my $string=shift;
