@@ -25,5 +25,5 @@ jobs:
 
         run: |
           git clone -b $GITHUB_REF_NAME https://github.com/$GITHUB_REPOSITORY .
-          rm -rf .git
+          rm -rf .git fontawesome editor.md
           LANG=en_US.UTF-8 ./test.sh ooo
