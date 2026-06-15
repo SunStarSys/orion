@@ -17,6 +17,7 @@
 package Dotiac::DTL::Filter;
 use v5.38;
 use utf8;
+use re 'eval';
 use Safe;
 use DB_File;
 use File::Basename ();
@@ -98,7 +99,8 @@ sub cut {
 	my $value=shift;
 	my $val=$value->repr();
 	my $t=shift;
-	$t=$t->repr();
+	$t=decode $t->repr();
+	utf8::encode $t;
 	$val=~s/[$t]//g;
 	$value->set($val);
 	return $value;
@@ -108,7 +110,8 @@ sub cuts {
   my $value=shift;
   my $val=$value->repr();
   my $t=shift;
-  $t=$t->repr();
+  $t=decode $t->repr();
+  utf8::encode $t;
   $val=~s/\Q$t\E//g;
   $value->set($val);
 }
@@ -393,13 +396,12 @@ sub dictsort {
 
 }
 
-
 sub split {
   my $value = shift;
   my $pattern = decode shift->repr;
   utf8::encode $pattern;
   local $_;
-  $safe->reval(qq{m{$pattern}}); die $@ if $@;	 
+  $safe->reval(qr{$pattern}); die $@ if $@;	 
   $value->set([CORE::split /$pattern/, $value->repr]);
   return $value;
 }
@@ -408,8 +410,12 @@ sub admit {
   my $value = shift;
   my $class = shift;
   my $val = $value->repr();
-  my $cla = "[^" . $class->repr() . "]+";
-  $cla = qr/$cla/, $val =~ s/$cla//g if length($cla) > 3;
+  my $pattern = decode $class->repr();
+  utf8::encode $pattern;
+  my $cla = "[^" . $pattern . "]+";
+  local $_;
+  $safe->reval(qr{$cla}); die $@ if $@;	   
+  $val =~ s/$cla//g if length($cla) > 3;
   $value->set($val);
   return $value;
 }
@@ -627,7 +633,8 @@ sub join {
 	my $value=shift;
 	my $j=shift;
 	if ($j) {
-		$j=$j->repr;
+		$j=decode $j->repr;
+		utf8::encode $j;
 	}
 	else {
 		$j="";
@@ -873,11 +880,13 @@ sub removetags {
 	my $val=shift;
 	my $value=$val->repr();
 	my $tags=shift;
-	$tags=$tags->repr;
+	$tags=decode $tags->repr;
 	if ($tags) {
-		my @t=CORE::split /[\s,]+/,$tags;
-		my $t=CORE::join("|",map {quotemeta $_} @t);
-		$value=~s/<\/?(?:$t)(?:\/?>|\s[^>]+>)//g;
+	    utf8::encode $tags;
+	    my @t=CORE::split /[\s,]+/,$tags;
+	    my $t=CORE::join("|",map {quotemeta $_} @t);
+
+	    $value=~s/<\/?(?:$t)(?:\/?>|\s[^>]+>)//g;
 	}
 	return $val->set($value);
 }
@@ -886,11 +895,14 @@ sub removeattrs {
 	my $val=shift;
 	my $value=$val->repr();
 	my $tags=shift;
-	$tags=$tags->repr;
+	$tags=decode $tags->repr;
 	if ($tags) {
-		my @t=CORE::split /[\s,]+/,$tags;
-		my $t=CORE::join("|",@t);
-		$value=~s/(<[^>]+)\b(?:$t)=(['"]).*?\2/$1/g;
+	    utf8::encode $tags;
+	    my @t=CORE::split /[\s,]+/,$tags;
+	    my $t=CORE::join("|",@t);
+	    local $_;
+	    $safe->reval(qr{$t}); die $@ if $@;
+	    $value=~s/(<[^>]+)\b(?:$t)=(['"]).*?\2/$1/g;
 	}
 	return $val->set($value);
 }
@@ -930,7 +942,8 @@ sub slice {
 	return $value unless $value->hash or $value->array or $value->object;
 	my $slice=shift;
 	return $value unless $slice;
-	$slice=$slice->repr;
+	$slice= decode $slice->repr;
+	utf8::encode $slice;
 	if ($value->object and $value->content->isa("PDL")) {
 	  my $pdl = $value->content;
 	  return $value->set($pdl->slice($slice));
@@ -1297,7 +1310,7 @@ Filters svn:keyword "$Author:...$" line in input content for author svnuser id
 
 sub append {
   my $value=shift;
-  my $extra=shift->repr;
+  my $extra=decode shift->repr;
   $extra =~ s!^/!! if $value->repr =~ m!/$!;
   return $value unless $extra;
   return $value->set($value->repr . $extra);
@@ -1333,7 +1346,7 @@ sub grep {
   my $pattern = decode shift->repr;
   utf8::encode $pattern;
   local $_;
-  $safe->reval(qq{m{$pattern}}); die $@ if $@;	 
+  $safe->reval(qr{$pattern}); die $@ if $@;	 
   my @rv = CORE::grep /$pattern/, $value->array ? @{$value->content} : $value->repr;
   return $value->set(\@rv) if @rv > 1;
   return $value->set(shift @rv);
@@ -1464,7 +1477,7 @@ sub parse_filename {
 sub basename {
   require File::Basename;
   my $value = shift;
-  my $raw = @_ && $_[0]->number && shift->repr;
+  my $raw = (@_ && $_[0]->number) ? shift->repr : undef;
   my $base = File::Basename::basename $value->repr;
   $base =~ s/\..*$// if defined $raw and $raw == 0;
   return $value->set($base);
@@ -1822,7 +1835,7 @@ sub AUTOLOAD :Sealed {
     shift;
     my PDL $pdl = $value->content;
     die "NOT A PDL object: " . $value->content unless $value->object and $pdl->isa("PDL");
-    return $value->set($method->($pdl, map $_->repr, @_));
+    return $value->set($method->($pdl, map decode $_->repr, @_));
   };
   goto &{*{$AUTOLOAD}{CODE}};
 }
