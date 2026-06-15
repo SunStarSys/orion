@@ -3565,7 +3565,8 @@
         var faIconReg       = regexs.fontAwesome;
         var editormdLogoReg = regexs.editormdLogo;
         var pageBreakReg    = regexs.pageBreak;
-
+        var slugIndex       = 0;
+	
         markedRenderer.emoji = function(text) {
 
             text = text.replace(editormd.regexs.emojiDatetime, function($1) {
@@ -3612,7 +3613,7 @@
                         }
                         else if (camelemojiMatchs)
                         {
-                            for (var t = 0, len3 = camelemojiMatchs.length; t < sluglen3; t++)
+                            for (var t = 0, len3 = camelemojiMatchs.length; t < len3; t++)
                             {
                                 var twe = camelemojiMatchs[t].replace(/:/g, "");
                                 return "<img src=\"" + editormd.camel_emoji.path + twe + editormd.camel_emoji.ext + "\" title=\"camel-emoji-" + twe + "\" alt=\"camel-emoji-" + twe + "\" class=\"emoji camel-emoji\" />";
@@ -3772,7 +3773,7 @@
             var toc = {
                 text  : text,
                 level : level,
-                slug  : escapedText
+                slug  : escapedText + ++slugIndex
             };
 
 
@@ -3780,7 +3781,7 @@
 
             var headingHTML = "<h" + level + " id=\"h"+ level + "-" + this.options.headerPrefix + id +"\">";
 
-            headingHTML    += "<a name=\"" + escapedText + "\" class=\"reference-link\"></a>";
+            headingHTML    += "<a name=\"" + escapedText + slugIndex + "\" class=\"reference-link\"></a>";
             headingHTML    += "<span class=\"header-link octicon octicon-link\"></span>";
             headingHTML    += (hasLinkReg) ? this.atLink(this.emoji(linkText)) : this.atLink(this.emoji(text));
             headingHTML    += "</h" + level + ">";
