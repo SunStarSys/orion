@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/SunStarSys/cms#readme",
   "dependencies": {
-    "eve": "^0.7.4",
+    "eve": "^0.11.10",
     "jquery": "^4.0.0",
     "jsdom": "^29.1.1",
     "navigator": "^1.0.1"
