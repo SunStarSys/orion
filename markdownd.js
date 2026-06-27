@@ -106,33 +106,34 @@ if (cluster.isMaster) {
       });
 
       c.on('end', () => {
-        const editormd = EMD(new JSDOM(HTML, { virtualConsole }).window);
-        if (!markdown) { return c.end("\n"); }
-        markdown = markdown.toString();
-        markdown = markdown.replace(/\&#123;/g,"{").replace(/\&#125;/g,"}");
-        /* look for nul character in first 3-11 chars */
-        const m  = markdown.match(/^(.{2,20})\x00(.+)$/s);
-        if (m) {
-          /* data-spec'd mode */
-          mode     = m[1];
-	  markdown = m[2];
-	}
-        const options = {
-          autoLoadModules: false,
-          readOnly:        true,
-          mode:            mode,
-          markdown:    markdown,
-          tocm:            true,
-          tex:             true,
-          searchReplace:  false,
-          toolbar:        false,
-          flowChart:      false,
-          saveHTMLToTextarea: true,
-          htmlDecode:      true,
-          taskList:        true,
-          emoji:           true,
-          delay:              1
-        };
+          const editormd = EMD(new JSDOM(HTML, { virtualConsole }).window);
+          if (!markdown) { return c.end("\n"); }
+          markdown = markdown.toString();
+          markdown = markdown.replace(/\&#123;/g,"{").replace(/\&#125;/g,"}");
+          /* look for nul character in first 3-11 chars */
+          const m  = markdown.match(/^(.{2,20})\x00(.+)$/s);
+          if (m) {
+              /* data-spec'd mode */
+              mode     = m[1];
+	      markdown = m[2];
+	  }
+          const options = {
+           autoLoadModules: false,
+           readOnly:        true,
+           mode:            mode,
+           markdown:    markdown,
+           tocm:            true,
+           tex:             true,
+           searchReplace:  false,
+           toolbar:        false,
+           flowChart:      false,
+           saveHTMLToTextarea: true,
+           htmlDecode:      true,
+           taskList:        true,
+           emoji:           true,
+           delay:              1
+          };
+
           if (mode.indexOf("gfm") == -1) {
           /* relatively rare (nontrivial) case:
            * instantiate an editor object and pray we wait
@@ -154,16 +155,24 @@ if (cluster.isMaster) {
            * quote blocks nor latex.
            */
               options.saveHTMLToTextarea = false;
-              const to = setTimeout(() => {c.end();throw new Error("processing timed out")}, TIMEOUT);
-              const div = editormd.markdownToHTML("editor", options);
-              clearTimeout(to);
-	      var data = div.html();
-	      data = data.replace(/&amp;/g, '&');
-              c.end(data);
+	      ! async function () {
+		  if (/@\S+\/status\/\d+/.test(markdown)) {
+		      const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+		      const div = editormd.markdownToHTML("editor-x-pass1", options);
+		      await sleep(500);
+		  }
+              }().then(() => {
+		  const to = setTimeout(() => {c.end();throw new Error("processing timed out")}, TIMEOUT);
+		  const div = editormd.markdownToHTML("editor", options);
+		  clearTimeout(to);
+		  var data = div.html();
+		  data = data.replace(/&amp;/g, '&');
+		  c.end(data);
+	      });
           }
       });
     }
   );
   server.on('error', (err) => { console.log(err) });
-  server.listen(MARKDOWN_PORT, "127.0.0.1", 128, () => {});
+  server.listen(MARKDOWN_PORT, "127.0.0.1", 1024, () => {});
 }

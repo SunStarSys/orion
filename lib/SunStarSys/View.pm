@@ -1139,12 +1139,14 @@ sub titleize_links {
     for (1..$idx) {
       $args{footer} .= <<EOT;
 elt = document.querySelector('#tt-$_')
-title = elt.getAttribute("title")
-title = title.replace(':::',"</b><br>")
-if ("$img[$_-1]".length > 0)
-  elt.setAttribute("title", "<img src='$img[$_-1]' width='100'><br><b>" + title)
-else
-  elt.setAttribute("title", "<b>" + title)
+if (elt) {
+  title = elt.getAttribute("title")
+  title = title.replace(':::',"</b><br>")
+  if ("$img[$_-1]".length > 0)
+    elt.setAttribute("title", "<img src='$img[$_-1]' width='100'><br><b>" + title)
+  else
+    elt.setAttribute("title", "<b>" + title)
+}
 EOT
     }
     $args{footer} .= "</script>\n";
