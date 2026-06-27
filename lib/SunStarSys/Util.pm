@@ -15,8 +15,11 @@ use Apache2::RequestRec;
 use Apache2::RequestUtil;
 use v5.38;
 use utf8;
+use threads;
+use threads::shared;
 use constant MAX_LINK_COUNT => 4096;
 use constant MAX_LINK_RAND  => 16;
+
 our @HDR_FIELDS = qw/status title keywords categories acl type/;
 
 our @EXPORT_OK = qw/sanitize_relative_path read_text_file copy_if_newer get_lock shuffle sort_tables fixup_code
@@ -41,6 +44,10 @@ UNITCHECK {
 my %actions;
 my @actions = qw/edit update revert copy move delete add commit diff mail merge production promote resolve rollback search static account comment watch unwatch like unlike markmap archived verified/;
 
+# memoization (a'la <ring.h>) to control RAM usage during large-scale builds
+my $rtf_ring_hdr :shared = shared_clone { next => undef, prev => undef, cache => {}, count => 0 };
+our $RTF_RING_SIZE_MAX = 10_000; #tunable
+
 for my $yml_file (map /^(.*)$/, </x1/cms/build/fields.yml.*>) {
   my (undef, undef, $ext) = parse_filename $yml_file;
   s/^[^.]*\.// for my $lang = $ext;
@@ -52,17 +59,14 @@ for my $yml_file (map /^(.*)$/, </x1/cms/build/fields.yml.*>) {
 our %action_en;
 
 for (keys %actions) {
-    for my $idx (0.. $#{$actions{en}}) {
-	$action_en{$actions{$_}[$idx]} = $actions{en}[$idx];
-    }
+  for my $idx (0.. $#{$actions{en}}) {
+    $action_en{$actions{$_}[$idx]} = $actions{en}[$idx];
+  }
 }
 
 # utility for parsing txt files with headers in them
 # and passing the args along to a hashref (in 2nd arg)
 
-# memoization (a'la <ring.h>) to control RAM usage during large-scale builds
-my $rtf_ring_hdr = { next => undef, prev => undef, cache => {}, count => 0 };
-our $RTF_RING_SIZE_MAX = 1_000; #tunable
 
 sub read_text_file {
   my ($file, $out, $content_lines) = @_;
@@ -78,7 +82,7 @@ sub read_text_file {
   $out->{mtime} = $_->mtime for map File::stat::populate(CORE::stat(_)), grep -f, $file;
   $out->{mtime} //= -1;
   warn "$file not a text file nor a reference" and return unless -T _ or ref $file;
-  my $cache = $rtf_ring_hdr->{cache}{$file};
+  my $cache :shared = $rtf_ring_hdr->{cache}{$file};
 
   if (defined $cache and $cache->{mtime} == $out->{mtime}) {
 
@@ -96,10 +100,12 @@ sub read_text_file {
 
     if ($rtf_ring_hdr->{next} != $cache->{link}) {
       # MRU to front
-
-      my $link = $cache->{link};
-      $link->{prev}{next} = $link->{next};
-      $link->{next}{prev} = $link->{prev} if $link->{next};
+      lock $rtf_ring_hdr;
+      my $link :shared = $cache->{link};
+      my $link_next :shared = $link->{next};
+      my $link_prev :shared = $link->{prev};
+      $link_prev->{next} = $link_next if $link_prev;
+      $link_next->{prev} = $link_prev if $link_next;
       $link->{next} = $rtf_ring_hdr->{next};
       $rtf_ring_hdr->{next} = $link;
       $link->{prev} = undef;
@@ -172,10 +178,11 @@ sub read_text_file {
 
   $content .= $_;
 
+  lock $rtf_ring_hdr;
+
   if (defined $cache) {
     # file modified on disk; clear cache and link
-
-    my $rm_me = $cache->{link};
+    my $rm_me :shared = $cache->{link};
     for (qw/prev next/) {
       $rtf_ring_hdr->{$_} = $rm_me->{$_} if $rtf_ring_hdr->{$_} == $rm_me;
     }
@@ -187,8 +194,7 @@ sub read_text_file {
   }
 
   # add link to front
-
-  my $link = { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
+  my $link :shared = shared_clone { file => $file, next => $rtf_ring_hdr->{next}, prev => undef };
   $rtf_ring_hdr->{next} = $link;
   $rtf_ring_hdr->{prev} //= $link;
   $link->{next}{prev} = $link if $link->{next};
@@ -197,7 +203,7 @@ sub read_text_file {
   while ($rtf_ring_hdr->{count} > $RTF_RING_SIZE_MAX) {
     # drop LRU
 
-    my $rm_me = $rtf_ring_hdr->{prev};
+    my $rm_me :shared = $rtf_ring_hdr->{prev};
     $rtf_ring_hdr->{prev} = $rm_me->{prev};
     $rtf_ring_hdr->{next} = undef unless $rm_me->{prev};
     $rm_me->{prev}{next} = undef if $rm_me->{prev};
@@ -206,7 +212,7 @@ sub read_text_file {
     $rtf_ring_hdr->{count}--;
   }
 
-  $rtf_ring_hdr->{cache}{$file} = {
+  $rtf_ring_hdr->{cache}{$file} = shared_clone {
     content => $content,
     headers => $hdr,
     lines   => $.,
@@ -529,7 +535,7 @@ sub walk_content_tree :prototype(&) {
 	     }
 	   };
 
-	   $s->() if -f and $ext =~ /^(?:md|ya?ml|csv)\b/;
+	   $s->() if -f "content$_" and $ext =~ /^(?:md|ya?ml|csv)\b/;
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
   # walk it again, now that deps are in sync
@@ -639,13 +645,12 @@ sub seed_file_deps {
 
   for my $dep_path (@{$$dependencies{$path}}) {
     splice @{$$dependencies{$path}}, $idx--, 1
-      if ! -f "content/$dep_path" or (!(grep $dep_path eq $_, @$old_deps) and $svn->client and
+      if ! -f "content$dep_path" or (!(grep $dep_path eq $_, @$old_deps) and $svn->client and
       eval { $svn->info("content$path", sub {$author = $_[1]->last_changed_author}) unless $author;
 	     SVN::_Repos::svn_repos_authz("accessof", "--repository" => $ENV{REPOS},
         "--path" => "/cms-sites/$ENV{WEBSITE}/(?:[^/]+/)+?content$dep_path", "--username" => $author // '*',
         "--groups-file" => "$ENV{TARGET}/group-svn.conf",
         "$ENV{TARGET}/authz-svn.conf", $pool)});
-
     ++$idx;
   }
 

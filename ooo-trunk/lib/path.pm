@@ -1,5 +1,5 @@
 package path;
-
+use SunStarSys::Util qw/walk_content_tree/;
 # taken from django's url.py
 
 our @patterns = (
@@ -20,6 +20,8 @@ our @patterns = (
 our %dependencies = (
 #    "/sitemap.html" => [ grep s!^content!!, glob "content/*.mdtext" ],
 );
+
+walk_content_tree {};
 
 1;
 

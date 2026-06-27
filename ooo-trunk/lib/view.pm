@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use Dotiac::DTL qw/Template *TEMPLATE_DIRS/;
 use Dotiac::DTL::Addon::markup;
-use ASF::Util qw/read_text_file sort_tables/;
+use ASF::Util qw/read_text_file sort_tables walk_content_tree/;
 use base 'SunStarSys::View';
 
 $ENV{NO_COPY_COMPRESS} = 1;
