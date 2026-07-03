@@ -36,7 +36,7 @@
 ### TO generate the link topology graph (SVGZ), run
 
 ```shell
-    % ./links2dotcfg.sh '^$' index ""
+    % ./links2dotcfg.pl '^$' index ""
 ```
 
 ### TO generate the content dependency graph (SVGZ), run
