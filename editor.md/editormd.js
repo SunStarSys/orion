@@ -155,7 +155,7 @@
         onpreviewscroll      : function() {},
 
         imageUpload          : false,
-        imageFormats         : ["jpg", "jpeg", "gif", "png", "bmp", "webp"],
+        imageFormats         : ["jpg", "jpeg", "gif", "png", "bmp", "webp", "svg"],
         imageUploadURL       : "",
         crossDomainUpload    : false,
         uploadCallbackURL    : "",
@@ -543,7 +543,10 @@
 
                 if (settings.mermaid)
                 {
-                    _this.editormd.loadCSS(loadPath + "../css/mermaid.min", function () {
+		    if (typeof mermaid !== "undefined")
+			_this.editormd.$mermaid = mermaid;
+		    else
+                      _this.editormd.loadCSS(loadPath + "../css/mermaid.min", function () {
                         _this.editormd.loadScript(loadPath + "mermaid.min", async function () {
                             //_this.editormd.loadScript(loadPath + "mermaid-mindmap.min", function () {
                                 _this.editormd.$mermaid = mermaid;
@@ -3536,6 +3539,7 @@
      * @returns {Renderer} markedRenderer  返回marked的Renderer自定义对象
      */
 
+    const xcache = new Map();
     editormd.markedRenderer = function(markdownToC, options) {
         var defaults = {
             toc                  : true,           // Table of contents
@@ -3635,8 +3639,17 @@
         };
 
         markedRenderer.atLink = function(text) {
-
-            if (atLinkReg.test(text))
+	    for (const m of text.matchAll(atLinkReg))
+		if (settings.atLink && /\/status\//.test(m[1]) && !xcache.get(m[1])) {
+         	    var url = "https://publish.x.com/oembed?url=https://x.com/" + m[1] + "&dnt=1";
+		    !async function () {
+			var response = await fetch(url);
+			if (!response.ok)
+			    return;
+			return await response.json();
+		    }().then((json)=>{ xcache.set(m[1], json.html);});
+		}
+	    if (atLinkReg.test(text))
             {
                 if (settings.atLink)
                 {
@@ -3691,7 +3704,12 @@
                         }
                         else if (/=$/.test($b))
                             return "<a href=\"" + editormd.urls.atLinkBase + "" + $b + "\" title=\"&#64;" + $b + "\" class=\"at-link\">" + $a + "</a>";
-                        else return "<a href=\"https://github.com/" + $b + "\" title=\"&64;" + $b + "\" class=\"at-link\">" + $a + "</a>";
+			else if (/\/status\//.test($b)) {
+			    if (xcache.get($b))
+				return xcache.get($b);
+			    return $a;
+			}
+                        else return "<a href=\"https://github.com/" + $b + "\" title=\"&#64;" + $b + "\" class=\"at-link\">" + $a + "</a>";
                     }).replace(/_#_&#64;_#_/g, "@");
                 }
 
@@ -4416,8 +4434,8 @@
         css : "/editor.md/lib/katex.min",
         js  : "/editor.md/lib/katex.min",
         physics: "/editor.md/lib/katex-physics",
-        mhchem: "/editor.md/lib/mhchem",
-        copy: "/editor.md/lib/copy-tex"
+        mhchem: "/editor.md/lib/mhchem.min",
+        copy: "/editor.md/lib/copy-tex.min"
     };
 
     editormd.kaTeXLoaded = false;
