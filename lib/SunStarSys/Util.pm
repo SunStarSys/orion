@@ -46,7 +46,7 @@ my @actions = qw/edit update revert copy move delete add commit diff mail merge 
 
 # memoization (a'la <ring.h>) to control RAM usage during large-scale builds
 my $rtf_ring_hdr :shared = shared_clone { next => undef, prev => undef, cache => {}, count => 0 };
-our $RTF_RING_SIZE_MAX = 10_000; #tunable
+our $RTF_RING_SIZE_MAX = 100_000; #tunable
 
 for my $yml_file (map /^(.*)$/, </x1/cms/build/fields.yml.*>) {
   my (undef, undef, $ext) = parse_filename $yml_file;
@@ -464,7 +464,7 @@ sub nonce {
     if (open my $fh, "<:raw", "$ENV{TARGET}/.nonce") {
       <$fh>
     }
-    else {      
+    else {
       warn "initializing nonce...\n";
       rand
     }
@@ -676,7 +676,7 @@ sub seed_file_acl {
     $svn->info("content$path", sub {$svnuser = $_[1]->last_changed_author})
   }
   $svnuser ||= "n/a";
-  # no laundering  
+  # no laundering
   while (@p) {
     my $p = shift @p;
     for (grep !$seen{$_}++, @{$$dependencies{$p}}) {
