@@ -535,7 +535,7 @@ sub walk_content_tree :prototype(&) {
 	     }
 	   };
 
-	   $s->() if -f "content$_" and $ext =~ /^(?:md|ya?ml|csv)\b/;
+	   $s->() if -f "content$_" and $ext =~ /^(?:md|ya?ml|csv|html?)\b/;
            $wanted->();
          }, no_chdir => 1 }, "$cwd/content");
   # walk it again, now that deps are in sync
