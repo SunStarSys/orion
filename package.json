@@ -22,7 +22,7 @@
   "dependencies": {
     "eve": "^0.27.6",
     "jquery": "^4.0.0",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "navigator": "^1.0.1"
   },
   "devDependencies": {
