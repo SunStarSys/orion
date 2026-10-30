@@ -216,7 +216,7 @@ sub single_narrative :Sealed {
 
   my $headers = Dump $args_headers;
   my $categories = delete $$args_headers{categories};
-  my $status = delete $$args_headers{status} // "draft";
+  my $status = delete $$args_headers{status} // "published";
   my $archive_headers = Dump $args_headers;
   my $keywords = $args{headers}{keywords};
 
@@ -740,6 +740,7 @@ sub latexmk {
   }
 
   if (not $cached and -f $file and my $status = system "latexmk -pdfxe -pdfxelatex='$generator' -auxdir=/tmp '$file'") {
+    system "tail -25 /tmp/$base.tex.log";
     unlink </tmp/$base.$ext*>, <*.{out,tex,pre,aux,ps,pdf,prc,log}>;
     die "latexmk -$args{format} rendering of '$file' failed: ". ($status>>8);
   }
@@ -1061,11 +1062,12 @@ sub titleize_links {
 			   require URI;
                            require HTTP::Headers;
                            require LWP::Protocol::http;
+                           use IO::Socket::SSL;
                            state $_foo = push @LWP::Protocol::http::EXTRA_SOCK_OPTS, MaxLineLength => 0;
 			   my $hdr = HTTP::Headers->new;
 			   $hdr->header('Accept-Language', join ',', substr($args{lang}, 1), "en-US;q=0.9");
 			   $hdr->header('Accept-Charset', 'utf-8');
-                           my $response = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0}, agent=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36", timeout=>5, default_headers=>$hdr)->get(URI->new($url));
+                           my $response = LWP::UserAgent->new(ssl_opts=>{verify_hostname=>0,SSL_verify_mode => IO::Socket::SSL::SSL_VERIFY_NONE}, agent=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36", timeout=>5, default_headers=>$hdr)->get(URI->new($url));
 			   if ($response) {
 			     state $t = Template("{{content|striptags|safe}}");
 			     if ($response->is_success or $response->is_redirect) {
